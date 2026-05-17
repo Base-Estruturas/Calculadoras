@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BASE Estruturas — Calculadoras</title>
+<meta name="description" content="Calculadoras estruturais conforme NBR 6118:2014 — BASE Estruturas.">
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="BASE Estruturas — Calculadoras">
+<meta property="og:description" content="Ferramentas internas de cálculo estrutural.">
+<meta property="og:image" content="assets/logo.png">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="assets/logo-horizontal.png" alt="BASE Estruturas" class="brand-logo" />
+    </div>
+
+    <div class="brand-divider"></div>
+
+    <div class="brand-sub">Calculadoras estruturais</div>
+
+    <div class="search">
+      <input type="text" id="search" placeholder="Buscar calculadora…" autocomplete="off" />
+    </div>
+
+    <nav class="nav" id="nav"></nav>
+
+    <div class="footer">
+      <div class="version">v1.0</div>
+      <div class="credit">criado por Eng. Vinícius Saraiva<br>CREA-RS 249799</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="btn-icon btn-menu" id="btn-menu" title="Menu" aria-label="Abrir menu">☰</button>
+      <div class="topbar-title" id="topbar-title">Selecione uma calculadora</div>
+      <button class="btn-icon" id="btn-reload" title="Recarregar (Ctrl+R)" disabled aria-label="Recarregar">↻</button>
+    </header>
+
+    <div class="content">
+      <div class="welcome" id="welcome">
+        <div class="welcome-card">
+          <div class="welcome-mark"></div>
+          <h1>BASE Estruturas</h1>
+          <p class="tag">Ferramentas de cálculo</p>
+          <p class="desc">
+            Dimensionamento e verificações estruturais conforme NBR 6118:2014
+            e demais normas brasileiras.
+          </p>
+          <p class="hint">Selecione uma calculadora no menu lateral para começar.</p>
+        </div>
+      </div>
+
+      <iframe id="frame" class="frame hidden" src="about:blank" frameborder="0" title="Calculadora ativa"></iframe>
+    </div>
+  </main>
+
+  <!-- Backdrop mobile -->
+  <div class="backdrop" id="backdrop"></div>
+
+</div>
+
+<script src="assets/calculadoras.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

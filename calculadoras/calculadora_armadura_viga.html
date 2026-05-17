@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Armadura de Viga — NBR 6118:2014</title>
+<style>
+  :root {
+    --bg: #f5f5f0;
+    --surface: #ffffff;
+    --surface-alt: #ecebe4;
+    --border: #d3d1c7;
+    --text: #2c2c2a;
+    --text-muted: #5f5e5a;
+    --text-faint: #888780;
+    --accent: #185fa5;
+    --accent-bg: #e6f1fb;
+    --accent-hover: #0c447c;
+    --warning-bg: #faeeda;
+    --warning-text: #854f0b;
+    --danger-bg: #fcebeb;
+    --danger-text: #a32d2d;
+    --info-bg: #eaf3de;
+    --info-text: #3b6d11;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 24px 16px;
+    line-height: 1.6;
+  }
+  .container { max-width: 820px; margin: 0 auto; }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: var(--text-muted); margin: 0; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin: 0 0 12px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px 14px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .field label {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    min-height: 36px;
+    line-height: 1.3;
+    display: flex;
+    align-items: flex-end;
+  }
+  input, select {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input:disabled { background: var(--surface-alt); color: var(--text-muted); }
+  .md-display {
+    background: var(--accent-bg);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--accent);
+    margin-top: 12px;
+  }
+  .md-display strong { font-weight: 500; }
+
+  .radio-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .radio-option {
+    flex: 1;
+    position: relative;
+  }
+  .radio-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .radio-option label {
+    display: block;
+    padding: 10px 12px;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-muted);
+    background: var(--surface);
+    transition: all 0.15s;
+    margin: 0;
+  }
+  .radio-option input[type="radio"]:checked + label {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .t-fields { display: none; }
+  .t-fields.visible { display: contents; }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin: 16px 0 20px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--surface-alt); }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .result-card {
+    background: var(--surface-alt);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .result-card.visible { display: block; }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .result-label { font-size: 13px; color: var(--text-muted); margin-bottom: 2px; }
+  .result-value { font-size: 28px; font-weight: 500; line-height: 1.2; }
+  .result-meta { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
+  .alert {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .alert-warning { background: var(--warning-bg); color: var(--warning-text); }
+  .alert-danger { background: var(--danger-bg); color: var(--danger-text); }
+  .alert-info { background: var(--info-bg); color: var(--info-text); }
+  .details {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.8;
+    display: none;
+  }
+  .details.visible { display: block; }
+  .details strong { color: var(--text); font-weight: 500; }
+  .footer {
+    font-size: 11px;
+    color: var(--text-faint);
+    line-height: 1.6;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c;
+      --surface: #2c2c2a;
+      --surface-alt: #252523;
+      --border: #444441;
+      --text: #f1efe8;
+      --text-muted: #b4b2a9;
+      --text-faint: #888780;
+      --accent: #85b7eb;
+      --accent-bg: #0c447c;
+      --accent-hover: #378add;
+      --warning-bg: #633806;
+      --warning-text: #fac775;
+      --danger-bg: #791f1f;
+      --danger-text: #f7c1c1;
+      --info-bg: #27500a;
+      --info-text: #c0dd97;
+    }
+    .btn-primary { color: #0c1626; }
+  }
+
+  /* ===== ESTILOS DE IMPRESSÃO / PDF ===== */
+  #print-area { display: none; }
+  @media print {
+    @page { size: A4; margin: 20mm 18mm; }
+    body { background: white !important; color: black !important; padding: 0 !important; font-size: 11pt; line-height: 1.5; }
+    .container > *:not(#print-area) { display: none !important; }
+    #print-area { display: block !important; color: black; font-family: "Times New Roman", Georgia, serif; }
+    #print-area h1 { font-size: 16pt; text-align: center; margin: 0 0 4px; font-weight: bold; }
+    #print-area .doc-subtitle { text-align: center; font-size: 11pt; margin: 0 0 6px; color: #444; }
+    #print-area .doc-date { text-align: center; font-size: 10pt; margin: 0 0 18px; color: #666; }
+    #print-area h2 { font-size: 13pt; font-weight: bold; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #999; page-break-after: avoid; }
+    #print-area h3 { font-size: 11pt; font-weight: bold; margin: 12px 0 6px; page-break-after: avoid; }
+    #print-area table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 10.5pt; page-break-inside: avoid; }
+    #print-area td, #print-area th { border: 1px solid #888; padding: 5px 8px; text-align: left; }
+    #print-area th { background: #eee; font-weight: bold; }
+    #print-area td.label { width: 55%; }
+    #print-area td.val { text-align: right; font-family: "Courier New", monospace; }
+    #print-area .formula { font-family: "Courier New", monospace; background: #f4f4f4; padding: 6px 10px; border-left: 3px solid #333; margin: 6px 0; font-size: 10pt; page-break-inside: avoid; }
+    #print-area p { margin: 4px 0; text-align: justify; }
+    #print-area .highlight { background: #f0f0f0; padding: 8px 12px; border-left: 4px solid #000; margin: 10px 0; font-weight: bold; page-break-inside: avoid; }
+    #print-area .note { font-size: 9.5pt; color: #555; font-style: italic; margin-top: 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Calculadora de armadura de viga</h1>
+    <p class="subtitle">Flexão simples · seção retangular ou T · NBR 6118:2014</p>
+  </header>
+
+  <div class="card">
+    <p class="section-title">Tipo de seção</p>
+    <div class="radio-group">
+      <div class="radio-option">
+        <input type="radio" id="sec-ret" name="secao" value="ret" checked />
+        <label for="sec-ret">Seção retangular</label>
+      </div>
+      <div class="radio-option">
+        <input type="radio" id="sec-t" name="secao" value="t" />
+        <label for="sec-t">Seção T</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Esforço</p>
+    <div class="grid">
+      <div class="field">
+        <label for="mk">Mk (tf·m)</label>
+        <input type="number" id="mk" value="10.00" step="0.01" />
+      </div>
+      <div class="field">
+        <label for="vk">Vk (tf)</label>
+        <input type="number" id="vk" value="8.00" step="0.01" />
+      </div>
+      <div class="field">
+        <label for="gf">γf (majoração)</label>
+        <input type="number" id="gf" value="1.4" step="0.05" />
+      </div>
+    </div>
+    <div class="md-display">
+      Md = γf · Mk = <strong><span id="md_tfm">14,000</span> tf·m</strong>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      Vd = γf · Vk = <strong><span id="vd_tf">11,200</span> tf</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Geometria</p>
+    <div class="grid" id="grid-geom">
+      <div class="field">
+        <label for="bw">bw — largura da alma (cm)</label>
+        <input type="number" id="bw" value="19" step="1" />
+      </div>
+      <div class="field">
+        <label for="h">h — altura total (cm)</label>
+        <input type="number" id="h" value="50" step="1" />
+      </div>
+      <div class="field">
+        <label for="d">d — altura útil (cm)</label>
+        <input type="number" id="d" value="46" step="0.5" />
+      </div>
+      <div class="field">
+        <label for="dl">d' = h − d (cm)</label>
+        <input type="number" id="dl" value="4" step="0.5" disabled />
+      </div>
+      <div class="field t-fields" id="field-bf">
+        <label for="bf">bf — largura colaborante da mesa (cm)</label>
+        <input type="number" id="bf" value="80" step="1" />
+      </div>
+      <div class="field t-fields" id="field-hf">
+        <label for="hf">hf — altura da mesa/laje (cm)</label>
+        <input type="number" id="hf" value="10" step="0.5" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Materiais</p>
+    <div class="grid">
+      <div class="field">
+        <label for="fck">fck (MPa)</label>
+        <select id="fck">
+          <option>20</option><option>25</option><option selected>30</option>
+          <option>35</option><option>40</option><option>45</option>
+          <option>50</option><option>55</option><option>60</option>
+          <option>70</option><option>80</option><option>90</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="aco">Aço</label>
+        <select id="aco">
+          <option value="50" selected>CA-50</option>
+          <option value="60">CA-60</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="gc">γc</label>
+        <input type="number" id="gc" value="1.4" step="0.05" />
+      </div>
+      <div class="field">
+        <label for="gs">γs</label>
+        <input type="number" id="gs" value="1.15" step="0.05" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Cisalhamento</p>
+    <div class="radio-group">
+      <div class="radio-option">
+        <input type="radio" id="mod-1" name="modelo" value="1" checked />
+        <label for="mod-1">Modelo I (θ = 45°)</label>
+      </div>
+      <div class="radio-option">
+        <input type="radio" id="mod-2" name="modelo" value="2" />
+        <label for="mod-2">Modelo II (θ variável)</label>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="field">
+        <label for="aco_estribo">Aço do estribo</label>
+        <select id="aco_estribo">
+          <option value="50" selected>CA-50</option>
+          <option value="60">CA-60</option>
+        </select>
+      </div>
+      <div class="field" id="field-theta">
+        <label for="theta">θ (graus, 30°–45°)</label>
+        <input type="number" id="theta" value="45" step="1" min="30" max="45" disabled />
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btn-calc">Calcular</button>
+    <button class="btn" id="btn-pdf" disabled>Gerar memória de cálculo (PDF)</button>
+  </div>
+
+  <div class="result-card" id="resultado"></div>
+  <div class="details" id="detalhes"></div>
+
+  <div class="result-card" id="resultado-cis"></div>
+  <div class="details" id="detalhes-cis"></div>
+
+  <p class="footer">
+    Cálculo conforme NBR 6118:2014 (item 17.2.2) com diagrama retangular simplificado.
+    Parâmetros λ e η ajustados para fck ≤ 50 MPa ou fck &gt; 50 MPa.
+    Limite de x/d = 0,45 (fck ≤ 50) ou 0,35 (fck &gt; 50).
+    Em seções T, verifica-se a posição da linha neutra: se cair dentro da mesa, dimensiona-se como retangular com largura bf; caso contrário, decompõe-se em parcela das abas + parcela da alma.
+    Conversão: 1 tf = 10 kN (padrão de engenharia estrutural).
+  </p>
+
+  <div id="print-area"></div>
+
+</div>
+
+<script>
+const G = 10.0; // 1 tf = 10 kN
+let ultimoCalculo = null;
+
+function fmtBR(v, dec) {
+  if (!isFinite(v)) return '—';
+  return v.toFixed(dec).replace('.', ',');
+}
+function kNcm_to_tfm(v) { return v / 100 / G; }
+
+function atualizarMd() {
+  const Mk = parseFloat(document.getElementById('mk').value) || 0;
+  const Vk = parseFloat(document.getElementById('vk').value) || 0;
+  const gf = parseFloat(document.getElementById('gf').value) || 0;
+  document.getElementById('md_tfm').textContent = fmtBR(Mk * gf, 3);
+  document.getElementById('vd_tf').textContent = fmtBR(Vk * gf, 3);
+}
+
+function atualizarDl() {
+  const h = parseFloat(document.getElementById('h').value) || 0;
+  const d = parseFloat(document.getElementById('d').value) || 0;
+  const dl = h - d;
+  document.getElementById('dl').value = dl.toFixed(1);
+}
+
+function tipoSecao() {
+  return document.querySelector('input[name="secao"]:checked').value;
+}
+
+function atualizarVisibilidadeT() {
+  const t = tipoSecao() === 't';
+  document.querySelectorAll('.t-fields').forEach(el => {
+    el.classList.toggle('visible', t);
+  });
+}
+
+function calcular() {
+  const Mk_tfm = parseFloat(document.getElementById('mk').value);
+  const gf = parseFloat(document.getElementById('gf').value);
+  const bw = parseFloat(document.getElementById('bw').value);
+  const h = parseFloat(document.getElementById('h').value);
+  const d = parseFloat(document.getElementById('d').value);
+  const dl = parseFloat(document.getElementById('dl').value);
+  const fck = parseFloat(document.getElementById('fck').value);
+  const aco = parseFloat(document.getElementById('aco').value);
+  const gc = parseFloat(document.getElementById('gc').value);
+  const gs = parseFloat(document.getElementById('gs').value);
+  const tipo = tipoSecao();
+  const bf = tipo === 't' ? parseFloat(document.getElementById('bf').value) : bw;
+  const hf = tipo === 't' ? parseFloat(document.getElementById('hf').value) : 0;
+
+  const res = document.getElementById('resultado');
+  const det = document.getElementById('detalhes');
+  res.classList.add('visible');
+  det.classList.add('visible');
+
+  if (!Mk_tfm || !gf || !bw || !h || !d || !fck || !gc || !gs) {
+    res.innerHTML = '<span style="color: var(--text-muted);">Preencha todos os campos.</span>';
+    det.innerHTML = '';
+    document.getElementById('btn-pdf').disabled = true;
+    return;
+  }
+  if (d >= h) {
+    res.innerHTML = '<span style="color: var(--danger-text);">d deve ser menor que h.</span>';
+    det.innerHTML = '';
+    document.getElementById('btn-pdf').disabled = true;
+    return;
+  }
+  if (tipo === 't' && (!bf || !hf || bf < bw || hf >= h)) {
+    res.innerHTML = '<span style="color: var(--danger-text);">Verifique bf (≥ bw) e hf (&lt; h).</span>';
+    det.innerHTML = '';
+    document.getElementById('btn-pdf').disabled = true;
+    return;
+  }
+
+  const Md_tfm = Mk_tfm * gf;
+  const Md_kNm = Md_tfm * G;
+  const Md = Md_kNm * 100;
+
+  const fyk = aco * 10;
+  const fcd_MPa = fck / gc;
+  const fyd_MPa = fyk / gs;
+  const fcd = fcd_MPa / 10;
+  const fyd = fyd_MPa / 10;
+
+  let lambda, eta, x_lim_rel;
+  if (fck <= 50) {
+    lambda = 0.8; eta = 0.85; x_lim_rel = 0.45;
+  } else {
+    lambda = 0.8 - (fck - 50) / 400;
+    eta = 0.85 * (1 - (fck - 50) / 200);
+    x_lim_rel = 0.35;
+  }
+
+  const sigma_cd = eta * fcd;
+  const x_lim = x_lim_rel * d;
+  const z_lim = d - lambda * x_lim / 2;
+
+  const dados = {
+    tipoSecao: tipo, Mk_tfm, gf, Md_tfm, Md_kNm, bw, h, d, dl, bf, hf,
+    fck, aco, fyk, gc, gs, fcd_MPa, fyd_MPa, fyd,
+    lambda, eta, x_lim_rel, sigma_cd, x_lim, z_lim
+  };
+
+  // Calcular Mlim conforme tipo de seção (para alerta de armadura dupla)
+  let M_lim;
+  if (tipo === 'ret') {
+    M_lim = sigma_cd * bw * lambda * x_lim * z_lim;
+  } else {
+    // Para seção T, o limite é mais complexo; usa-se bw na verificação da alma
+    M_lim = sigma_cd * bw * lambda * x_lim * z_lim;
+  }
+  const M_lim_tfm = kNcm_to_tfm(M_lim);
+  dados.M_lim_tfm = M_lim_tfm;
+
+  let html, detHtml;
+
+  if (tipo === 'ret') {
+    // ====== SEÇÃO RETANGULAR ======
+    const A = sigma_cd * bw * lambda * lambda / 2;
+    const B = -sigma_cd * bw * lambda * d;
+    const C = Md;
+    const disc = B*B - 4*A*C;
+
+    if (Md <= M_lim && disc >= 0) {
+      // Armadura simples
+      const x = (-B - Math.sqrt(disc)) / (2*A);
+      const z = d - lambda * x / 2;
+      const As = Md / (fyd * z);
+      const eps_cu = 3.5;
+      const eps_yd = (fyd_MPa / 210000) * 1000;
+      const eps_s = eps_cu * (d - x) / x;
+      let dominio;
+      if (x / d <= 0.259) dominio = '2 (ELU por deformação plástica do aço)';
+      else if (eps_s >= eps_yd) dominio = '3 (aço escoa antes do esmagamento)';
+      else dominio = '4 (peça super-armada — evitar)';
+
+      Object.assign(dados, { modo: 'simples', x, z, As, eps_s, eps_yd, dominio });
+      const finalArm = armaduraMinMax(As, 0, bw, h, fck);
+      Object.assign(dados, finalArm);
+
+      html = `
+        <div class="result-grid">
+          <div>
+            <div class="result-label">Armadura tracionada As</div>
+            <div class="result-value">${fmtBR(finalArm.As_adotada, 2)} cm²</div>
+            <div class="result-meta">As calculado: ${fmtBR(As, 2)} cm²</div>
+          </div>
+          <div>
+            <div class="result-label">Configuração</div>
+            <div class="result-value" style="font-size: 18px;">Retangular · simples</div>
+            <div class="result-meta">Domínio ${dominio}</div>
+          </div>
+        </div>
+        ${finalArm.alerta}
+      `;
+      detHtml = detalhesRetSimples(dados, finalArm);
+    } else {
+      // Armadura dupla retangular
+      const x = x_lim, z = z_lim;
+      const M1 = M_lim;
+      const M2 = Md - M1;
+      const eps_cu = 3.5;
+      const eps_sl = eps_cu * (x - dl) / x;
+      const eps_yd = (fyd_MPa / 210000) * 1000;
+      let sigma_sl = (eps_sl >= eps_yd) ? fyd : (eps_sl / 1000) * 21000;
+      const As1 = M1 / (fyd * z);
+      const Asl = M2 / (sigma_sl * (d - dl));
+      const As_total = As1 + M2 / (fyd * (d - dl));
+
+      Object.assign(dados, {
+        modo: 'dupla', x, z, As: As_total, Asl, As1,
+        M1_tfm: kNcm_to_tfm(M1), M2_tfm: kNcm_to_tfm(M2),
+        eps_sl, eps_yd, sigma_sl_MPa: sigma_sl * 10,
+        escoaCompr: eps_sl >= eps_yd
+      });
+      const finalArm = armaduraMinMax(As_total, Asl, bw, h, fck);
+      Object.assign(dados, finalArm);
+
+      html = `
+        <div class="result-grid">
+          <div>
+            <div class="result-label">Armadura tracionada As</div>
+            <div class="result-value">${fmtBR(finalArm.As_adotada, 2)} cm²</div>
+          </div>
+          <div>
+            <div class="result-label">Armadura comprimida As'</div>
+            <div class="result-value">${fmtBR(Asl, 2)} cm²</div>
+          </div>
+        </div>
+        <div class="alert alert-warning"><strong>Md &gt; Mlim</strong> → armadura dupla necessária.</div>
+        ${finalArm.alerta}
+      `;
+      detHtml = detalhesRetDupla(dados, finalArm);
+    }
+  } else {
+    // ====== SEÇÃO T ======
+    // Limite com toda a mesa comprimida (λx = hf → x = hf/λ)
+    const M_mesa_lim = sigma_cd * bf * hf * (d - hf/2);
+    const M_mesa_lim_tfm = kNcm_to_tfm(M_mesa_lim);
+    dados.M_mesa_lim_tfm = M_mesa_lim_tfm;
+
+    if (Md <= M_mesa_lim) {
+      // CASO 1: LN dentro da mesa → comporta-se como retangular bf × d
+      const A = sigma_cd * bf * lambda * lambda / 2;
+      const B = -sigma_cd * bf * lambda * d;
+      const C = Md;
+      const disc = B*B - 4*A*C;
+      const x = (-B - Math.sqrt(disc)) / (2*A);
+      const lx = lambda * x;
+      const z = d - lx / 2;
+      const As = Md / (fyd * z);
+      const eps_cu = 3.5;
+      const eps_yd = (fyd_MPa / 210000) * 1000;
+      const eps_s = eps_cu * (d - x) / x;
+      let dominio;
+      if (x / d <= 0.259) dominio = '2 (ELU por deformação plástica do aço)';
+      else if (eps_s >= eps_yd) dominio = '3 (aço escoa antes do esmagamento)';
+      else dominio = '4 (peça super-armada — evitar)';
+
+      Object.assign(dados, {
+        modo: 't-mesa', x, lx, z, As, eps_s, eps_yd, dominio,
+        casoT: 'LN dentro da mesa'
+      });
+      const finalArm = armaduraMinMax(As, 0, bw, h, fck);
+      Object.assign(dados, finalArm);
+
+      html = `
+        <div class="result-grid">
+          <div>
+            <div class="result-label">Armadura tracionada As</div>
+            <div class="result-value">${fmtBR(finalArm.As_adotada, 2)} cm²</div>
+            <div class="result-meta">As calculado: ${fmtBR(As, 2)} cm²</div>
+          </div>
+          <div>
+            <div class="result-label">Configuração</div>
+            <div class="result-value" style="font-size: 18px;">Seção T · LN na mesa</div>
+            <div class="result-meta">Dimensionada como retangular bf × d · Domínio ${dominio}</div>
+          </div>
+        </div>
+        <div class="alert alert-info">λx = ${fmtBR(lx, 2)} cm ≤ hf = ${fmtBR(hf, 2)} cm → linha neutra dentro da mesa.</div>
+        ${finalArm.alerta}
+      `;
+      detHtml = detalhesTmesa(dados, finalArm);
+    } else {
+      // CASO 2: LN na alma → decompor em abas + alma
+      const M_aba = sigma_cd * (bf - bw) * hf * (d - hf/2);
+      const As_aba = M_aba / (fyd * (d - hf/2));
+      const M_alma = Md - M_aba;
+
+      const A = sigma_cd * bw * lambda * lambda / 2;
+      const B = -sigma_cd * bw * lambda * d;
+      const C = M_alma;
+      const disc = B*B - 4*A*C;
+
+      if (M_alma > M_lim || disc < 0) {
+        // Necessita armadura dupla na alma
+        const x = x_lim, z = z_lim;
+        const M_alma_lim = M_lim;
+        const M_alma_2 = M_alma - M_alma_lim;
+        const eps_cu = 3.5;
+        const eps_sl = eps_cu * (x - dl) / x;
+        const eps_yd = (fyd_MPa / 210000) * 1000;
+        let sigma_sl = (eps_sl >= eps_yd) ? fyd : (eps_sl / 1000) * 21000;
+        const As_alma_1 = M_alma_lim / (fyd * z);
+        const Asl = M_alma_2 / (sigma_sl * (d - dl));
+        const As_alma_2 = M_alma_2 / (fyd * (d - dl));
+        const As_alma_total = As_alma_1 + As_alma_2;
+        const As_total = As_aba + As_alma_total;
+
+        Object.assign(dados, {
+          modo: 't-alma-dupla', x, z,
+          M_aba_tfm: kNcm_to_tfm(M_aba), As_aba,
+          M_alma_tfm: kNcm_to_tfm(M_alma), M_alma_lim_tfm: kNcm_to_tfm(M_alma_lim),
+          M_alma_2_tfm: kNcm_to_tfm(M_alma_2),
+          As_alma_1, As_alma_2, As_alma_total,
+          As: As_total, Asl,
+          eps_sl, eps_yd, sigma_sl_MPa: sigma_sl * 10,
+          escoaCompr: eps_sl >= eps_yd,
+          casoT: 'LN na alma — necessita armadura dupla'
+        });
+        const finalArm = armaduraMinMax(As_total, Asl, bw, h, fck);
+        Object.assign(dados, finalArm);
+
+        html = `
+          <div class="result-grid">
+            <div>
+              <div class="result-label">Armadura tracionada As</div>
+              <div class="result-value">${fmtBR(finalArm.As_adotada, 2)} cm²</div>
+            </div>
+            <div>
+              <div class="result-label">Armadura comprimida As'</div>
+              <div class="result-value">${fmtBR(Asl, 2)} cm²</div>
+            </div>
+          </div>
+          <div class="alert alert-warning"><strong>Seção T com armadura dupla</strong> · M_alma &gt; Mlim. Considere aumentar h.</div>
+          ${finalArm.alerta}
+        `;
+        detHtml = detalhesTalmaDupla(dados, finalArm);
+      } else {
+        // Armadura simples na alma
+        const x = (-B - Math.sqrt(disc)) / (2*A);
+        const z = d - lambda * x / 2;
+        const As_alma = M_alma / (fyd * z);
+        const As_total = As_aba + As_alma;
+        const eps_cu = 3.5;
+        const eps_yd = (fyd_MPa / 210000) * 1000;
+        const eps_s = eps_cu * (d - x) / x;
+        let dominio;
+        if (x / d <= 0.259) dominio = '2';
+        else if (eps_s >= eps_yd) dominio = '3 (aço escoa antes do esmagamento)';
+        else dominio = '4 (peça super-armada — evitar)';
+
+        Object.assign(dados, {
+          modo: 't-alma', x, z,
+          M_aba_tfm: kNcm_to_tfm(M_aba), As_aba,
+          M_alma_tfm: kNcm_to_tfm(M_alma), As_alma,
+          As: As_total, eps_s, eps_yd, dominio,
+          casoT: 'LN na alma — armadura simples'
+        });
+        const finalArm = armaduraMinMax(As_total, 0, bw, h, fck);
+        Object.assign(dados, finalArm);
+
+        html = `
+          <div class="result-grid">
+            <div>
+              <div class="result-label">Armadura tracionada As</div>
+              <div class="result-value">${fmtBR(finalArm.As_adotada, 2)} cm²</div>
+              <div class="result-meta">As_aba: ${fmtBR(As_aba, 2)} + As_alma: ${fmtBR(As_alma, 2)} cm²</div>
+            </div>
+            <div>
+              <div class="result-label">Configuração</div>
+              <div class="result-value" style="font-size: 18px;">Seção T · LN na alma</div>
+              <div class="result-meta">Decomposta em abas + alma · Domínio ${dominio}</div>
+            </div>
+          </div>
+          <div class="alert alert-info">λx = ${fmtBR(lambda*x, 2)} cm &gt; hf = ${fmtBR(hf, 2)} cm → linha neutra abaixo da mesa.</div>
+          ${finalArm.alerta}
+        `;
+        detHtml = detalhesTalma(dados, finalArm);
+      }
+    }
+  }
+
+  document.getElementById('resultado').innerHTML = html;
+  document.getElementById('detalhes').innerHTML = detHtml;
+  ultimoCalculo = dados;
+
+  // === Cálculo de cisalhamento ===
+  calcularCisalhamento(dados);
+
+  document.getElementById('btn-pdf').disabled = false;
+}
+
+function armaduraMinMax(As, Asl, bw, h, fck) {
+  const Ac = bw * h;
+  const tab = {20: 0.150, 25: 0.150, 30: 0.150, 35: 0.164, 40: 0.179, 45: 0.194, 50: 0.208, 55: 0.211, 60: 0.219, 70: 0.233, 80: 0.245, 90: 0.256};
+  const rho_min_pct = tab[fck] || 0.260;
+  const rho_min = rho_min_pct / 100;
+  const As_min = rho_min * Ac;
+  const As_max = 0.04 * Ac;
+  const As_adotada = Math.max(As, As_min);
+  let alerta = '';
+  if (As_adotada > As_max) {
+    alerta = `<div class="alert alert-danger">As ultrapassa o máximo permitido (4 %·Ac). Redimensionar a seção.</div>`;
+  } else if (As < As_min) {
+    alerta = `<div class="alert alert-warning">As calculado &lt; As,min. Adotada armadura mínima: ${fmtBR(As_min, 2)} cm².</div>`;
+  }
+  return { Ac, rho_min_pct, As_min, As_max, As_adotada, alerta };
+}
+
+// ====== Memória de cálculo do cisalhamento (PDF) ======
+function memoriaCisalhamento(cis, num) {
+  let html = `
+    <h2>${num}. Verificação ao cisalhamento</h2>
+    <p>Dimensionamento da armadura transversal conforme NBR 6118:2014, item 17.4.2 — ${cis.modeloTexto}.</p>
+
+    <h3>${num}.1 Esforço cortante</h3>
+    <table>
+      <tr><td class="label">Cortante característico (Vk)</td><td class="val">${fmtBR(cis.Vk_tf, 2)} tf</td></tr>
+      <tr><td class="label">Cortante de cálculo (Vd = γf · Vk)</td><td class="val">${fmtBR(cis.Vd_tf, 2)} tf = ${fmtBR(cis.Vd, 1)} kN</td></tr>
+    </table>
+
+    <h3>${num}.2 Propriedades dos materiais (cisalhamento)</h3>
+    <table>
+      <tr><td class="label">fctm (resistência média à tração)</td><td class="val">${fmtBR(cis.fctm_MPa, 3)} MPa</td></tr>
+      <tr><td class="label">fctd = 0,7·fctm/γc</td><td class="val">${fmtBR(cis.fctd_MPa, 3)} MPa</td></tr>
+      <tr><td class="label">fywd (limitado a 435 MPa para estribos)</td><td class="val">${fmtBR(cis.fywd_MPa, 1)} MPa</td></tr>
+      <tr><td class="label">αv2 = 1 − fck/250</td><td class="val">${fmtBR(cis.alpha_v2, 3)}</td></tr>
+    </table>
+
+    <h3>${num}.3 Verificação da biela comprimida (Vrd2)</h3>
+    <div class="formula">${cis.modelo === '1'
+      ? 'Vrd2 = 0,27 · αv2 · fcd · bw · d'
+      : 'Vrd2 = 0,54 · αv2 · fcd · bw · d · sen²θ · cotg θ'}</div>
+    <table>
+      <tr><td class="label">Vrd2</td><td class="val">${fmtBR(cis.Vrd2, 2)} kN = ${fmtBR(cis.Vrd2/G, 2)} tf</td></tr>
+      <tr><td class="label">Relação Vd / Vrd2</td><td class="val">${fmtBR(cis.Vd/cis.Vrd2*100, 1)} %</td></tr>
+      <tr><td class="label">Situação</td><td class="val">${cis.falhaBiela ? '✗ FALHA — bielas comprimidas' : '✓ OK'}</td></tr>
+    </table>
+  `;
+
+  if (cis.falhaBiela) {
+    html += `<p class="note">Necessário aumentar bw, d ou fck. Não é possível dimensionar a armadura transversal nesta configuração.</p>`;
+    return html;
+  }
+
+  html += `
+    <h3>${num}.4 Parcela do concreto (Vc)</h3>
+    <div class="formula">Vc0 = 0,6 · fctd · bw · d = ${fmtBR(cis.Vc0, 2)} kN</div>
+    ${cis.modelo === '2' ? `<p>No Modelo II, Vc é interpolado: Vc = Vc0 quando Vd ≤ Vc0, Vc = 0 quando Vd ≥ Vrd2, com interpolação linear entre esses limites.</p>` : ''}
+    <table>
+      <tr><td class="label">Vc adotado</td><td class="val">${fmtBR(cis.Vc, 2)} kN</td></tr>
+    </table>
+
+    <h3>${num}.5 Cálculo da armadura transversal</h3>
+    <div class="formula">Vsw = Vd − Vc = ${fmtBR(cis.Vd, 2)} − ${fmtBR(cis.Vc, 2)} = ${fmtBR(cis.Vsw, 2)} kN</div>
+    <div class="formula">${cis.modelo === '1'
+      ? 'Asw/s = Vsw / (0,9 · d · fywd)'
+      : 'Asw/s = Vsw / (0,9 · d · fywd · cotg θ)'}</div>
+    <div class="formula">Asw/s (calc.) = ${fmtBR(cis.Asw_per_m_calc, 3)} cm²/m</div>
+
+    <h3>${num}.6 Armadura mínima e espaçamento máximo</h3>
+    <table>
+      <tr><td class="label">ρsw,min = 0,2 · fctm / fywk</td><td class="val">${fmtBR(cis.rho_sw_min_pct, 4)} %</td></tr>
+      <tr><td class="label">Asw/s,min = ρsw,min · bw</td><td class="val">${fmtBR(cis.Asw_per_m_min, 3)} cm²/m</td></tr>
+      <tr><td class="label">${cis.criterio_smax}</td><td class="val">s,máx = ${fmtBR(cis.s_max, 1)} cm</td></tr>
+    </table>
+
+    <div class="highlight">
+      Asw/s adotado = ${fmtBR(cis.Asw_per_m_final, 3)} cm²/m ${cis.usouMinimo ? '(governado pela armadura mínima)' : ''}<br>
+      Espaçamento máximo: s,máx = ${fmtBR(cis.s_max, 1)} cm
+    </div>
+
+    <h3>${num}.7 Bitolas e espaçamentos</h3>
+    <p>Considerando estribos verticais com 2 ramos:</p>
+    <table>
+      <thead>
+        <tr><th>Bitola</th><th>Aφ (cm²)</th><th>Asw,estribo (cm²)</th><th>s,máx calc. (cm)</th><th>s adotado (cm)</th></tr>
+      </thead>
+      <tbody>
+        ${cis.tabelaBitolas.map(b => `
+          <tr>
+            <td>Ø ${fmtBR(b.phi, b.phi % 1 === 0 ? 0 : 1)} mm</td>
+            <td class="val">${fmtBR(b.A_phi, 3)}</td>
+            <td class="val">${fmtBR(b.Asw_estribo, 3)}</td>
+            <td class="val">${b.s_nec >= 999 ? '—' : fmtBR(Math.min(b.s_nec, cis.s_max), 1)}</td>
+            <td class="val"><strong>c/ ${b.s_adotado} cm</strong></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <p class="note">O espaçamento adotado é o mínimo entre o calculado e o s,máx de norma, arredondado para baixo a múltiplo de 1 cm.</p>
+  `;
+
+  return html;
+}
+
+// ====== CÁLCULO DE CISALHAMENTO (NBR 6118:2014 item 17.4.2) ======
+function calcularCisalhamento(dados) {
+  const resCis = document.getElementById('resultado-cis');
+  const detCis = document.getElementById('detalhes-cis');
+  resCis.classList.add('visible');
+  detCis.classList.add('visible');
+
+  const Vk_tf = parseFloat(document.getElementById('vk').value);
+  const gf = dados.gf;
+  const bw = dados.bw, d = dados.d;
+  const fck = dados.fck, gc = dados.gc;
+  const acoEst = parseFloat(document.getElementById('aco_estribo').value);
+  const modelo = document.querySelector('input[name="modelo"]:checked').value;
+  const thetaDeg = parseFloat(document.getElementById('theta').value);
+
+  if (!Vk_tf) {
+    resCis.innerHTML = '<span style="color: var(--text-muted);">Informe Vk para calcular cisalhamento.</span>';
+    detCis.innerHTML = '';
+    return;
+  }
+  if (modelo === '2' && (thetaDeg < 30 || thetaDeg > 45)) {
+    resCis.innerHTML = '<span style="color: var(--danger-text);">θ deve estar entre 30° e 45° no Modelo II.</span>';
+    detCis.innerHTML = '';
+    return;
+  }
+
+  const Vd_tf = Vk_tf * gf;
+  const Vd = Vd_tf * G; // kN
+
+  const fcd_MPa = fck / gc;
+  const fcd_kNcm2 = fcd_MPa / 10;
+  const fyk_est = acoEst * 10; // MPa
+  // NBR 17.4.2: fywd ≤ 435 MPa para estribos
+  const fywd_MPa = Math.min(fyk_est / 1.15, 435);
+  const fywd_kNcm2 = fywd_MPa / 10;
+
+  // fctm e fctd
+  let fctm_MPa;
+  if (fck <= 50) fctm_MPa = 0.3 * Math.pow(fck, 2/3);
+  else fctm_MPa = 2.12 * Math.log(1 + 0.11 * fck);
+  const fctk_inf_MPa = 0.7 * fctm_MPa;
+  const fctd_MPa = fctk_inf_MPa / gc;
+  const fctd_kNcm2 = fctd_MPa / 10;
+
+  const alpha_v2 = 1 - fck / 250;
+
+  let Vrd2, Vc0, Vc, Vsw, modeloTexto, thetaRad, cotgTheta;
+
+  if (modelo === '1') {
+    // ===== MODELO I =====
+    modeloTexto = 'Modelo I (θ = 45°)';
+    // Vrd2 = 0,27 · αv2 · fcd · bw · d
+    Vrd2 = 0.27 * alpha_v2 * fcd_kNcm2 * bw * d;
+    // Vc0 = 0,6 · fctd · bw · d
+    Vc0 = 0.6 * fctd_kNcm2 * bw * d;
+    Vc = Vc0;
+    Vsw = Math.max(Vd - Vc, 0);
+    cotgTheta = 1.0;
+    thetaRad = Math.PI / 4;
+  } else {
+    // ===== MODELO II =====
+    modeloTexto = `Modelo II (θ = ${thetaDeg}°)`;
+    thetaRad = thetaDeg * Math.PI / 180;
+    cotgTheta = 1 / Math.tan(thetaRad);
+    const sin2 = Math.pow(Math.sin(thetaRad), 2);
+    const senCos = Math.sin(thetaRad) * Math.cos(thetaRad);
+    // Vrd2 = 0,54 · αv2 · fcd · bw · d · sen²θ · (cotg α + cotg θ)
+    // α=90° (estribo vertical): cotg α = 0 → simplifica
+    Vrd2 = 0.54 * alpha_v2 * fcd_kNcm2 * bw * d * sin2 * cotgTheta;
+    // Vc1 (interpolação): se Vsd ≤ Vc0 → Vc1=Vc0; se Vsd = Vrd2 → Vc1=0
+    // simplificação adotada (NBR): interpolação linear
+    Vc0 = 0.6 * fctd_kNcm2 * bw * d;
+    if (Vd <= Vc0) {
+      Vc = Vc0;
+    } else if (Vd >= Vrd2) {
+      Vc = 0;
+    } else {
+      // Vc1 = Vc0 · (Vrd2 - Vsd) / (Vrd2 - Vc0)
+      Vc = Vc0 * (Vrd2 - Vd) / (Vrd2 - Vc0);
+    }
+    Vsw = Math.max(Vd - Vc, 0);
+  }
+
+  // Asw/s necessário (cm²/cm)
+  // Modelo I: Asw/s = Vsw / (0,9 · d · fywd)        — estribo vertical
+  // Modelo II: Asw/s = Vsw / (0,9 · d · fywd · (cotg α + cotg θ) · sen α)
+  //            α=90°: sen α = 1, cotg α = 0 → /(0,9·d·fywd·cotg θ)
+  let Asw_per_cm;
+  if (modelo === '1') {
+    Asw_per_cm = Vsw / (0.9 * d * fywd_kNcm2);
+  } else {
+    Asw_per_cm = Vsw / (0.9 * d * fywd_kNcm2 * cotgTheta);
+  }
+  let Asw_per_m_calc = Asw_per_cm * 100;
+
+  // Armadura mínima (item 17.4.1.1.1)
+  // ρsw,min = 0,2 · fctm / fywk  (com fywk ≤ 500 MPa para o cálculo)
+  const fywk_min = Math.min(fyk_est, 500);
+  const rho_sw_min = 0.2 * fctm_MPa / fywk_min;
+  const Asw_per_m_min = rho_sw_min * bw * 100; // cm²/m
+
+  const Asw_per_m_final = Math.max(Asw_per_m_calc, Asw_per_m_min);
+  const usouMinimo = Asw_per_m_calc < Asw_per_m_min;
+
+  // Espaçamento máximo (item 17.4.1.2.4 NBR 6118:2014)
+  let s_max, criterio_smax;
+  if (Vd <= 0.67 * Vrd2) {
+    s_max = Math.min(0.6 * d, 30);
+    criterio_smax = `Vd ≤ 0,67·Vrd2 → s,máx = min(0,6·d; 30 cm)`;
+  } else {
+    s_max = Math.min(0.3 * d, 20);
+    criterio_smax = `Vd > 0,67·Vrd2 → s,máx = min(0,3·d; 20 cm)`;
+  }
+
+  // Falha na biela?
+  const falhaBiela = Vd > Vrd2;
+
+  const dCis = {
+    Vk_tf, Vd_tf, Vd, modeloTexto, modelo, thetaDeg,
+    fcd_MPa, fctm_MPa, fctd_MPa, fywd_MPa, fyk_est: acoEst*10, alpha_v2,
+    Vrd2, Vc0, Vc, Vsw, cotgTheta,
+    Asw_per_m_calc, Asw_per_m_min, Asw_per_m_final, usouMinimo,
+    rho_sw_min_pct: rho_sw_min*100,
+    s_max, criterio_smax, falhaBiela
+  };
+
+  // Tabela de bitolas
+  const bitolas = [5, 6.3, 8, 10, 12.5, 16, 20];
+  dCis.tabelaBitolas = bitolas.map(phi => {
+    const A_phi = Math.PI * Math.pow(phi/10, 2) / 4; // cm²
+    const Asw_estribo = 2 * A_phi; // 2 ramos
+    const s_nec = Asw_per_m_final > 0 ? (Asw_estribo / Asw_per_m_final) * 100 : 999;
+    const s_adotado = Math.max(Math.min(Math.floor(Math.min(s_nec, s_max)), 30), 5);
+    const viavel = s_adotado >= 5;
+    return { phi, A_phi, Asw_estribo, s_nec, s_adotado, viavel };
+  });
+
+  Object.assign(dados, { cis: dCis });
+  ultimoCalculo = dados;
+
+  // ===== RENDER =====
+  let html = '';
+  if (falhaBiela) {
+    html = `
+      <div class="alert alert-danger" style="margin: 0; font-size: 14px;">
+        <strong>FALHA: Vd = ${fmtBR(Vd_tf, 2)} tf &gt; Vrd2 = ${fmtBR(Vrd2/G, 2)} tf</strong><br>
+        Ruptura por compressão diagonal das bielas. É necessário aumentar bw, d ou fck.
+      </div>
+    `;
+  } else {
+    html = `
+      <div class="result-grid">
+        <div>
+          <div class="result-label">Armadura transversal Asw/s</div>
+          <div class="result-value">${fmtBR(Asw_per_m_final, 2)} cm²/m</div>
+          <div class="result-meta">${usouMinimo ? `Armadura mínima governa (calc.: ${fmtBR(Asw_per_m_calc, 2)} cm²/m)` : `Calculada · mínima: ${fmtBR(Asw_per_m_min, 2)} cm²/m`}</div>
+        </div>
+        <div>
+          <div class="result-label">Verificações</div>
+          <div class="result-value" style="font-size: 18px;">${modeloTexto}</div>
+          <div class="result-meta">Vd = ${fmtBR(Vd_tf, 2)} tf · Vrd2 = ${fmtBR(Vrd2/G, 2)} tf ✓ · s,máx = ${fmtBR(s_max, 1)} cm</div>
+        </div>
+      </div>
+    `;
+    // Tabela de bitolas
+    html += `
+      <div style="margin-top: 16px;">
+        <div class="result-label" style="margin-bottom: 8px;">Bitolas e espaçamentos (estribo de 2 ramos)</div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
+              <th style="text-align: left; padding: 6px 8px;">Bitola</th>
+              <th style="text-align: right; padding: 6px 8px;">Aφ (cm²)</th>
+              <th style="text-align: right; padding: 6px 8px;">Asw,estribo (cm²)</th>
+              <th style="text-align: right; padding: 6px 8px;">s,máx calc. (cm)</th>
+              <th style="text-align: right; padding: 6px 8px;">s adotado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dCis.tabelaBitolas.map(b => `
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 6px 8px;"><strong>Ø ${fmtBR(b.phi, b.phi % 1 === 0 ? 0 : 1)} mm</strong></td>
+                <td style="text-align: right; padding: 6px 8px;">${fmtBR(b.A_phi, 3)}</td>
+                <td style="text-align: right; padding: 6px 8px;">${fmtBR(b.Asw_estribo, 3)}</td>
+                <td style="text-align: right; padding: 6px 8px;">${b.s_nec >= 999 ? '—' : fmtBR(Math.min(b.s_nec, s_max), 1)}</td>
+                <td style="text-align: right; padding: 6px 8px;"><strong>c/ ${b.s_adotado} cm</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  resCis.innerHTML = html;
+
+  let detHtml = `
+    <p class="section-title" style="margin-top: 0;">Cisalhamento — ${modeloTexto} (NBR 6118:2014, item 17.4.2)</p>
+    Vk = ${fmtBR(Vk_tf, 2)} tf &nbsp;·&nbsp; γf = ${fmtBR(gf, 2)} &nbsp;·&nbsp; <strong>Vd = γf · Vk = ${fmtBR(Vd_tf, 2)} tf = ${fmtBR(Vd, 1)} kN</strong><br>
+    fcd = ${fmtBR(fcd_MPa, 2)} MPa &nbsp;·&nbsp; fywd = min(fywk/γs ; 435 MPa) = ${fmtBR(fywd_MPa, 1)} MPa<br>
+    fctm = ${fmtBR(fctm_MPa, 3)} MPa &nbsp;·&nbsp; fctd = ${fmtBR(fctd_MPa, 3)} MPa<br>
+    αv2 = 1 − fck/250 = ${fmtBR(alpha_v2, 3)}<br><br>
+    <strong>Verificação da biela comprimida:</strong><br>
+    Vrd2 = ${fmtBR(Vrd2, 2)} kN = ${fmtBR(Vrd2/G, 2)} tf<br>
+    Vd / Vrd2 = ${fmtBR(Vd/Vrd2*100, 1)} % ${falhaBiela ? '✗ FALHA' : '✓ OK'}<br><br>
+    <strong>Parcela do concreto (Vc):</strong><br>
+    Vc0 = 0,6 · fctd · bw · d = ${fmtBR(Vc0, 2)} kN<br>
+    Vc = ${fmtBR(Vc, 2)} kN ${modelo === '2' && Vd > Vc0 && Vd < Vrd2 ? '(interpolado, Modelo II)' : ''}<br><br>
+    <strong>Cálculo da armadura transversal:</strong><br>
+    Vsw = Vd − Vc = ${fmtBR(Vsw, 2)} kN<br>
+    Asw/s = Vsw / (0,9 · d · fywd${modelo === '2' ? ' · cotg θ' : ''}) = <strong>${fmtBR(Asw_per_m_calc, 3)} cm²/m</strong><br><br>
+    <strong>Armadura mínima (item 17.4.1.1.1):</strong><br>
+    ρsw,min = 0,2 · fctm / fywk = ${fmtBR(dCis.rho_sw_min_pct, 4)} %<br>
+    Asw/s,min = ρsw,min · bw = ${fmtBR(Asw_per_m_min, 3)} cm²/m<br><br>
+    <strong>Asw/s adotado = ${fmtBR(Asw_per_m_final, 3)} cm²/m</strong> ${usouMinimo ? '(mínima)' : '(calculada)'}<br>
+    ${criterio_smax} = <strong>${fmtBR(s_max, 1)} cm</strong>
+  `;
+
+  detCis.innerHTML = detHtml;
+}
+
+// ====== Funções de detalhamento na tela ======
+function detalhesRetSimples(c, f) {
+  return `
+    <p class="section-title" style="margin-top: 0;">Detalhes do cálculo — seção retangular, armadura simples</p>
+    Mk = ${fmtBR(c.Mk_tfm, 3)} tf·m &nbsp;·&nbsp; γf = ${fmtBR(c.gf, 2)} &nbsp;·&nbsp; Md = γf · Mk = <strong>${fmtBR(c.Md_tfm, 3)} tf·m</strong><br>
+    fcd = fck/γc = ${c.fck}/${fmtBR(c.gc, 2)} = ${fmtBR(c.fcd_MPa, 2)} MPa &nbsp;·&nbsp; fyd = ${fmtBR(c.fyd_MPa, 1)} MPa<br>
+    λ = ${fmtBR(c.lambda, 3)} &nbsp;·&nbsp; η = ${fmtBR(c.eta, 3)} &nbsp;·&nbsp; σcd = η·fcd = ${fmtBR(c.sigma_cd, 3)} kN/cm²<br>
+    Mlim = ${fmtBR(c.M_lim_tfm, 3)} tf·m &nbsp;·&nbsp; Md ≤ Mlim → armadura simples<br>
+    x = ${fmtBR(c.x, 2)} cm &nbsp;·&nbsp; x/d = ${fmtBR(c.x/c.d, 3)} &nbsp;·&nbsp; z = ${fmtBR(c.z, 2)} cm<br>
+    εs = ${fmtBR(c.eps_s, 2)}‰ &nbsp;·&nbsp; εyd = ${fmtBR(c.eps_yd, 2)}‰<br>
+    As = Md / (fyd · z) = <strong>${fmtBR(c.As, 2)} cm²</strong><br><br>
+    <p class="section-title">Armadura mínima e máxima</p>
+    ρmin = ${fmtBR(f.rho_min_pct, 3)} % &nbsp;·&nbsp; As,min = ${fmtBR(f.As_min, 2)} cm² &nbsp;·&nbsp; As,máx = ${fmtBR(f.As_max, 2)} cm²<br>
+    <strong>As adotada = ${fmtBR(f.As_adotada, 2)} cm²</strong>
+  `;
+}
+
+function detalhesRetDupla(c, f) {
+  return `
+    <p class="section-title" style="margin-top: 0;">Detalhes do cálculo — seção retangular, armadura dupla</p>
+    Md = ${fmtBR(c.Md_tfm, 3)} tf·m &nbsp;·&nbsp; Mlim = ${fmtBR(c.M_lim_tfm, 3)} tf·m → Md &gt; Mlim<br>
+    M1 = Mlim = ${fmtBR(c.M_lim_tfm, 3)} tf·m &nbsp;·&nbsp; ΔM = ${fmtBR(c.M2_tfm, 3)} tf·m<br>
+    εs' = ${fmtBR(c.eps_sl, 2)}‰ &nbsp;·&nbsp; σs' = ${fmtBR(c.sigma_sl_MPa, 1)} MPa ${c.escoaCompr ? '(escoa)' : '(NÃO escoa)'}<br>
+    As1 = ${fmtBR(c.As1, 2)} cm² &nbsp;·&nbsp; As2 = ${fmtBR(c.As - c.As1, 2)} cm²<br>
+    As = <strong>${fmtBR(c.As, 2)} cm²</strong> &nbsp;·&nbsp; As' = <strong>${fmtBR(c.Asl, 2)} cm²</strong><br><br>
+    <p class="section-title">Armadura mínima e máxima</p>
+    As,min = ${fmtBR(f.As_min, 2)} &nbsp;·&nbsp; <strong>As adotada = ${fmtBR(f.As_adotada, 2)} cm²</strong>
+  `;
+}
+
+function detalhesTmesa(c, f) {
+  return `
+    <p class="section-title" style="margin-top: 0;">Detalhes do cálculo — seção T, LN dentro da mesa</p>
+    Mk = ${fmtBR(c.Mk_tfm, 3)} tf·m &nbsp;·&nbsp; Md = γf · Mk = <strong>${fmtBR(c.Md_tfm, 3)} tf·m</strong><br>
+    bf = ${c.bf} cm &nbsp;·&nbsp; hf = ${c.hf} cm &nbsp;·&nbsp; bw = ${c.bw} cm<br>
+    M_mesa,lim (toda mesa comprimida) = ${fmtBR(c.M_mesa_lim_tfm, 3)} tf·m → Md ≤ M_mesa,lim → LN na mesa<br>
+    Dimensionado como retangular bf × d:<br>
+    x = ${fmtBR(c.x, 2)} cm &nbsp;·&nbsp; λx = ${fmtBR(c.lx, 2)} cm ≤ hf = ${c.hf} cm ✓<br>
+    z = ${fmtBR(c.z, 2)} cm &nbsp;·&nbsp; εs = ${fmtBR(c.eps_s, 2)}‰<br>
+    As = Md / (fyd · z) = <strong>${fmtBR(c.As, 2)} cm²</strong><br><br>
+    <p class="section-title">Armadura mínima e máxima</p>
+    As,min = ${fmtBR(f.As_min, 2)} cm² &nbsp;·&nbsp; <strong>As adotada = ${fmtBR(f.As_adotada, 2)} cm²</strong>
+  `;
+}
+
+function detalhesTalma(c, f) {
+  return `
+    <p class="section-title" style="margin-top: 0;">Detalhes do cálculo — seção T, LN na alma</p>
+    Md = <strong>${fmtBR(c.Md_tfm, 3)} tf·m</strong> &nbsp;·&nbsp; bf = ${c.bf} cm &nbsp;·&nbsp; hf = ${c.hf} cm &nbsp;·&nbsp; bw = ${c.bw} cm<br>
+    M_mesa,lim = ${fmtBR(c.M_mesa_lim_tfm, 3)} tf·m → Md &gt; M_mesa,lim → LN na alma<br>
+    <strong>Parcela das abas</strong> (bf − bw) × hf:<br>
+    M_aba = σcd · (bf − bw) · hf · (d − hf/2) = ${fmtBR(c.M_aba_tfm, 3)} tf·m<br>
+    As_aba = M_aba / [fyd · (d − hf/2)] = ${fmtBR(c.As_aba, 2)} cm²<br>
+    <strong>Parcela da alma</strong> (largura bw):<br>
+    M_alma = Md − M_aba = ${fmtBR(c.M_alma_tfm, 3)} tf·m<br>
+    x = ${fmtBR(c.x, 2)} cm &nbsp;·&nbsp; z = ${fmtBR(c.z, 2)} cm &nbsp;·&nbsp; εs = ${fmtBR(c.eps_s, 2)}‰<br>
+    As_alma = M_alma / (fyd · z) = ${fmtBR(c.As_alma, 2)} cm²<br>
+    <strong>As = As_aba + As_alma = ${fmtBR(c.As, 2)} cm²</strong><br><br>
+    <p class="section-title">Armadura mínima e máxima</p>
+    As,min = ${fmtBR(f.As_min, 2)} cm² &nbsp;·&nbsp; <strong>As adotada = ${fmtBR(f.As_adotada, 2)} cm²</strong>
+  `;
+}
+
+function detalhesTalmaDupla(c, f) {
+  return `
+    <p class="section-title" style="margin-top: 0;">Detalhes do cálculo — seção T com armadura dupla</p>
+    Md = <strong>${fmtBR(c.Md_tfm, 3)} tf·m</strong><br>
+    M_aba = ${fmtBR(c.M_aba_tfm, 3)} tf·m → As_aba = ${fmtBR(c.As_aba, 2)} cm²<br>
+    M_alma = ${fmtBR(c.M_alma_tfm, 3)} tf·m &nbsp;·&nbsp; M_alma,lim = ${fmtBR(c.M_alma_lim_tfm, 3)} tf·m → necessita armadura dupla<br>
+    As_alma_1 = ${fmtBR(c.As_alma_1, 2)} cm² &nbsp;·&nbsp; As_alma_2 = ${fmtBR(c.As_alma_2, 2)} cm²<br>
+    As = ${fmtBR(c.As, 2)} cm² &nbsp;·&nbsp; As' = ${fmtBR(c.Asl, 2)} cm²<br><br>
+    <strong>As adotada = ${fmtBR(f.As_adotada, 2)} cm²</strong>
+  `;
+}
+
+// ====== Memória de cálculo (PDF) ======
+function gerarMemoriaPDF() {
+  if (!ultimoCalculo) return;
+  const c = ultimoCalculo;
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const tipoTexto = c.tipoSecao === 't' ? 'Seção T' : 'Seção retangular';
+
+  let html = `
+    <h1>Memória de cálculo — armadura longitudinal de viga</h1>
+    <p class="doc-subtitle">Flexão simples · ${tipoTexto} · NBR 6118:2014</p>
+    <p class="doc-date">Data de emissão: ${hoje}</p>
+
+    <h2>1. Dados de entrada</h2>
+
+    <h3>1.1 Esforço solicitante</h3>
+    <table>
+      <tr><td class="label">Momento característico (Mk)</td><td class="val">${fmtBR(c.Mk_tfm, 3)} tf·m</td></tr>
+      <tr><td class="label">Coeficiente de majoração das ações (γf)</td><td class="val">${fmtBR(c.gf, 2)}</td></tr>
+      <tr><td class="label"><strong>Momento de cálculo (Md = γf · Mk)</strong></td><td class="val"><strong>${fmtBR(c.Md_tfm, 3)} tf·m</strong></td></tr>
+    </table>
+    <p>O momento de cálculo é obtido pela majoração do momento característico:</p>
+    <div class="formula">Md = γf · Mk = ${fmtBR(c.gf, 2)} × ${fmtBR(c.Mk_tfm, 3)} = ${fmtBR(c.Md_tfm, 3)} tf·m</div>
+
+    <h3>1.2 Geometria da seção (${tipoTexto.toLowerCase()})</h3>
+    <table>
+      <tr><td class="label">Largura da alma (bw)</td><td class="val">${fmtBR(c.bw, 1)} cm</td></tr>
+      <tr><td class="label">Altura total (h)</td><td class="val">${fmtBR(c.h, 1)} cm</td></tr>
+      <tr><td class="label">Altura útil (d)</td><td class="val">${fmtBR(c.d, 1)} cm</td></tr>
+      <tr><td class="label">Distância da armadura comprimida (d' = h − d)</td><td class="val">${fmtBR(c.dl, 1)} cm</td></tr>
+      ${c.tipoSecao === 't' ? `
+        <tr><td class="label">Largura colaborante da mesa (bf)</td><td class="val">${fmtBR(c.bf, 1)} cm</td></tr>
+        <tr><td class="label">Altura da mesa/laje (hf)</td><td class="val">${fmtBR(c.hf, 1)} cm</td></tr>
+      ` : ''}
+      <tr><td class="label">Área da alma (Ac = bw · h)</td><td class="val">${fmtBR(c.Ac, 2)} cm²</td></tr>
+    </table>
+
+    <h3>1.3 Materiais</h3>
+    <table>
+      <tr><td class="label">Resistência característica do concreto (fck)</td><td class="val">${c.fck} MPa</td></tr>
+      <tr><td class="label">Aço CA-${c.aco} (fyk)</td><td class="val">${c.fyk} MPa</td></tr>
+      <tr><td class="label">Coeficiente de minoração do concreto (γc)</td><td class="val">${fmtBR(c.gc, 2)}</td></tr>
+      <tr><td class="label">Coeficiente de minoração do aço (γs)</td><td class="val">${fmtBR(c.gs, 2)}</td></tr>
+      <tr><td class="label">fcd = fck/γc</td><td class="val">${fmtBR(c.fcd_MPa, 2)} MPa</td></tr>
+      <tr><td class="label">fyd = fyk/γs</td><td class="val">${fmtBR(c.fyd_MPa, 1)} MPa</td></tr>
+    </table>
+
+    <h2>2. Parâmetros do diagrama retangular simplificado</h2>
+    <p>Conforme NBR 6118:2014, item 17.2.2, adotam-se os parâmetros λ e η em função do fck:</p>
+    <div class="formula">${c.fck <= 50
+      ? `Para fck ≤ 50 MPa: λ = 0,80 e η = 0,85`
+      : `Para fck > 50 MPa: λ = 0,80 − (fck − 50)/400 = ${fmtBR(c.lambda, 3)} e η = 0,85·(1 − (fck − 50)/200) = ${fmtBR(c.eta, 3)}`}
+    </div>
+    <table>
+      <tr><td class="label">Tensão de compressão de cálculo (σcd = η · fcd)</td><td class="val">${fmtBR(c.sigma_cd, 3)} kN/cm²</td></tr>
+      <tr><td class="label">Limite de x/d (ductilidade)</td><td class="val">${fmtBR(c.x_lim_rel, 2)}</td></tr>
+      <tr><td class="label">x,lim = ${fmtBR(c.x_lim_rel, 2)} · d</td><td class="val">${fmtBR(c.x_lim, 2)} cm</td></tr>
+      <tr><td class="label">z,lim = d − λ · x,lim / 2</td><td class="val">${fmtBR(c.z_lim, 2)} cm</td></tr>
+    </table>
+  `;
+
+  if (c.tipoSecao === 'ret') {
+    html += memoriaRet(c);
+  } else {
+    html += memoriaT(c);
+  }
+
+  // Numeração base depende do tipo
+  const numArmMin = c.tipoSecao === 't' ? 5 : 4;
+  const numResultFlex = numArmMin + 1;
+  const numCis = numResultFlex + 1;
+  const numRef = numCis + 1;
+
+  html += `
+    <h2>${numArmMin}. Armadura mínima e máxima — armadura longitudinal</h2>
+    <p>Conforme NBR 6118:2014, item 17.3.5 e tabela 17.3, devem ser respeitados os limites de armadura mínima e máxima:</p>
+    <table>
+      <tr><td class="label">Taxa mínima de armadura (ρmin)</td><td class="val">${fmtBR(c.rho_min_pct, 3)} %</td></tr>
+      <tr><td class="label">Armadura mínima (As,min = ρmin · Ac)</td><td class="val">${fmtBR(c.As_min, 2)} cm²</td></tr>
+      <tr><td class="label">Armadura máxima (As,máx = 4 % · Ac)</td><td class="val">${fmtBR(c.As_max, 2)} cm²</td></tr>
+    </table>
+
+    <h2>${numResultFlex}. Resultado da flexão</h2>
+    <div class="highlight">
+      Armadura tracionada adotada: As = ${fmtBR(c.As_adotada, 2)} cm²
+      ${c.Asl ? `<br>Armadura comprimida: As' = ${fmtBR(c.Asl, 2)} cm²` : ''}
+    </div>
+    <p class="note">
+      Valor obtido como o máximo entre a armadura calculada e a armadura mínima de norma.
+      A armadura final deve respeitar o detalhamento, número mínimo de barras e
+      espaçamentos conforme NBR 6118:2014.
+    </p>
+
+    ${c.cis ? memoriaCisalhamento(c.cis, numCis) : ''}
+
+    <h2>${numRef}. Referências</h2>
+    <p>ABNT NBR 6118:2014 — Projeto de estruturas de concreto — Procedimento. Rio de Janeiro: ABNT, 2014.</p>
+  `;
+
+  document.getElementById('print-area').innerHTML = html;
+  setTimeout(() => window.print(), 100);
+}
+
+function memoriaRet(c) {
+  if (c.modo === 'simples') {
+    return `
+      <table>
+        <tr><td class="label"><strong>Mlim = σcd · bw · λ · x,lim · z,lim</strong></td><td class="val"><strong>${fmtBR(c.M_lim_tfm, 3)} tf·m</strong></td></tr>
+      </table>
+
+      <h2>3. Dimensionamento — armadura simples</h2>
+      <p>Como Md = ${fmtBR(c.Md_tfm, 3)} tf·m ≤ Mlim = ${fmtBR(c.M_lim_tfm, 3)} tf·m, a peça é dimensionada com armadura simples.</p>
+      <p>A profundidade da linha neutra é obtida pela equação de equilíbrio:</p>
+      <div class="formula">Md = σcd · bw · λ · x · (d − λ · x / 2)</div>
+      <table>
+        <tr><td class="label">Profundidade da linha neutra (x)</td><td class="val">${fmtBR(c.x, 2)} cm</td></tr>
+        <tr><td class="label">Relação x/d</td><td class="val">${fmtBR(c.x/c.d, 3)}</td></tr>
+        <tr><td class="label">Braço de alavanca (z = d − λ · x / 2)</td><td class="val">${fmtBR(c.z, 2)} cm</td></tr>
+        <tr><td class="label">Deformação no aço tracionado (εs)</td><td class="val">${fmtBR(c.eps_s, 2)} ‰</td></tr>
+        <tr><td class="label">Deformação de escoamento (εyd)</td><td class="val">${fmtBR(c.eps_yd, 2)} ‰</td></tr>
+        <tr><td class="label"><strong>Domínio de deformação</strong></td><td class="val"><strong>${c.dominio}</strong></td></tr>
+      </table>
+
+      <h3>3.1 Cálculo da armadura tracionada</h3>
+      <div class="formula">As = Md / (fyd · z)</div>
+      <p>Convertendo Md para kN·cm (1 tf = 10 kN, padrão de engenharia) e fyd para kN/cm²:</p>
+      <div class="formula">As = (${fmtBR(c.Md_tfm * G * 100, 2)}) / (${fmtBR(c.fyd, 3)} × ${fmtBR(c.z, 2)}) = ${fmtBR(c.As, 2)} cm²</div>
+
+      <h2>4. Verificação</h2>
+      <p>Resultado de armadura simples, sem necessidade de aço comprimido.</p>
+    `;
+  } else {
+    return `
+      <table>
+        <tr><td class="label"><strong>Mlim = σcd · bw · λ · x,lim · z,lim</strong></td><td class="val"><strong>${fmtBR(c.M_lim_tfm, 3)} tf·m</strong></td></tr>
+      </table>
+
+      <h2>3. Dimensionamento — armadura dupla</h2>
+      <p>Como Md = ${fmtBR(c.Md_tfm, 3)} tf·m > Mlim = ${fmtBR(c.M_lim_tfm, 3)} tf·m, é necessária armadura dupla:</p>
+      <table>
+        <tr><td class="label">M1 = Mlim (parcela do binário concreto + aço tracionado)</td><td class="val">${fmtBR(c.M_lim_tfm, 3)} tf·m</td></tr>
+        <tr><td class="label">ΔM = Md − Mlim (parcela com armadura dupla)</td><td class="val">${fmtBR(c.M2_tfm, 3)} tf·m</td></tr>
+      </table>
+
+      <h3>3.1 Verificação da armadura comprimida</h3>
+      <table>
+        <tr><td class="label">Deformação na armadura comprimida (εs')</td><td class="val">${fmtBR(c.eps_sl, 2)} ‰</td></tr>
+        <tr><td class="label">Deformação de escoamento (εyd)</td><td class="val">${fmtBR(c.eps_yd, 2)} ‰</td></tr>
+        <tr><td class="label">Tensão na armadura comprimida (σs')</td><td class="val">${fmtBR(c.sigma_sl_MPa, 1)} MPa</td></tr>
+        <tr><td class="label">Situação</td><td class="val">${c.escoaCompr ? 'Aço comprimido escoa' : 'Aço comprimido NÃO escoa'}</td></tr>
+      </table>
+
+      <h3>3.2 Cálculo das armaduras</h3>
+      <div class="formula">As1 = M1 / (fyd · z,lim) = ${fmtBR(c.As1, 2)} cm²</div>
+      <div class="formula">As2 = ΔM / (fyd · (d − d')) = ${fmtBR(c.As - c.As1, 2)} cm²</div>
+      <div class="formula">As' = ΔM / (σs' · (d − d')) = ${fmtBR(c.Asl, 2)} cm²</div>
+      <table>
+        <tr><td class="label">Armadura tracionada total (As = As1 + As2)</td><td class="val">${fmtBR(c.As, 2)} cm²</td></tr>
+        <tr><td class="label">Armadura comprimida (As')</td><td class="val">${fmtBR(c.Asl, 2)} cm²</td></tr>
+      </table>
+
+      <h2>4. Verificação</h2>
+      <p>Resultado com armadura dupla; armadura comprimida necessária.</p>
+    `;
+  }
+}
+
+function memoriaT(c) {
+  let html = `
+    <table>
+      <tr><td class="label">M_mesa,lim = σcd · bf · hf · (d − hf/2) (toda a mesa comprimida)</td><td class="val">${fmtBR(c.M_mesa_lim_tfm, 3)} tf·m</td></tr>
+      <tr><td class="label"><strong>Comparativo:</strong> Md = ${fmtBR(c.Md_tfm, 3)} tf·m vs M_mesa,lim = ${fmtBR(c.M_mesa_lim_tfm, 3)} tf·m</td>
+          <td class="val"><strong>${c.modo === 't-mesa' ? 'LN dentro da mesa' : 'LN na alma'}</strong></td></tr>
+    </table>
+
+    <h2>3. Dimensionamento — ${c.casoT}</h2>
+  `;
+
+  if (c.modo === 't-mesa') {
+    html += `
+      <p>Como Md = ${fmtBR(c.Md_tfm, 3)} tf·m ≤ M_mesa,lim = ${fmtBR(c.M_mesa_lim_tfm, 3)} tf·m, a linha neutra está dentro da mesa. A seção comporta-se como retangular com largura bf = ${c.bf} cm.</p>
+      <div class="formula">Md = σcd · bf · λ · x · (d − λ · x / 2)</div>
+      <table>
+        <tr><td class="label">Profundidade da linha neutra (x)</td><td class="val">${fmtBR(c.x, 2)} cm</td></tr>
+        <tr><td class="label">Profundidade do bloco comprimido (λx)</td><td class="val">${fmtBR(c.lx, 2)} cm</td></tr>
+        <tr><td class="label">Verificação λx ≤ hf</td><td class="val">${fmtBR(c.lx, 2)} ≤ ${c.hf} ✓</td></tr>
+        <tr><td class="label">Relação x/d</td><td class="val">${fmtBR(c.x/c.d, 3)}</td></tr>
+        <tr><td class="label">Braço de alavanca (z = d − λx/2)</td><td class="val">${fmtBR(c.z, 2)} cm</td></tr>
+        <tr><td class="label">Domínio de deformação</td><td class="val">${c.dominio}</td></tr>
+      </table>
+
+      <h3>3.1 Cálculo da armadura tracionada</h3>
+      <div class="formula">As = Md / (fyd · z)</div>
+      <div class="formula">As = (${fmtBR(c.Md_tfm * G * 100, 2)}) / (${fmtBR(c.fyd, 3)} × ${fmtBR(c.z, 2)}) = ${fmtBR(c.As, 2)} cm²</div>
+
+      <h2>4. Verificação</h2>
+      <p>Linha neutra dentro da mesa: comportamento equivalente a uma seção retangular bf × d.</p>
+    `;
+  } else if (c.modo === 't-alma') {
+    html += `
+      <p>Como Md = ${fmtBR(c.Md_tfm, 3)} tf·m > M_mesa,lim = ${fmtBR(c.M_mesa_lim_tfm, 3)} tf·m, a linha neutra está abaixo da mesa. O momento é decomposto em duas parcelas:</p>
+
+      <h3>3.1 Parcela das abas da mesa</h3>
+      <p>Considera-se a contribuição da mesa fora da alma, com largura (bf − bw) e altura hf totalmente comprimidas:</p>
+      <div class="formula">M_aba = σcd · (bf − bw) · hf · (d − hf/2)</div>
+      <div class="formula">M_aba = ${fmtBR(c.sigma_cd, 3)} × (${c.bf} − ${c.bw}) × ${c.hf} × (${c.d} − ${c.hf}/2) = ${fmtBR(c.M_aba_tfm, 3)} tf·m</div>
+      <div class="formula">As_aba = M_aba / [fyd · (d − hf/2)] = ${fmtBR(c.As_aba, 2)} cm²</div>
+
+      <h3>3.2 Parcela da alma</h3>
+      <p>Calcula-se a parcela restante como retangular com largura bw:</p>
+      <div class="formula">M_alma = Md − M_aba = ${fmtBR(c.M_alma_tfm, 3)} tf·m</div>
+      <div class="formula">M_alma = σcd · bw · λ · x · (d − λx/2)</div>
+      <table>
+        <tr><td class="label">Profundidade da linha neutra na alma (x)</td><td class="val">${fmtBR(c.x, 2)} cm</td></tr>
+        <tr><td class="label">Braço de alavanca (z = d − λx/2)</td><td class="val">${fmtBR(c.z, 2)} cm</td></tr>
+        <tr><td class="label">Deformação no aço (εs)</td><td class="val">${fmtBR(c.eps_s, 2)} ‰</td></tr>
+        <tr><td class="label">Domínio</td><td class="val">${c.dominio}</td></tr>
+      </table>
+      <div class="formula">As_alma = M_alma / (fyd · z) = ${fmtBR(c.As_alma, 2)} cm²</div>
+
+      <h3>3.3 Armadura total</h3>
+      <div class="formula">As = As_aba + As_alma = ${fmtBR(c.As_aba, 2)} + ${fmtBR(c.As_alma, 2)} = ${fmtBR(c.As, 2)} cm²</div>
+
+      <h2>4. Verificação</h2>
+      <p>Linha neutra na alma — seção dimensionada por superposição de efeitos. Armadura simples suficiente.</p>
+    `;
+  } else {
+    // t-alma-dupla
+    html += `
+      <p>A linha neutra cai na alma e, mesmo com x = x,lim, a alma não resiste a M_alma. É necessária armadura dupla na parcela da alma.</p>
+
+      <h3>3.1 Parcela das abas</h3>
+      <div class="formula">M_aba = σcd · (bf − bw) · hf · (d − hf/2) = ${fmtBR(c.M_aba_tfm, 3)} tf·m</div>
+      <div class="formula">As_aba = ${fmtBR(c.As_aba, 2)} cm²</div>
+
+      <h3>3.2 Parcela da alma (com armadura dupla)</h3>
+      <table>
+        <tr><td class="label">M_alma = Md − M_aba</td><td class="val">${fmtBR(c.M_alma_tfm, 3)} tf·m</td></tr>
+        <tr><td class="label">M_alma,lim (alma no limite x,lim)</td><td class="val">${fmtBR(c.M_alma_lim_tfm, 3)} tf·m</td></tr>
+        <tr><td class="label">ΔM_alma = M_alma − M_alma,lim</td><td class="val">${fmtBR(c.M_alma_2_tfm, 3)} tf·m</td></tr>
+        <tr><td class="label">εs'</td><td class="val">${fmtBR(c.eps_sl, 2)} ‰</td></tr>
+        <tr><td class="label">σs'</td><td class="val">${fmtBR(c.sigma_sl_MPa, 1)} MPa ${c.escoaCompr ? '(escoa)' : '(NÃO escoa)'}</td></tr>
+        <tr><td class="label">As_alma_1</td><td class="val">${fmtBR(c.As_alma_1, 2)} cm²</td></tr>
+        <tr><td class="label">As_alma_2 (parcela do binário do par tracionada-comprimida)</td><td class="val">${fmtBR(c.As_alma_2, 2)} cm²</td></tr>
+        <tr><td class="label">As' (armadura comprimida)</td><td class="val">${fmtBR(c.Asl, 2)} cm²</td></tr>
+      </table>
+
+      <h3>3.3 Armadura total</h3>
+      <div class="formula">As = As_aba + As_alma_1 + As_alma_2 = ${fmtBR(c.As, 2)} cm²</div>
+      <div class="formula">As' = ${fmtBR(c.Asl, 2)} cm²</div>
+
+      <h2>4. Verificação</h2>
+      <p>Resultado com armadura dupla; recomenda-se aumentar a altura da viga para evitar armadura comprimida sempre que possível.</p>
+    `;
+  }
+
+  return html;
+}
+
+// ====== Listeners ======
+document.getElementById('mk').addEventListener('input', atualizarMd);
+document.getElementById('vk').addEventListener('input', atualizarMd);
+document.getElementById('gf').addEventListener('input', atualizarMd);
+document.getElementById('h').addEventListener('input', atualizarDl);
+document.getElementById('d').addEventListener('input', atualizarDl);
+document.querySelectorAll('input[name="secao"]').forEach(el => {
+  el.addEventListener('change', atualizarVisibilidadeT);
+});
+document.querySelectorAll('input[name="modelo"]').forEach(el => {
+  el.addEventListener('change', () => {
+    const m2 = document.getElementById('mod-2').checked;
+    document.getElementById('theta').disabled = !m2;
+    if (!m2) document.getElementById('theta').value = 45;
+  });
+});
+document.getElementById('btn-calc').addEventListener('click', calcular);
+document.getElementById('btn-pdf').addEventListener('click', gerarMemoriaPDF);
+
+atualizarMd();
+atualizarDl();
+atualizarVisibilidadeT();
+</script>
+
+</body>
+</html>

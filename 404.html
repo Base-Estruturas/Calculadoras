@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>BASE Estruturas — Página não encontrada</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<script>
+  // Redireciona para a home preservando o caminho original (para futuras rotas)
+  const path = window.location.pathname.split('/').filter(Boolean);
+  // Detecta se está em subpasta (caso de username.github.io/repo)
+  const base = path.length > 0 && path[0] !== 'index.html' ? '/' + path[0] + '/' : '/';
+  window.location.replace(base);
+</script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #000;
+    color: #fff;
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  h1 { font-weight: 700; letter-spacing: 0.04em; font-size: 22px; }
+  p { color: #888; font-size: 13px; }
+</style>
+</head>
+<body>
+  <div>
+    <h1>BASE ESTRUTURAS</h1>
+    <p>Redirecionando…</p>
+  </div>
+</body>
+</html>
