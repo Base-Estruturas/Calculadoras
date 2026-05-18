@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora — Sapata Associada</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d1117;
+    --bg2:       #161b22;
+    --bg3:       #21262d;
+    --border:    #30363d;
+    --accent:    #f0a500;
+    --accent2:   #e36b00;
+    --green:     #1a7f4e;
+    --green-lt:  #2dbd74;
+    --red:       #da3633;
+    --red-lt:    #ff7b72;
+    --blue:      #1f6feb;
+    --blue-lt:   #58a6ff;
+    --purple:    #6e40c9;
+    --purple-lt: #bc8cff;
+    --text:      #e6edf3;
+    --text2:     #8b949e;
+    --text3:     #484f58;
+    --radius:    8px;
+    --mono:      'Space Mono', monospace;
+    --sans:      'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  .logo { width: 36px; height: 36px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 700; font-size: 16px; color: #000; flex-shrink: 0; }
+  header h1 { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+  header p { font-size: 12px; color: var(--text2); }
+  .badge { margin-left: auto; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-family: var(--mono); color: var(--accent); }
+
+  .wrapper { display: grid; grid-template-columns: 390px 1fr; gap: 0; min-height: calc(100vh - 73px); }
+
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); padding: 24px 18px; overflow-y: auto; max-height: calc(100vh - 73px); position: sticky; top: 73px; }
+
+  .section-title { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text2); margin-bottom: 10px; margin-top: 16px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .section-title:first-child { margin-top: 0; }
+
+  .input-group { margin-bottom: 4px; }
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+  label { font-size: 11px; font-weight: 500; color: var(--text2); letter-spacing: 0.3px; }
+  label span { font-family: var(--mono); font-size: 10px; color: var(--accent); margin-left: 4px; }
+
+  input[type="number"] { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 10px; color: var(--text); font-family: var(--mono); font-size: 13px; width: 100%; transition: border-color 0.2s; -moz-appearance: textfield; }
+  input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(240,165,0,0.12); }
+  select { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 10px; color: var(--text); font-family: var(--sans); font-size: 13px; width: 100%; cursor: pointer; }
+  select:focus { outline: none; border-color: var(--accent); }
+
+  /* Pill labels para separar P1/P2 */
+  .pilar-label { display: inline-block; padding: 2px 10px; border-radius: 12px; font-family: var(--mono); font-size: 10px; font-weight: 700; margin-bottom: 8px; }
+  .pilar-label.p1 { background: rgba(88,166,255,0.15); color: var(--blue-lt); border: 1px solid rgba(88,166,255,0.3); }
+  .pilar-label.p2 { background: rgba(45,189,116,0.15); color: var(--green-lt); border: 1px solid rgba(45,189,116,0.3); }
+
+  .pilar-box { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; }
+
+  .btn-calc { width: 100%; margin-top: 12px; padding: 12px; background: var(--accent); color: #000; font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: 0.5px; border: none; border-radius: var(--radius); cursor: pointer; transition: background 0.2s, transform 0.1s; }
+  .btn-calc:hover { background: var(--accent2); }
+  .btn-calc:active { transform: scale(0.98); }
+
+  .results { padding: 28px 32px; overflow-y: auto; }
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .results-header h2 { font-family: var(--mono); font-size: 14px; color: var(--text); }
+
+  .status { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-family: var(--mono); }
+  .status.ok   { border-color: var(--green); color: var(--green-lt); }
+  .status.fail { border-color: var(--red);   color: var(--red-lt); }
+  .dot { width:8px; height:8px; border-radius:50%; }
+  .ok .dot   { background: var(--green-lt); }
+  .fail .dot { background: var(--red-lt); }
+
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; position: relative; overflow: hidden; }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); }
+  .card.green::before { background: var(--green-lt); }
+  .card.blue::before  { background: var(--blue-lt); }
+  .card.purple::before{ background: var(--purple-lt); }
+  .card-label { font-size: 10px; font-family: var(--mono); color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .card-value { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; }
+  .card-unit  { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+  .calc-block { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+  .calc-block-header { background: var(--bg3); padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+  .step-num { width: 22px; height: 22px; background: var(--accent); color: #000; font-family: var(--mono); font-weight: 700; font-size: 11px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .calc-block-header h3 { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
+  .ref { margin-left: auto; font-size: 10px; color: var(--text2); font-family: var(--mono); }
+  .calc-body { padding: 16px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 7px 12px; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); border-bottom: 1px solid var(--border); }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--bg3); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .mono { font-family: var(--mono); }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--mono); font-size: 10px; font-weight: 700; }
+  .tag.ok   { background: rgba(45,189,116,0.15); color: var(--green-lt); }
+  .tag.fail { background: rgba(218,54,51,0.15);  color: var(--red-lt); }
+  .tag.min  { background: rgba(188,140,255,0.15);color: var(--purple-lt); }
+  .tag.calc { background: rgba(88,166,255,0.15); color: var(--blue-lt); }
+
+  .eq { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: var(--accent); margin: 6px 0; letter-spacing: 0.3px; }
+  .eq .result { color: var(--green-lt); font-weight: 700; }
+  .eq .lbl    { color: var(--text2); font-size: 11px; }
+
+  .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: var(--text3); gap: 12px; }
+  .placeholder p { font-family: var(--mono); font-size: 12px; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SA</div>
+  <div>
+    <h1>CALCULADORA — SAPATA ASSOCIADA</h1>
+    <p>Dimensionamento geotécnico e estrutural · NBR 6118:2014 · NBR 6122:2022</p>
+  </div>
+  <div class="badge">v1.1</div>
+</header>
+
+<div class="wrapper">
+<aside class="sidebar">
+
+  <div class="section-title">Cargas nos Pilares</div>
+  <div class="pilar-box">
+    <div class="pilar-label p1">PILAR 1 — P1</div>
+    <div class="input-row">
+      <div class="field">
+        <label>Fz <span>tf</span></label>
+        <input type="number" id="fz1" value="168" step="0.1">
+      </div>
+      <div class="field">
+        <label>Mx <span>tf·m</span></label>
+        <input type="number" id="mx1" value="9" step="0.1">
+      </div>
+    </div>
+  </div>
+  <div class="pilar-box">
+    <div class="pilar-label p2">PILAR 2 — P2</div>
+    <div class="input-row">
+      <div class="field">
+        <label>Fz <span>tf</span></label>
+        <input type="number" id="fz2" value="173" step="0.1">
+      </div>
+      <div class="field">
+        <label>Mx <span>tf·m</span></label>
+        <input type="number" id="mx2" value="13" step="0.1">
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Geometria dos Pilares</div>
+  <div class="pilar-box">
+    <div class="pilar-label p1">PILAR 1</div>
+    <div class="input-row">
+      <div class="field">
+        <label>bp1 — Largura (tranv.) <span>cm</span></label>
+        <input type="number" id="bp1" value="19" step="1">
+      </div>
+      <div class="field">
+        <label>hp1 — Comprim. (long.) <span>cm</span></label>
+        <input type="number" id="hp1" value="80" step="1">
+      </div>
+    </div>
+  </div>
+  <div class="pilar-box">
+    <div class="pilar-label p2">PILAR 2</div>
+    <div class="input-row">
+      <div class="field">
+        <label>bp2 — Largura (tranv.) <span>cm</span></label>
+        <input type="number" id="bp2" value="19" step="1">
+      </div>
+      <div class="field">
+        <label>hp2 — Comprim. (long.) <span>cm</span></label>
+        <input type="number" id="hp2" value="80" step="1">
+      </div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Distância entre eixos <span>m</span></label>
+    <input type="number" id="deixos" value="2.00" step="0.05">
+  </div>
+
+  <div class="section-title">Dimensões Adotadas da Sapata</div>
+  <div class="input-row">
+    <div class="field">
+      <label>a — Longitudinal <span>cm</span></label>
+      <input type="number" id="a_sap" value="470" step="5">
+    </div>
+    <div class="field">
+      <label>b — Transversal <span>cm</span></label>
+      <input type="number" id="b_sap" value="210" step="5">
+    </div>
+  </div>
+  <div class="field">
+    <label>h — Altura <span>cm</span></label>
+    <input type="number" id="h_sap" value="100" step="5">
+  </div>
+
+  <div class="section-title">Solo e Materiais</div>
+  <div class="field">
+    <label>σ_adm do solo <span>tf/m²</span></label>
+    <input type="number" id="sigma_adm" value="40" step="1">
+  </div>
+  <div class="input-row">
+    <div class="field">
+      <label>fck <span>MPa</span></label>
+      <input type="number" id="fck" value="25" step="5">
+    </div>
+    <div class="field">
+      <label>Cobrimento <span>cm</span></label>
+      <input type="number" id="cob" value="5" step="0.5">
+    </div>
+  </div>
+  <div class="input-row">
+    <div class="field">
+      <label>φ armadura <span>mm</span></label>
+      <select id="phi_princ">
+        <option value="10">φ 10</option>
+        <option value="12.5">φ 12.5</option>
+        <option value="16" selected>φ 16</option>
+        <option value="20">φ 20</option>
+        <option value="25">φ 25</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>ρ_min <span>×10⁻³</span></label>
+      <input type="number" id="rho_min" value="1.5" step="0.1">
+    </div>
+  </div>
+
+  <button class="btn-calc" onclick="calcular()">▶  CALCULAR</button>
+
+</aside>
+
+<main class="results" id="results">
+  <div class="placeholder">
+    <svg width="64" height="64" fill="none" viewBox="0 0 64 64">
+      <rect x="8" y="40" width="48" height="16" rx="3" stroke="#484f58" stroke-width="2"/>
+      <rect x="18" y="24" width="12" height="16" rx="2" stroke="#484f58" stroke-width="2"/>
+      <rect x="34" y="24" width="12" height="16" rx="2" stroke="#484f58" stroke-width="2"/>
+      <line x1="32" y1="8" x2="32" y2="24" stroke="#484f58" stroke-width="2" stroke-dasharray="3 2"/>
+      <line x1="24" y1="8" x2="24" y2="24" stroke="#484f58" stroke-width="2" stroke-dasharray="3 2"/>
+      <line x1="40" y1="8" x2="40" y2="24" stroke="#484f58" stroke-width="2" stroke-dasharray="3 2"/>
+    </svg>
+    <p>Preencha os dados e clique em CALCULAR</p>
+  </div>
+</main>
+</div>
+
+<script>
+function asBarras(as_req, phi_mm) {
+  const as1 = Math.PI * Math.pow(phi_mm/2, 2) / 100; // cm²
+  const n = Math.ceil(as_req / as1);
+  return { n, as_adot: n * as1, as1 };
+}
+
+function espacamento(largura_cm, n, cob_cm, phi_mm) {
+  if (n <= 1) return largura_cm - 2*cob_cm;
+  const phi = phi_mm / 10;
+  return Math.floor((largura_cm - 2*cob_cm - phi) / (n - 1));
+}
+
+function calcular() {
+  // ── Leitura ──────────────────────────────────────────────────
+  const Fz1       = parseFloat(document.getElementById('fz1').value);
+  const Mx1       = parseFloat(document.getElementById('mx1').value);
+  const Fz2       = parseFloat(document.getElementById('fz2').value);
+  const Mx2       = parseFloat(document.getElementById('mx2').value);
+  const bp1       = parseFloat(document.getElementById('bp1').value);   // cm largura transv P1
+  const hp1       = parseFloat(document.getElementById('hp1').value);   // cm comprim long P1
+  const bp2       = parseFloat(document.getElementById('bp2').value);
+  const hp2       = parseFloat(document.getElementById('hp2').value);
+  const deixos    = parseFloat(document.getElementById('deixos').value); // m
+  const A_cm      = parseFloat(document.getElementById('a_sap').value);  // cm
+  const B_cm      = parseFloat(document.getElementById('b_sap').value);  // cm
+  const H_cm      = parseFloat(document.getElementById('h_sap').value);  // cm
+  const sigma_adm = parseFloat(document.getElementById('sigma_adm').value);
+  const fck       = parseFloat(document.getElementById('fck').value);    // MPa
+  const cob       = parseFloat(document.getElementById('cob').value);    // cm
+  const phi_mm    = parseFloat(document.getElementById('phi_princ').value);
+  const rho_min   = parseFloat(document.getElementById('rho_min').value) / 1000;
+
+  // ── Conversões ──────────────────────────────────────────────
+  const A_m  = A_cm  / 100;
+  const B_m  = B_cm  / 100;
+  const H_m  = H_cm  / 100;
+  const phi  = phi_mm / 10; // cm
+
+  // ── E1: Peso próprio e carga total ──────────────────────────
+  const Pp       = A_m * B_m * H_m * 2.5;
+  const Nk_total = Fz1 + Fz2 + Pp;
+
+  // ── E2: Área ─────────────────────────────────────────────────
+  const A_min  = Nk_total / sigma_adm;
+  const A_adot = A_m * B_m;
+  const area_ok = A_adot >= A_min;
+
+  // ── E3: Centroide da resultante ──────────────────────────────
+  // x̄ = distância do eixo P1 à resultante
+  const x_bar = (Fz2 * deixos) / (Fz1 + Fz2); // m
+
+  // Posição do eixo de P1 a partir da borda esquerda da sapata
+  // Para pressão uniforme: centroide geom. da sapata = ponto da resultante
+  // centroide geom. = A_m/2 a partir da borda esq
+  // eixo P1 = A_m/2 - x_bar (se resultante está à direita do centro → P1 fica à esquerda)
+  const c_esq_eixo = A_m / 2 - x_bar; // m — dist. borda esq ao eixo P1 (pode ser negativo se mal dimensionada)
+  // eixo P2 = c_esq_eixo + deixos
+  const c_dir_eixo = A_m - c_esq_eixo - deixos; // m — dist. eixo P2 à borda dir
+
+  // Borda livre além da face do pilar (na direção longitudinal)
+  const borda_esq = c_esq_eixo - hp1/200; // m (hp1 em cm → /200 para m e meia seção)
+  const borda_dir = c_dir_eixo - hp2/200;
+
+  // ── E4: Pressão no solo ──────────────────────────────────────
+  const sigma_med  = Nk_total / A_adot;
+  const M_total    = Mx1 + Mx2;
+  const W_b        = (A_m * Math.pow(B_m, 2)) / 6;
+  const delta_sig  = M_total / W_b;
+  const sigma_max  = sigma_med + delta_sig;
+  const sigma_min  = sigma_med - delta_sig;
+  const sigma_ok   = sigma_max <= sigma_adm;
+  const sigmin_ok  = sigma_min >= 0;
+
+  // Pressão de cálculo adotada (conforme solicitado: usar sigma_adm)
+  const sigma_sd = sigma_adm;
+
+  // ── E5: Rigidez ──────────────────────────────────────────────
+  // Dir. transversal — borda além da face do pilar (usa pilar de maior largura)
+  const bp_max  = Math.max(bp1, bp2);
+  const aib_cm  = (B_cm - bp_max) / 2; // cm — consola transversal
+  const aib_m   = aib_cm / 100;
+
+  // Dir. longitudinal — borda maior (normalmente borda_esq)
+  const borda_max_m  = Math.max(borda_esq, borda_dir);
+  const borda_max_cm = borda_max_m * 100;
+
+  const rig_transv = aib_cm  / H_cm;
+  const rig_long   = borda_max_cm / H_cm;
+  const rig_ok     = rig_transv <= 2.5 && rig_long <= 2.5;
+
+  // ── E6: Altura útil ──────────────────────────────────────────
+  const d = H_cm - cob - phi / 2; // cm
+
+  // ── E7: Momentos ─────────────────────────────────────────────
+  const q_sd = sigma_sd * B_m; // tf/m
+
+  // Reações — tomando momentos em relação à borda esquerda
+  const R_P2 = (q_sd * A_m * (A_m / 2)) / (c_esq_eixo + deixos);
+  const R_P1 = q_sd * A_m - R_P2;
+
+  // Momentos negativos nas faces dos pilares (balanços)
+  const M_neg_P1 = q_sd * Math.pow(borda_esq, 2) / 2;
+  const M_neg_P2 = q_sd * Math.pow(borda_dir, 2) / 2;
+  const M_neg_max = Math.max(M_neg_P1, M_neg_P2);
+
+  // Momento positivo no vão — ponto V=0
+  const V_apos_P1 = R_P1 - q_sd * c_esq_eixo;
+  const x0 = V_apos_P1 / q_sd; // m a partir do eixo P1
+  let M_pos = 0;
+  if (x0 > 0 && x0 < deixos) {
+    const x_abs = c_esq_eixo + x0;
+    M_pos = Math.abs(q_sd * Math.pow(x_abs, 2) / 2 - R_P1 * (x_abs - c_esq_eixo));
+  }
+
+  // Momento transversal — consola bilateral na face do pilar
+  const M_transv = sigma_sd * A_m * Math.pow(aib_m, 2) / 2;
+
+  // ── E8: Armaduras ────────────────────────────────────────────
+  // fyd em kgf/cm² : CA-50 → fyd = 500/1.15 MPa = 434.78 MPa = 4347.8 kgf/cm²
+  const fyd = (500 / 1.15) * 10; // kgf/cm²
+
+  // Transversal (dir b) — armadura principal
+  const As_tv_calc = (M_transv * 1e5) / (0.9 * d * fyd);
+  const As_tv_min  = rho_min * A_cm * d;
+  const As_tv      = Math.max(As_tv_calc, As_tv_min);
+  const gov_tv     = As_tv_min > As_tv_calc ? 'min' : 'calc';
+
+  // Long. superior (momento negativo)
+  const As_ls_calc = (M_neg_max * 1e5) / (0.9 * d * fyd);
+  const As_ls_min  = rho_min * B_cm * d;
+  const As_ls      = Math.max(As_ls_calc, As_ls_min);
+  const gov_ls     = As_ls_min > As_ls_calc ? 'min' : 'calc';
+
+  // Long. inferior (momento positivo)
+  const As_li_calc = M_pos > 0 ? (M_pos * 1e5) / (0.9 * d * fyd) : 0;
+  const As_li_min  = rho_min * B_cm * d;
+  const As_li      = Math.max(As_li_calc, As_li_min);
+  const gov_li     = As_li_min > As_li_calc ? 'min' : 'calc';
+
+  const bar_tv = asBarras(As_tv, phi_mm);
+  const bar_ls = asBarras(As_ls, phi_mm);
+  const bar_li = asBarras(As_li, phi_mm);
+
+  const esp_tv = espacamento(A_cm, bar_tv.n, cob, phi_mm);
+  const esp_ls = espacamento(B_cm, bar_ls.n, cob, phi_mm);
+  const esp_li = espacamento(B_cm, bar_li.n, cob, phi_mm);
+
+  // ── E9: Puncionamento ────────────────────────────────────────
+  // Verificar para cada pilar separadamente (NBR 6118 item 19.5)
+  // Perímetro crítico a d/2 da face do pilar
+  const d_semi = d / 2; // cm
+
+  // Pilar que será verificado: o mais carregado
+  const pilar_punc = Fz1 >= Fz2 ? 1 : 2;
+  const Fz_punc    = Math.max(Fz1, Fz2);
+  const bp_punc    = pilar_punc === 1 ? bp1 : bp2; // cm — largura transv
+  const hp_punc    = pilar_punc === 1 ? hp1 : hp2; // cm — comprim long
+
+  // Perímetro crítico (retângulo a d/2 de cada face)
+  // Lado transversal (dir b): bp + 2*(d/2)
+  // Lado longitudinal (dir a): hp + 2*(d/2)
+  const lad_transv = bp_punc + 2 * d_semi; // cm
+  const lad_long   = hp_punc + 2 * d_semi; // cm
+  const perim      = 2 * lad_transv + 2 * lad_long; // cm
+  const A_crit     = (lad_transv * lad_long) / 1e4;  // m²
+
+  const Fsd_punc = Fz_punc - sigma_sd * A_crit; // tf
+  const tau_sd   = (Fsd_punc * 1000) / (perim * d); // kgf/cm²
+
+  // Taxa de armadura de flexão — usar armadura transversal (principal, dir b)
+  // sobre a largura total da sapata na dir b = A_cm
+  const rho_flex = bar_tv.as_adot / (A_cm * d);
+
+  // τ_Rd1 — NBR 6118 eq. 19.5 (fck em MPa)
+  // τ_Rd1 = 0,13 × (1 + √(20/d)) × (100 × ρ × fck)^(1/3)   [MPa]
+  // onde d em mm → converter d de cm para mm
+  const d_mm     = d * 10;
+  const tau_rd1_MPa = 0.13 * (1 + Math.sqrt(200 / d_mm)) * Math.pow(100 * rho_flex * fck, 1/3);
+  // converter MPa → kgf/cm²:  1 MPa = 10.197 kgf/cm²
+  const tau_rd1  = tau_rd1_MPa * 10.197;
+  const punc_ok  = tau_sd < tau_rd1;
+
+  // ── Status geral ─────────────────────────────────────────────
+  const tudo_ok = area_ok && sigma_ok && sigmin_ok && rig_ok && punc_ok;
+
+  // ── Helpers de formatação ────────────────────────────────────
+  const f = (v, n=2) => v.toFixed(n).replace('.', ',');
+  const fPhi = (p) => `φ ${p} mm`;
+  const tagOk   = (ok, txtOk, txtFail) =>
+    `<span class="tag ${ok?'ok':'fail'}">${ok?txtOk:txtFail}</span>`;
+
+  // ═══════════════════════════════════════════════════════════════
+  //  HTML de resultado
+  // ═══════════════════════════════════════════════════════════════
+  document.getElementById('results').innerHTML = `
+    <div class="results-header">
+      <h2>RESULTADOS DO DIMENSIONAMENTO</h2>
+      <div class="status ${tudo_ok?'ok':'fail'}">
+        <div class="dot"></div>
+        ${tudo_ok ? 'TODAS AS VERIFICAÇÕES OK' : 'ATENÇÃO — VERIFICAR PARÂMETROS'}
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Dimensões</div>
+        <div class="card-value" style="font-size:16px">${A_cm}×${B_cm}×${H_cm}</div>
+        <div class="card-unit">cm (a × b × h)</div>
+      </div>
+      <div class="card green">
+        <div class="card-label">σ máx / σ adm</div>
+        <div class="card-value">${f(sigma_max)} / ${f(sigma_adm,0)}</div>
+        <div class="card-unit">tf/m²  ${sigma_ok ? '✓' : '✗ EXCEDE'}</div>
+      </div>
+      <div class="card blue">
+        <div class="card-label">As transversal</div>
+        <div class="card-value">${f(bar_tv.as_adot)}</div>
+        <div class="card-unit">cm² · ${bar_tv.n} ${fPhi(phi_mm)} c/${esp_tv}cm</div>
+      </div>
+      <div class="card purple">
+        <div class="card-label">As long. sup/inf</div>
+        <div class="card-value">${f(bar_ls.as_adot)}</div>
+        <div class="card-unit">cm² · ${bar_ls.n} ${fPhi(phi_mm)} c/${esp_ls}cm</div>
+      </div>
+    </div>
+
+    <!-- E1 -->
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num">1</div><h3>Carga Total e Peso Próprio</h3></div>
+      <div class="calc-body">
+        <div class="eq">P<sub>pp</sub> = ${f(A_m)} × ${f(B_m)} × ${f(H_m)} × 2,5 = <span class="result">${f(Pp)} tf</span></div>
+        <div class="eq">N<sub>k,total</sub> = ${f(Fz1)} + ${f(Fz2)} + ${f(Pp)} = <span class="result">${f(Nk_total)} tf</span></div>
+      </div>
+    </div>
+
+    <!-- E2 -->
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num">2</div><h3>Área em Planta</h3><span class="ref">NBR 6122:2022 · 7.6</span></div>
+      <div class="calc-body">
+        <div class="eq">
+          A<sub>min</sub> = ${f(Nk_total)} / ${f(sigma_adm,0)} = <span class="result">${f(A_min)} m²</span>
+          &nbsp;&nbsp;
+          A<sub>adot</sub> = ${f(A_m,2)} × ${f(B_m,2)} = <span class="result">${f(A_adot)} m²</span>
+          &nbsp; ${tagOk(area_ok, '✓ OK', '✗ INSUFICIENTE')}
+        </div>
+      </div>
+    </div>
+
+    <!-- E3 -->
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num">3</div><h3>Posição da Resultante</h3></div>
+      <div class="calc-body">
+        <div class="eq">x̄ = (${f(Fz2)} × ${f(deixos,2)}) / (${f(Fz1)} + ${f(Fz2)}) = <span class="result">${f(x_bar,3)} m de P1</span></div>
+        <div class="eq">
+          Eixo P1 desde borda esq: <span class="result">${f(c_esq_eixo,3)} m</span>
+          &nbsp;&nbsp;
+          Eixo P2 desde borda dir: <span class="result">${f(c_dir_eixo,3)} m</span>
+        </div>
+        <div class="eq">
+          Borda livre P1 (além face): <span class="result">${f(borda_esq*100,1)} cm</span>
+          &nbsp;&nbsp;
+          Borda livre P2 (além face): <span class="result">${f(borda_dir*100,1)} cm</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- E4 -->
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num">4</div><h3>Pressão no Solo</h3><span class="ref">NBR 6122:2022 · 7.6.2</span></div>
+      <div class="calc-body">
+        <div class="eq">σ<sub>med</sub> = ${f(Nk_total)} / ${f(A_adot)} = <span class="result">${f(sigma_med)} tf/m²</span></div>
+        <div class="eq">
+          W<sub>b</sub> = ${f(A_m,2)} × ${f(B_m,2)}² / 6 = <span class="result">${f(W_b,3)} m³</span>
+          &nbsp;&nbsp;
+          Δσ = ${f(M_total)} / ${f(W_b,3)} = <span class="result">${f(delta_sig)} tf/m²</span>
+        </div>
+        <div class="eq">
+          σ<sub>max</sub> = ${f(sigma_max)} tf/m² ${tagOk(sigma_ok, '✓ ≤ '+sigma_adm, '✗ > '+sigma_adm)}
+          &nbsp;&nbsp;
+          σ<sub>min</sub> = ${f(sigma_min)} tf/m² ${tagOk(sigmin_ok, '✓ ≥ 0', '✗ TRAÇÃO')}
+        </div>
+      </div>
+    </div>
+
+    <!-- E5 -->
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num">5</div><h3>Verificação de Rigidez</h3><span class="ref">NBR 6118:2014 · 22.5.1</span></div>
+      <div class="calc-body">
+        <div class="eq">d = ${H_cm} − ${cob} − ${f(phi/2,1)} = <span class="result">${f(d,1)} cm</span></div>
+        <div class="eq">
+          Dir. transversal: a<sub>ib</sub>/h = ${f(aib_cm,1)} / ${H_cm} = <span class="result">${f(rig_transv,2)}</span>
+          &nbsp; ${tagOk(rig_transv<=2.5, '✓ ≤ 2,5', '✗ > 2,5')}
+        </div>
+        <div class="eq">
+          Dir. longitudinal: a<sub>ia</sub>/h = ${f(borda_max_cm,1)} / ${H_cm} = <span class="result">${f(rig_long,2)}</span>
+          &nbsp; ${tagOk(rig_long<=2.5, '✓ ≤ 2,5', '✗ > 2,5')}
+        </div>
+        <div class="eq" style="color:${rig_ok?'var(--green-lt)':'var(--red-lt)'}">
+          ${rig_ok ? '✓ Sapata rígida — modelo de bielas válido (NBR 6118 item 22.5.2)' : '✗ Sapata flexível — aumentar altura h'}
+        </div>
+      </div>
+    </div>
+
+    <!-- E6 -->
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num">6</div><h3>Momentos Fletores</h3><span class="ref">NBR 6118:2014 · 22.5.2</span></div>
+      <div class="calc-body">
+        <div class="eq">
+          <span class="lbl">q_sd = σ_sd × b =</span>
+          ${f(sigma_sd,0)} × ${f(B_m,2)} = <span class="result">${f(q_sd,2)} tf/m</span>
+        </div>
+        <div class="eq">
+          <span class="lbl">Transversal — consola bilateral (face pilar, dir. b):</span><br>
+          a<sub>ib</sub> = (${B_cm} − ${bp_max}) / 2 = ${f(aib_cm,1)} cm = ${f(aib_m,3)} m<br>
+          M<sub>sd,b</sub> = ${f(sigma_sd,0)} × ${f(A_m,2)} × ${f(aib_m,3)}² / 2 = <span class="result">${f(M_transv)} tf·m</span>
+        </div>
+        <div class="eq">
+          <span class="lbl">Longitudinal — M negativo face P1 (balanço esq):</span><br>
+          M<sub>neg,P1</sub> = ${f(q_sd,2)} × ${f(borda_esq,3)}² / 2 = <span class="result">${f(M_neg_P1)} tf·m</span>
+        </div>
+        <div class="eq">
+          <span class="lbl">Longitudinal — M negativo face P2 (balanço dir):</span><br>
+          M<sub>neg,P2</sub> = ${f(q_sd,2)} × ${f(borda_dir,3)}² / 2 = <span class="result">${f(M_neg_P2)} tf·m</span>
+          &nbsp;← governa: <span class="result">${f(M_neg_max)} tf·m</span>
+        </div>
+        <div class="eq">
+          <span class="lbl">Longitudinal — M positivo no vão (x₀ = ${f(x0,3)} m de P1):</span><br>
+          M<sub>pos</sub> = <span class="result">${f(M_pos)} tf·m</span>
+          ${M_pos < 0.1 ? '&nbsp;<span class="tag min">mínimo governa</span>' : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- E7 -->
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num">7</div><h3>Armaduras</h3><span class="ref">CA-50 · f<sub>yd</sub> = 434,8 MPa</span></div>
+      <div class="calc-body">
+        <table>
+          <thead>
+            <tr>
+              <th>Armadura</th><th>M_sd (tf·m)</th><th>As calc (cm²)</th>
+              <th>As mín (cm²)</th><th>As adot (cm²)</th><th>Detalhamento</th><th>Governa</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Transversal (dir. b)</td>
+              <td class="mono">${f(M_transv)}</td>
+              <td class="mono">${f(As_tv_calc)}</td>
+              <td class="mono">${f(As_tv_min)}</td>
+              <td class="mono"><strong>${f(bar_tv.as_adot)}</strong></td>
+              <td class="mono">${bar_tv.n} ${fPhi(phi_mm)} c/${esp_tv}cm</td>
+              <td><span class="tag ${gov_tv}">${gov_tv==='min'?'MÍNIMO':'CÁLCULO'}</span></td>
+            </tr>
+            <tr>
+              <td>Long. superior (neg.)</td>
+              <td class="mono">${f(M_neg_max)}</td>
+              <td class="mono">${f(As_ls_calc)}</td>
+              <td class="mono">${f(As_ls_min)}</td>
+              <td class="mono"><strong>${f(bar_ls.as_adot)}</strong></td>
+              <td class="mono">${bar_ls.n} ${fPhi(phi_mm)} c/${esp_ls}cm</td>
+              <td><span class="tag ${gov_ls}">${gov_ls==='min'?'MÍNIMO':'CÁLCULO'}</span></td>
+            </tr>
+            <tr>
+              <td>Long. inferior (pos.)</td>
+              <td class="mono">${f(M_pos)}</td>
+              <td class="mono">${f(As_li_calc)}</td>
+              <td class="mono">${f(As_li_min)}</td>
+              <td class="mono"><strong>${f(bar_li.as_adot)}</strong></td>
+              <td class="mono">${bar_li.n} ${fPhi(phi_mm)} c/${esp_li}cm</td>
+              <td><span class="tag ${gov_li}">${gov_li==='min'?'MÍNIMO':'CÁLCULO'}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- E8 -->
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num">8</div><h3>Puncionamento — Pilar ${pilar_punc} (P${pilar_punc}, mais carregado)</h3><span class="ref">NBR 6118:2014 · 19.5</span></div>
+      <div class="calc-body">
+        <div class="eq">
+          <span class="lbl">Dimensões do pilar verificado: ${bp_punc}×${hp_punc} cm (bp×hp) · d/2 = ${f(d_semi,1)} cm</span>
+        </div>
+        <div class="eq">
+          Perímetro crítico: u = 2×(${bp_punc}+2×${f(d_semi,1)}) + 2×(${hp_punc}+2×${f(d_semi,1)})<br>
+          = 2×${f(lad_transv,1)} + 2×${f(lad_long,1)} = <span class="result">${f(perim,1)} cm</span>
+        </div>
+        <div class="eq">
+          A<sub>crit</sub> = ${f(lad_transv,1)} × ${f(lad_long,1)} / 10000 = <span class="result">${f(A_crit,3)} m²</span>
+        </div>
+        <div class="eq">
+          F<sub>sd,punc</sub> = ${f(Fz_punc)} − ${f(sigma_sd,0)} × ${f(A_crit,3)} = <span class="result">${f(Fsd_punc)} tf</span>
+        </div>
+        <div class="eq">
+          τ<sub>sd</sub> = (${f(Fsd_punc)} × 1000) / (${f(perim,1)} × ${f(d,1)}) = <span class="result">${f(tau_sd,2)} kgf/cm²</span>
+        </div>
+        <div class="eq">
+          ρ<sub>flex</sub> = ${f(bar_tv.as_adot,2)} / (${A_cm} × ${f(d,1)}) = <span class="result">${(rho_flex*1000).toFixed(2)} ‰</span>
+        </div>
+        <div class="eq">
+          τ<sub>Rd1</sub> = 0,13 × (1 + √(200/${f(d_mm,0)})) × (100 × ${(rho_flex).toFixed(5)} × ${fck})^(1/3)<br>
+          = 0,13 × ${f(1+Math.sqrt(200/d_mm),3)} × ${f(Math.pow(100*rho_flex*fck,1/3),3)} MPa × 10,197<br>
+          = <span class="result">${f(tau_rd1,2)} kgf/cm²</span>
+          &nbsp; ${tagOk(punc_ok, '✓ τsd < τRd1 — sem arm. específica', '✗ REQUER armadura de puncionamento')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quadro -->
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num" style="font-size:9px">QA</div><h3>Quadro de Armaduras</h3></div>
+      <div class="calc-body">
+        <table>
+          <thead>
+            <tr><th>Marca</th><th>Bitola</th><th>Qtd</th><th>Comp. (cm)</th><th>Total (m)</th><th>Descrição</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono" style="color:var(--green-lt)">T1</td>
+              <td class="mono">${fPhi(phi_mm)}</td>
+              <td class="mono">${bar_tv.n}</td>
+              <td class="mono">${B_cm + 20}</td>
+              <td class="mono">${f(bar_tv.n*(B_cm+20)/100,2)}</td>
+              <td>Transversal inf. — dir. b — c/${esp_tv}cm — As=${f(bar_tv.as_adot)}cm²</td>
+            </tr>
+            <tr>
+              <td class="mono" style="color:var(--blue-lt)">L1</td>
+              <td class="mono">${fPhi(phi_mm)}</td>
+              <td class="mono">${bar_ls.n}</td>
+              <td class="mono">${A_cm + 20}</td>
+              <td class="mono">${f(bar_ls.n*(A_cm+20)/100,2)}</td>
+              <td>Long. superior — dir. a — c/${esp_ls}cm — As=${f(bar_ls.as_adot)}cm²</td>
+            </tr>
+            <tr>
+              <td class="mono" style="color:var(--purple-lt)">L2</td>
+              <td class="mono">${fPhi(phi_mm)}</td>
+              <td class="mono">${bar_li.n}</td>
+              <td class="mono">${A_cm + 20}</td>
+              <td class="mono">${f(bar_li.n*(A_cm+20)/100,2)}</td>
+              <td>Long. inferior — dir. a — c/${esp_li}cm — As=${f(bar_li.as_adot)}cm²</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:6px;font-size:11px;color:var(--text2);line-height:2.2">
+          <strong style="color:var(--text)">Notas:</strong><br>
+          1. Cobrimento nominal: ${cob} cm — Classe CAA II — NBR 6118 Tab. 7.2<br>
+          2. Concreto: fck = ${fck} MPa — Aço CA-50 — fyd = 434,8 MPa<br>
+          3. σ_sd adotado = ${sigma_adm} tf/m² (pressão de cálculo uniforme máxima)<br>
+          4. Armadura mínima: ρ_min = ${(rho_min*1000).toFixed(1)}‰ — NBR 6118 item 22.5.3<br>
+          5. Puncionamento: τ_Rd1 calculado com d em mm (fórmula NBR 6118 eq. 19-5 · fck em MPa)
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+window.addEventListener('load', calcular);
+</script>
+</body>
+</html>
