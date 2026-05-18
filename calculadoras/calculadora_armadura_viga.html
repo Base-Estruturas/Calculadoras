@@ -396,6 +396,32 @@
   </div>
 
   <div class="result-card" id="resultado"></div>
+
+  <div class="result-card" id="card-bitola">
+    <p class="section-title" style="margin-top:0;">Detalhamento da armadura tracionada</p>
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 12px 14px;">
+      <div class="field">
+        <label for="bitola">Bitola da barra (mm)</label>
+        <select id="bitola">
+          <option value="0.196">ϕ 5,0 mm — 0,196 cm²</option>
+          <option value="0.312">ϕ 6,3 mm — 0,312 cm²</option>
+          <option value="0.5">ϕ 8,0 mm — 0,5 cm²</option>
+          <option value="0.785" selected>ϕ 10,0 mm — 0,785 cm²</option>
+          <option value="1.23">ϕ 12,5 mm — 1,23 cm²</option>
+          <option value="2.00">ϕ 16,0 mm — 2,00 cm²</option>
+          <option value="3.14">ϕ 20,0 mm — 3,14 cm²</option>
+          <option value="4.91">ϕ 25,0 mm — 4,91 cm²</option>
+          <option value="8.04">ϕ 32,0 mm — 8,04 cm²</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Quantidade de barras (As adotado ÷ área da bitola)</label>
+        <div id="qtd-barras" class="result-value" style="font-size: 28px; font-weight: 500;">—</div>
+        <div id="qtd-barras-meta" class="result-meta" style="font-size: 14px; color: var(--text-muted); margin-top: 6px;"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="details" id="detalhes"></div>
 
   <div class="result-card" id="resultado-cis"></div>
@@ -762,10 +788,30 @@ function calcular() {
   document.getElementById('detalhes').innerHTML = detHtml;
   ultimoCalculo = dados;
 
+  // === Atualiza card de detalhamento da armadura tracionada ===
+  atualizarBitola();
+  document.getElementById('card-bitola').classList.add('visible');
+
   // === Cálculo de cisalhamento ===
   calcularCisalhamento(dados);
 
   document.getElementById('btn-pdf').disabled = false;
+}
+
+function atualizarBitola() {
+  if (!ultimoCalculo || ultimoCalculo.As_adotada == null) return;
+  const As_adot = Math.round(ultimoCalculo.As_adotada * 100) / 100; // arredonda para 2 casas
+  const areaBitola = parseFloat(document.getElementById('bitola').value);
+  const select = document.getElementById('bitola');
+  const textoBitola = select.options[select.selectedIndex].text;
+  const partes = textoBitola.split('—');
+  const labelBitola = partes[0].trim();
+  const areaTexto = partes[1] ? partes[1].trim() : `${fmtBR(areaBitola, 3)} cm²`;
+  const qtd = As_adot / areaBitola;
+  document.getElementById('qtd-barras').innerHTML =
+    `${fmtBR(qtd, 3)} <span style="font-size:18px; color: var(--text-muted); font-weight:400;">barras</span>`;
+  document.getElementById('qtd-barras-meta').textContent =
+    `${fmtBR(As_adot, 2)} cm² ÷ ${areaTexto} (${labelBitola})`;
 }
 
 function armaduraMinMax(As, Asl, bw, h, fck) {
@@ -1444,6 +1490,7 @@ document.querySelectorAll('input[name="modelo"]').forEach(el => {
 });
 document.getElementById('btn-calc').addEventListener('click', calcular);
 document.getElementById('btn-pdf').addEventListener('click', gerarMemoriaPDF);
+document.getElementById('bitola').addEventListener('change', atualizarBitola);
 
 atualizarMd();
 atualizarD();
