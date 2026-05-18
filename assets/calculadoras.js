@@ -66,7 +66,7 @@ const CALCULADORAS = [
      nome: 'Sapata associada',
      arquivo: 'calculadora_sapata_associada.html',
      descricao: 'Dimensionamento de sapata associada.'
-   },
+   }
 
   // ===== ESCADAS =====
   // {
