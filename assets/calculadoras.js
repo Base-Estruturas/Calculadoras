@@ -39,7 +39,7 @@ const CALCULADORAS = [
      nome: 'Viga — Espaçamento barras',
      arquivo: 'espacamento-barras-viga.html',
      descricao: 'Cálculo espamento entre barras long.'
-   }
+   },
 
   // ===== PILARES =====
   // {
