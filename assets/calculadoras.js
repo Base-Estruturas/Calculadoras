@@ -64,7 +64,7 @@ const CALCULADORAS = [
   //   categoria: 'Fundações',
   //   id: 'sapata-associada',
   //  nome: 'Sapata associada',
-  //   arquivo: 'calculadora_sapata_associada.html',
+  //   arquivo: 'calculadora_sapata_associadaa.html',
   //   descricao: 'Dimensionamento de sapata associada.'
   // },
 
