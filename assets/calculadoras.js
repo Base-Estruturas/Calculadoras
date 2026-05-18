@@ -32,14 +32,14 @@ const CALCULADORAS = [
     arquivo: 'calculadora_armadura_viga.html',
     descricao: 'Armadura longitudinal e transversal de vigas retangulares ou T conforme NBR 6118:2014.'
   },
-  // Para adicionar mais vigas, copie o bloco acima:
-  // {
+ 
+   {
      categoria: 'Vigas',
      id: 'Espaçamento-Barras',
-  //   nome: 'Viga — Espaçamento barras',
-  //   arquivo: 'espacamento-barras-viga.html',
-  //   descricao: 'Cálculo espamento entre barras long.'
-  // },
+     nome: 'Viga — Espaçamento barras',
+     arquivo: 'espacamento-barras-viga.html',
+     descricao: 'Cálculo espamento entre barras long.'
+   },
 
   // ===== PILARES =====
   // {
