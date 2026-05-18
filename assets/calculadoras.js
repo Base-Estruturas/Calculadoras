@@ -39,7 +39,7 @@ const CALCULADORAS = [
      nome: 'Viga — Espaçamento barras',
      arquivo: 'espacamento-barras-viga.html',
      descricao: 'Cálculo espamento entre barras long.'
-   },
+   }
 
   // ===== PILARES =====
   // {
@@ -60,13 +60,13 @@ const CALCULADORAS = [
   // },
 
   // ===== FUNDAÇÕES =====
-  // {
-  //   categoria: 'Fundações',
-  //   id: 'sapata-isolada',
-  //   nome: 'Sapata isolada',
-  //   arquivo: 'calculadora_sapata.html',
-  //   descricao: 'Dimensionamento de sapata isolada de concreto armado.'
-  // },
+   {
+     categoria: 'Fundações',
+     id: 'sapata-associada',
+     nome: 'Sapata associada',
+     arquivo: 'calculadora_sapata_associada.html',
+     descricao: 'Dimensionamento de sapata associada.'
+   },
 
   // ===== ESCADAS =====
   // {
