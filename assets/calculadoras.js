@@ -34,11 +34,11 @@ const CALCULADORAS = [
   },
   // Para adicionar mais vigas, copie o bloco acima:
   // {
-  //   categoria: 'Vigas',
-  //   id: 'viga-flecha',
-  //   nome: 'Viga — Verificação de flecha',
-  //   arquivo: 'calculadora_viga_flecha.html',
-  //   descricao: 'Verificação de flecha imediata e total.'
+     categoria: 'Vigas',
+     id: 'Espaçamento-Barras',
+  //   nome: 'Viga — Espaçamento barras',
+  //   arquivo: 'espacamento-barras-viga.html',
+  //   descricao: 'Cálculo espamento entre barras long.'
   // },
 
   // ===== PILARES =====
