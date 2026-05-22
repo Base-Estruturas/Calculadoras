@@ -4,119 +4,471 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calculadora — Sapata Associada</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:        #0d1117;
-    --bg2:       #161b22;
-    --bg3:       #21262d;
-    --border:    #30363d;
-    --accent:    #f0a500;
-    --accent2:   #e36b00;
-    --green:     #1a7f4e;
-    --green-lt:  #2dbd74;
-    --red:       #da3633;
-    --red-lt:    #ff7b72;
-    --blue:      #1f6feb;
-    --blue-lt:   #58a6ff;
-    --purple:    #6e40c9;
-    --purple-lt: #bc8cff;
-    --text:      #e6edf3;
-    --text2:     #8b949e;
-    --text3:     #484f58;
-    --radius:    8px;
-    --mono:      'Space Mono', monospace;
-    --sans:      'DM Sans', sans-serif;
+    --bg:         #f1f3f2;
+    --bg2:        #ffffff;
+    --bg3:        #f9fafb;
+    --border:     #e5e7eb;
+    --border2:    #d1d5db;
+    --accent:     #2563eb;
+    --accent-lt:  #3b82f6;
+    --green:      #27ae60;
+    --green-lt:   #2ecc71;
+    --green-bg:   #d1fae5;
+    --green-tx:   #065f46;
+    --red:        #c0392b;
+    --red-lt:     #e74c3c;
+    --red-bg:     #fee2e2;
+    --red-tx:     #991b1b;
+    --orange:     #e67e22;
+    --orange-lt:  #f39c12;
+    --orange-bg:  #fffbeb;
+    --orange-tx:  #92400e;
+    --purple-bg:  #ede9fe;
+    --purple-tx:  #5b21b6;
+    --blue-bg:    #dbeafe;
+    --blue-tx:    #1e40af;
+    --text:       #1f2937;
+    --text2:      #4b5563;
+    --text3:      #6b7280;
+    --text4:      #9ca3af;
+    --radius:     8px;
+    --mono:       'Courier New', monospace;
+    --sans:       -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.6; min-height: 100vh; }
 
-  header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 18px 32px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
-  .logo { width: 36px; height: 36px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 700; font-size: 16px; color: #000; flex-shrink: 0; }
-  header h1 { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
-  header p { font-size: 12px; color: var(--text2); }
-  .badge { margin-left: auto; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-family: var(--mono); color: var(--accent); }
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    color: #fff;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+  }
+  header h1 {
+    font-size: 1em;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  header p { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .badge {
+    margin-left: auto;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+  }
 
-  .wrapper { display: grid; grid-template-columns: 390px 1fr; gap: 0; min-height: calc(100vh - 73px); }
+  .wrapper {
+    display: grid;
+    grid-template-columns: 390px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 73px);
+  }
 
-  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); padding: 24px 18px; overflow-y: auto; max-height: calc(100vh - 73px); position: sticky; top: 73px; }
+  /* Sidebar com rolagem própria */
+  .sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    overflow-y: auto;
+    max-height: calc(100vh - 73px);
+    position: sticky;
+    top: 73px;
+  }
 
-  .section-title { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text2); margin-bottom: 10px; margin-top: 16px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .section-title {
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 12px;
+    margin-top: 22px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
   .section-title:first-child { margin-top: 0; }
 
-  .input-group { margin-bottom: 4px; }
-  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-  label { font-size: 11px; font-weight: 500; color: var(--text2); letter-spacing: 0.3px; }
-  label span { font-family: var(--mono); font-size: 10px; color: var(--accent); margin-left: 4px; }
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  label {
+    font-size: 0.82em;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: 0.01em;
+  }
+  label span.unit {
+    font-size: 0.92em;
+    color: var(--text4);
+    margin-left: 4px;
+  }
 
-  input[type="number"] { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 10px; color: var(--text); font-family: var(--mono); font-size: 13px; width: 100%; transition: border-color 0.2s; -moz-appearance: textfield; }
-  input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
-  input[type="number"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(240,165,0,0.12); }
-  select { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 10px; color: var(--text); font-family: var(--sans); font-size: 13px; width: 100%; cursor: pointer; }
-  select:focus { outline: none; border-color: var(--accent); }
+  input[type="number"] {
+    background: #fff;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 8px 11px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.95em;
+    width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  select {
+    background: #fff;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 8px 11px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.95em;
+    width: 100%;
+    cursor: pointer;
+  }
 
-  /* Pill labels para separar P1/P2 */
-  .pilar-label { display: inline-block; padding: 2px 10px; border-radius: 12px; font-family: var(--mono); font-size: 10px; font-weight: 700; margin-bottom: 8px; }
-  .pilar-label.p1 { background: rgba(88,166,255,0.15); color: var(--blue-lt); border: 1px solid rgba(88,166,255,0.3); }
-  .pilar-label.p2 { background: rgba(45,189,116,0.15); color: var(--green-lt); border: 1px solid rgba(45,189,116,0.3); }
+  .pilar-label {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.72em;
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: 0.04em;
+  }
+  .pilar-label.p1 { background: var(--blue-bg);  color: var(--blue-tx);  border: 1px solid #bfdbfe; }
+  .pilar-label.p2 { background: var(--green-bg); color: var(--green-tx); border: 1px solid #a7f3d0; }
 
-  .pilar-box { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; }
+  .pilar-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
 
-  .btn-calc { width: 100%; margin-top: 12px; padding: 12px; background: var(--accent); color: #000; font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: 0.5px; border: none; border-radius: var(--radius); cursor: pointer; transition: background 0.2s, transform 0.1s; }
-  .btn-calc:hover { background: var(--accent2); }
-  .btn-calc:active { transform: scale(0.98); }
+  /* Área de resultados — rolagem própria */
+  .results {
+    padding: 28px 32px;
+    overflow-y: auto;
+    max-height: calc(100vh - 73px);
+  }
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+  }
+  .results-header h2 {
+    font-size: 1em;
+    font-weight: 700;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 
-  .results { padding: 28px 32px; overflow-y: auto; }
-  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-  .results-header h2 { font-family: var(--mono); font-size: 14px; color: var(--text); }
-
-  .status { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-family: var(--mono); }
-  .status.ok   { border-color: var(--green); color: var(--green-lt); }
-  .status.fail { border-color: var(--red);   color: var(--red-lt); }
-  .dot { width:8px; height:8px; border-radius:50%; }
-  .ok .dot   { background: var(--green-lt); }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.82em;
+    font-weight: 600;
+  }
+  .status.ok   { background: var(--green-bg);  border-color: #a7f3d0; color: var(--green-tx); }
+  .status.warn { background: var(--orange-bg); border-color: #fde68a; color: var(--orange-tx); }
+  .status.fail { background: var(--red-bg);    border-color: #fecaca; color: var(--red-tx); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .ok   .dot { background: var(--green-lt); }
+  .warn .dot { background: var(--orange-lt); }
   .fail .dot { background: var(--red-lt); }
 
-  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; position: relative; overflow: hidden; }
-  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); }
-  .card.green::before { background: var(--green-lt); }
-  .card.blue::before  { background: var(--blue-lt); }
-  .card.purple::before{ background: var(--purple-lt); }
-  .card-label { font-size: 10px; font-family: var(--mono); color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .card-value { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; }
-  .card-unit  { font-size: 11px; color: var(--text2); margin-top: 4px; }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .card-sum {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-sum::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+  }
+  .card-sum.green::before  { background: var(--green-lt); }
+  .card-sum.blue::before   { background: var(--accent); }
+  .card-sum.purple::before { background: #8b5cf6; }
+  .card-sum .card-label {
+    font-size: 0.7em;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .card-sum .card-value {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .card-sum .card-unit {
+    font-size: 0.78em;
+    color: var(--text3);
+    margin-top: 5px;
+  }
 
-  .calc-block { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
-  .calc-block-header { background: var(--bg3); padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
-  .step-num { width: 22px; height: 22px; background: var(--accent); color: #000; font-family: var(--mono); font-weight: 700; font-size: 11px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .calc-block-header h3 { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
-  .ref { margin-left: auto; font-size: 10px; color: var(--text2); font-family: var(--mono); }
-  .calc-body { padding: 16px; }
+  .result-box {
+    background: linear-gradient(135deg, var(--green), var(--green-lt));
+    color: #fff;
+    padding: 22px;
+    border-radius: var(--radius);
+    text-align: center;
+    margin-bottom: 22px;
+  }
+  .result-box.warn  { background: linear-gradient(135deg, var(--orange), var(--orange-lt)); }
+  .result-box.error { background: linear-gradient(135deg, var(--red), var(--red-lt)); }
+  .result-box .label {
+    font-size: 0.78em;
+    opacity: 0.95;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .result-box .value { font-size: 2.1em; font-weight: 700; line-height: 1; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 7px 12px; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); border-bottom: 1px solid var(--border); }
-  td { padding: 8px 12px; border-bottom: 1px solid var(--bg3); vertical-align: middle; }
+  .calc-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .calc-block-header {
+    background: var(--bg3);
+    padding: 11px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-num {
+    width: 24px; height: 24px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.78em;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .calc-block-header h3 {
+    font-size: 0.82em;
+    font-weight: 700;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Card colapsável (planta baixa) */
+  .collapsible {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .collapsible-header {
+    background: var(--bg3);
+    padding: 11px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .collapsible-header:hover { background: #eef0f2; }
+  .collapsible.closed .collapsible-header { border-bottom: none; }
+  .collapsible-header .icon-toggle {
+    width: 24px; height: 24px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 0.85em;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+  .collapsible.closed .icon-toggle { transform: rotate(-90deg); }
+  .collapsible-header h3 {
+    font-size: 0.82em;
+    font-weight: 700;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .collapsible-header .hint {
+    margin-left: auto;
+    font-size: 0.75em;
+    color: var(--text3);
+    font-weight: 500;
+  }
+  .collapsible-body {
+    padding: 18px 16px 8px;
+    background: var(--bg2);
+    overflow: hidden;
+    max-height: 800px;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+  .collapsible.closed .collapsible-body {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .planta-svg { width: 60%; height: auto; display: block; margin: 0 auto; }
+  .ref {
+    margin-left: auto;
+    font-size: 0.75em;
+    color: var(--text3);
+    font-weight: 500;
+  }
+  .calc-body { padding: 14px 16px; }
+
+  .eq {
+    background: var(--bg3);
+    border: 1px dashed var(--border2);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 0.85em;
+    color: var(--text);
+    margin: 6px 0;
+    line-height: 1.7;
+  }
+  .eq .result { color: var(--accent); font-weight: 700; }
+  .eq .lbl    { color: var(--text3); font-size: 0.92em; font-family: var(--sans); font-style: italic; }
+
+  .alert {
+    background: var(--orange-bg);
+    border: 1px solid #fde68a;
+    border-left: 3px solid var(--orange-lt);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 0.85em;
+    color: var(--orange-tx);
+    margin-bottom: 12px;
+  }
+  .alert.danger {
+    background: var(--red-bg);
+    border-color: #fecaca;
+    border-left-color: var(--red);
+    color: var(--red-tx);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86em;
+  }
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+    font-weight: 700;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--bg3);
+    vertical-align: middle;
+    color: var(--text2);
+  }
   tr:last-child td { border-bottom: none; }
-  .mono { font-family: var(--mono); }
+  .mono { font-family: var(--mono); color: var(--text); }
 
-  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--mono); font-size: 10px; font-weight: 700; }
-  .tag.ok   { background: rgba(45,189,116,0.15); color: var(--green-lt); }
-  .tag.fail { background: rgba(218,54,51,0.15);  color: var(--red-lt); }
-  .tag.min  { background: rgba(188,140,255,0.15);color: var(--purple-lt); }
-  .tag.calc { background: rgba(88,166,255,0.15); color: var(--blue-lt); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.78em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .tag.ok   { background: var(--green-bg);  color: var(--green-tx); }
+  .tag.fail { background: var(--red-bg);    color: var(--red-tx); }
+  .tag.min  { background: var(--purple-bg); color: var(--purple-tx); }
+  .tag.calc { background: var(--blue-bg);   color: var(--blue-tx); }
 
-  .eq { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: var(--accent); margin: 6px 0; letter-spacing: 0.3px; }
-  .eq .result { color: var(--green-lt); font-weight: 700; }
-  .eq .lbl    { color: var(--text2); font-size: 11px; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
-  .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: var(--text3); gap: 12px; }
-  .placeholder p { font-family: var(--mono); font-size: 12px; }
-
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  @media (max-width: 900px) {
+    .wrapper { grid-template-columns: 1fr; }
+    .sidebar { position: static; max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
+    .results { max-height: none; }
+    .cards { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 500px) {
+    header { padding: 14px 18px; }
+    .results { padding: 20px 18px; }
+    .cards { grid-template-columns: 1fr; }
+    .input-row { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -124,281 +476,384 @@
 <header>
   <div class="logo">SA</div>
   <div>
-    <h1>CALCULADORA — SAPATA ASSOCIADA</h1>
+    <h1>Calculadora — Sapata Associada</h1>
     <p>Dimensionamento geotécnico e estrutural · NBR 6118:2014 · NBR 6122:2022</p>
   </div>
-  <div class="badge">v1.1</div>
+  <div class="badge">v1.2</div>
 </header>
 
 <div class="wrapper">
-<aside class="sidebar">
 
-  <div class="section-title">Cargas nos Pilares</div>
-  <div class="pilar-box">
-    <div class="pilar-label p1">PILAR 1 — P1</div>
+  <aside class="sidebar">
+
+    <div class="section-title">Cargas nos Pilares</div>
+    <div class="pilar-box">
+      <div class="pilar-label p1">PILAR 1 — P1</div>
+      <div class="input-row">
+        <div class="field">
+          <label>F<sub>z</sub> <span class="unit">(tf)</span></label>
+          <input type="number" id="fz1" value="168" step="0.1">
+        </div>
+        <div class="field">
+          <label>M<sub>x</sub> <span class="unit">(tf·m)</span></label>
+          <input type="number" id="mx1" value="9" step="0.1">
+        </div>
+      </div>
+    </div>
+    <div class="pilar-box">
+      <div class="pilar-label p2">PILAR 2 — P2</div>
+      <div class="input-row">
+        <div class="field">
+          <label>F<sub>z</sub> <span class="unit">(tf)</span></label>
+          <input type="number" id="fz2" value="173" step="0.1">
+        </div>
+        <div class="field">
+          <label>M<sub>x</sub> <span class="unit">(tf·m)</span></label>
+          <input type="number" id="mx2" value="13" step="0.1">
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Geometria dos Pilares</div>
+    <div class="pilar-box">
+      <div class="pilar-label p1">PILAR 1</div>
+      <div class="input-row">
+        <div class="field">
+          <label>b<sub>p1</sub> — transv. <span class="unit">(cm)</span></label>
+          <input type="number" id="bp1" value="19" step="1">
+        </div>
+        <div class="field">
+          <label>h<sub>p1</sub> — long. <span class="unit">(cm)</span></label>
+          <input type="number" id="hp1" value="80" step="1">
+        </div>
+      </div>
+    </div>
+    <div class="pilar-box">
+      <div class="pilar-label p2">PILAR 2</div>
+      <div class="input-row">
+        <div class="field">
+          <label>b<sub>p2</sub> — transv. <span class="unit">(cm)</span></label>
+          <input type="number" id="bp2" value="19" step="1">
+        </div>
+        <div class="field">
+          <label>h<sub>p2</sub> — long. <span class="unit">(cm)</span></label>
+          <input type="number" id="hp2" value="80" step="1">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Distância entre eixos <span class="unit">(m)</span></label>
+      <input type="number" id="deixos" value="2.00" step="0.05">
+    </div>
+
+    <div class="section-title">Dimensões Adotadas da Sapata</div>
     <div class="input-row">
       <div class="field">
-        <label>Fz <span>tf</span></label>
-        <input type="number" id="fz1" value="168" step="0.1">
+        <label>a — Longitudinal <span class="unit">(cm)</span></label>
+        <input type="number" id="a_sap" value="470" step="5">
       </div>
       <div class="field">
-        <label>Mx <span>tf·m</span></label>
-        <input type="number" id="mx1" value="9" step="0.1">
+        <label>b — Transversal <span class="unit">(cm)</span></label>
+        <input type="number" id="b_sap" value="210" step="5">
       </div>
     </div>
-  </div>
-  <div class="pilar-box">
-    <div class="pilar-label p2">PILAR 2 — P2</div>
+    <div class="field">
+      <label>h — Altura <span class="unit">(cm)</span></label>
+      <input type="number" id="h_sap" value="100" step="5">
+    </div>
+
+    <div class="section-title">Solo e Materiais</div>
+    <div class="field">
+      <label>σ<sub>adm</sub> do solo <span class="unit">(tf/m²)</span></label>
+      <input type="number" id="sigma_adm" value="40" step="1">
+    </div>
     <div class="input-row">
       <div class="field">
-        <label>Fz <span>tf</span></label>
-        <input type="number" id="fz2" value="173" step="0.1">
+        <label>f<sub>ck</sub> <span class="unit">(MPa)</span></label>
+        <select id="fck">
+          <option value="20">20</option>
+          <option value="25" selected>25</option>
+          <option value="30">30</option>
+          <option value="35">35</option>
+          <option value="40">40</option>
+          <option value="45">45</option>
+          <option value="50">50</option>
+        </select>
       </div>
       <div class="field">
-        <label>Mx <span>tf·m</span></label>
-        <input type="number" id="mx2" value="13" step="0.1">
+        <label>Cobrimento <span class="unit">(cm)</span></label>
+        <input type="number" id="cob" value="5" step="0.5">
       </div>
     </div>
-  </div>
-
-  <div class="section-title">Geometria dos Pilares</div>
-  <div class="pilar-box">
-    <div class="pilar-label p1">PILAR 1</div>
     <div class="input-row">
       <div class="field">
-        <label>bp1 — Largura (tranv.) <span>cm</span></label>
-        <input type="number" id="bp1" value="19" step="1">
+        <label>Ø armadura <span class="unit">(mm)</span></label>
+        <select id="phi_princ">
+          <option value="10">Ø 10</option>
+          <option value="12.5">Ø 12.5</option>
+          <option value="16" selected>Ø 16</option>
+          <option value="20">Ø 20</option>
+          <option value="25">Ø 25</option>
+        </select>
       </div>
       <div class="field">
-        <label>hp1 — Comprim. (long.) <span>cm</span></label>
-        <input type="number" id="hp1" value="80" step="1">
+        <label>ρ<sub>min</sub> <span class="unit">(automático · Tab. 17.3)</span></label>
+        <input type="text" id="rho_min_display" value="0,150‰" readonly
+               style="background:var(--bg3); color:var(--text2); cursor:not-allowed;">
       </div>
     </div>
-  </div>
-  <div class="pilar-box">
-    <div class="pilar-label p2">PILAR 2</div>
-    <div class="input-row">
-      <div class="field">
-        <label>bp2 — Largura (tranv.) <span>cm</span></label>
-        <input type="number" id="bp2" value="19" step="1">
-      </div>
-      <div class="field">
-        <label>hp2 — Comprim. (long.) <span>cm</span></label>
-        <input type="number" id="hp2" value="80" step="1">
-      </div>
-    </div>
-  </div>
-  <div class="field">
-    <label>Distância entre eixos <span>m</span></label>
-    <input type="number" id="deixos" value="2.00" step="0.05">
-  </div>
 
-  <div class="section-title">Dimensões Adotadas da Sapata</div>
-  <div class="input-row">
-    <div class="field">
-      <label>a — Longitudinal <span>cm</span></label>
-      <input type="number" id="a_sap" value="470" step="5">
-    </div>
-    <div class="field">
-      <label>b — Transversal <span>cm</span></label>
-      <input type="number" id="b_sap" value="210" step="5">
-    </div>
-  </div>
-  <div class="field">
-    <label>h — Altura <span>cm</span></label>
-    <input type="number" id="h_sap" value="100" step="5">
-  </div>
+  </aside>
 
-  <div class="section-title">Solo e Materiais</div>
-  <div class="field">
-    <label>σ_adm do solo <span>tf/m²</span></label>
-    <input type="number" id="sigma_adm" value="40" step="1">
-  </div>
-  <div class="input-row">
-    <div class="field">
-      <label>fck <span>MPa</span></label>
-      <input type="number" id="fck" value="25" step="5">
-    </div>
-    <div class="field">
-      <label>Cobrimento <span>cm</span></label>
-      <input type="number" id="cob" value="5" step="0.5">
-    </div>
-  </div>
-  <div class="input-row">
-    <div class="field">
-      <label>φ armadura <span>mm</span></label>
-      <select id="phi_princ">
-        <option value="10">φ 10</option>
-        <option value="12.5">φ 12.5</option>
-        <option value="16" selected>φ 16</option>
-        <option value="20">φ 20</option>
-        <option value="25">φ 25</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>ρ_min <span>×10⁻³</span></label>
-      <input type="number" id="rho_min" value="1.5" step="0.1">
-    </div>
-  </div>
-
-  <button class="btn-calc" onclick="calcular()">▶  CALCULAR</button>
-
-</aside>
-
-<main class="results" id="results">
-  <div class="placeholder">
-    <svg width="64" height="64" fill="none" viewBox="0 0 64 64">
-      <rect x="8" y="40" width="48" height="16" rx="3" stroke="#484f58" stroke-width="2"/>
-      <rect x="18" y="24" width="12" height="16" rx="2" stroke="#484f58" stroke-width="2"/>
-      <rect x="34" y="24" width="12" height="16" rx="2" stroke="#484f58" stroke-width="2"/>
-      <line x1="32" y1="8" x2="32" y2="24" stroke="#484f58" stroke-width="2" stroke-dasharray="3 2"/>
-      <line x1="24" y1="8" x2="24" y2="24" stroke="#484f58" stroke-width="2" stroke-dasharray="3 2"/>
-      <line x1="40" y1="8" x2="40" y2="24" stroke="#484f58" stroke-width="2" stroke-dasharray="3 2"/>
-    </svg>
-    <p>Preencha os dados e clique em CALCULAR</p>
-  </div>
-</main>
+  <main class="results" id="results"></main>
 </div>
 
 <script>
-function asBarras(as_req, phi_mm) {
-  const as1 = Math.PI * Math.pow(phi_mm/2, 2) / 100; // cm²
-  const n = Math.ceil(as_req / as1);
-  return { n, as_adot: n * as1, as1 };
+// Estado persistente do card colapsável (mantém aberto/fechado entre recálculos)
+let plantaAberta = true;
+function togglePlanta() {
+  plantaAberta = !plantaAberta;
+  const card = document.getElementById('plantaCard');
+  if (card) card.classList.toggle('closed', !plantaAberta);
 }
 
+function plantaCardHTML() {
+  const stateClass = plantaAberta ? '' : 'closed';
+  return `
+    <div class="collapsible ${stateClass}" id="plantaCard">
+      <div class="collapsible-header" onclick="togglePlanta()">
+        <div class="icon-toggle">▾</div>
+        <h3>Planta Baixa — Referência dos Inputs Geométricos</h3>
+        <span class="hint">clique para abrir / fechar</span>
+      </div>
+      <div class="collapsible-body">
+        <svg class="planta-svg" viewBox="0 0 680 540" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="hatchP1" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="6" stroke="#185FA5" stroke-width="1"/>
+            </pattern>
+            <pattern id="hatchP2" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="6" stroke="#0F6E56" stroke-width="1"/>
+            </pattern>
+            <marker id="arrPL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" fill="#444441"/>
+            </marker>
+          </defs>
+
+          <g transform="translate(40,40)">
+            <line x1="0" y1="0" x2="32" y2="0" stroke="#2C2C2A" stroke-width="1" marker-end="url(#arrPL)"/>
+            <line x1="0" y1="0" x2="0" y2="32" stroke="#2C2C2A" stroke-width="1" marker-end="url(#arrPL)"/>
+            <text x="38" y="0" dominant-baseline="central" font-size="11" fill="#2C2C2A">a (long.)</text>
+            <text x="-4" y="40" text-anchor="end" font-size="11" fill="#2C2C2A">b (transv.)</text>
+          </g>
+
+          <line x1="220" y1="170" x2="460" y2="170" stroke="#444441" stroke-width="0.6"/>
+          <line x1="220" y1="165" x2="220" y2="175" stroke="#444441" stroke-width="0.8"/>
+          <line x1="460" y1="165" x2="460" y2="175" stroke="#444441" stroke-width="0.8"/>
+          <line x1="232" y1="170" x2="220" y2="170" stroke="#444441" stroke-width="0.6" marker-start="url(#arrPL)"/>
+          <line x1="448" y1="170" x2="460" y2="170" stroke="#444441" stroke-width="0.6" marker-start="url(#arrPL)"/>
+          <line x1="220" y1="180" x2="220" y2="265" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+          <line x1="460" y1="180" x2="460" y2="265" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+          <text x="340" y="160" text-anchor="middle" font-size="13" font-weight="600" fill="#0C447C">e  (deixos)</text>
+
+          <line x1="100" y1="120" x2="580" y2="120" stroke="#444441" stroke-width="0.6"/>
+          <line x1="100" y1="115" x2="100" y2="125" stroke="#444441" stroke-width="0.8"/>
+          <line x1="580" y1="115" x2="580" y2="125" stroke="#444441" stroke-width="0.8"/>
+          <line x1="112" y1="120" x2="100" y2="120" stroke="#444441" stroke-width="0.6" marker-start="url(#arrPL)"/>
+          <line x1="568" y1="120" x2="580" y2="120" stroke="#444441" stroke-width="0.6" marker-start="url(#arrPL)"/>
+          <line x1="100" y1="130" x2="100" y2="260" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+          <line x1="580" y1="130" x2="580" y2="260" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+          <text x="340" y="110" text-anchor="middle" font-size="13" font-weight="600" fill="#0C447C">a  (a_sap)</text>
+
+          <rect x="100" y="260" width="480" height="100" fill="#F1EFE8" stroke="#2C2C2A" stroke-width="1.5"/>
+
+          <rect x="190" y="292" width="60" height="36" fill="url(#hatchP1)" stroke="#0C447C" stroke-width="1.2"/>
+          <text x="220" y="312" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="700" fill="#042C53">P1</text>
+
+          <rect x="430" y="292" width="60" height="36" fill="url(#hatchP2)" stroke="#085041" stroke-width="1.2"/>
+          <text x="460" y="312" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="700" fill="#04342C">P2</text>
+
+          <line x1="220" y1="265" x2="220" y2="355" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+          <line x1="460" y1="265" x2="460" y2="355" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+
+          <line x1="190" y1="278" x2="250" y2="278" stroke="#185FA5" stroke-width="0.6"/>
+          <line x1="190" y1="273" x2="190" y2="283" stroke="#185FA5" stroke-width="0.8"/>
+          <line x1="250" y1="273" x2="250" y2="283" stroke="#185FA5" stroke-width="0.8"/>
+          <text x="220" y="270" text-anchor="middle" font-size="11" font-weight="500" fill="#185FA5">hp1</text>
+
+          <line x1="178" y1="292" x2="178" y2="328" stroke="#185FA5" stroke-width="0.6"/>
+          <line x1="173" y1="292" x2="183" y2="292" stroke="#185FA5" stroke-width="0.8"/>
+          <line x1="173" y1="328" x2="183" y2="328" stroke="#185FA5" stroke-width="0.8"/>
+          <text x="170" y="312" text-anchor="end" dominant-baseline="central" font-size="11" font-weight="500" fill="#185FA5">bp1</text>
+
+          <line x1="430" y1="278" x2="490" y2="278" stroke="#0F6E56" stroke-width="0.6"/>
+          <line x1="430" y1="273" x2="430" y2="283" stroke="#0F6E56" stroke-width="0.8"/>
+          <line x1="490" y1="273" x2="490" y2="283" stroke="#0F6E56" stroke-width="0.8"/>
+          <text x="460" y="270" text-anchor="middle" font-size="11" font-weight="500" fill="#0F6E56">hp2</text>
+
+          <line x1="502" y1="292" x2="502" y2="328" stroke="#0F6E56" stroke-width="0.6"/>
+          <line x1="497" y1="292" x2="507" y2="292" stroke="#0F6E56" stroke-width="0.8"/>
+          <line x1="497" y1="328" x2="507" y2="328" stroke="#0F6E56" stroke-width="0.8"/>
+          <text x="510" y="312" text-anchor="start" dominant-baseline="central" font-size="11" font-weight="500" fill="#0F6E56">bp2</text>
+
+          <line x1="618" y1="260" x2="618" y2="360" stroke="#444441" stroke-width="0.6"/>
+          <line x1="613" y1="260" x2="623" y2="260" stroke="#444441" stroke-width="0.8"/>
+          <line x1="613" y1="360" x2="623" y2="360" stroke="#444441" stroke-width="0.8"/>
+          <line x1="618" y1="272" x2="618" y2="260" stroke="#444441" stroke-width="0.6" marker-start="url(#arrPL)"/>
+          <line x1="618" y1="348" x2="618" y2="360" stroke="#444441" stroke-width="0.6" marker-start="url(#arrPL)"/>
+          <line x1="585" y1="260" x2="625" y2="260" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+          <line x1="585" y1="360" x2="625" y2="360" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+          <text x="635" y="310" text-anchor="start" dominant-baseline="central" font-size="13" font-weight="600" fill="#0C447C">b</text>
+          <text x="635" y="324" text-anchor="start" dominant-baseline="central" font-size="11" fill="#0C447C">(b_sap)</text>
+
+          <rect x="500" y="430" width="140" height="40" fill="#F1EFE8" stroke="#2C2C2A" stroke-width="1.2"/>
+          <rect x="555" y="408" width="30" height="22" fill="url(#hatchP1)" stroke="#0C447C" stroke-width="1"/>
+          <line x1="488" y1="430" x2="488" y2="470" stroke="#444441" stroke-width="0.6"/>
+          <line x1="483" y1="430" x2="493" y2="430" stroke="#444441" stroke-width="0.8"/>
+          <line x1="483" y1="470" x2="493" y2="470" stroke="#444441" stroke-width="0.8"/>
+          <line x1="488" y1="438" x2="488" y2="430" stroke="#444441" stroke-width="0.6" marker-start="url(#arrPL)"/>
+          <line x1="488" y1="462" x2="488" y2="470" stroke="#444441" stroke-width="0.6" marker-start="url(#arrPL)"/>
+          <text x="480" y="450" text-anchor="end" dominant-baseline="central" font-size="11" font-weight="500" fill="#0C447C">h (h_sap)</text>
+          <text x="570" y="494" text-anchor="middle" font-size="11" fill="#5F5E5A">corte vertical</text>
+
+          <g transform="translate(40,500)">
+            <text x="0" y="0" font-size="11" fill="#5F5E5A">a_sap · b_sap · h_sap — dimensões da sapata  ·  bp1/hp1, bp2/hp2 — pilares  ·  deixos — distância entre eixos dos pilares</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  `;
+}
+
+function fmt(v, casas = 2) {
+  if (!isFinite(v)) return '—';
+  return v.toLocaleString('pt-BR', {
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas
+  });
+}
+function fPhi(p) { return `Ø ${fmt(p, p % 1 === 0 ? 0 : 1)} mm`; }
+function tagOk(ok, txtOk, txtFail) {
+  return `<span class="tag ${ok ? 'ok' : 'fail'}">${ok ? txtOk : txtFail}</span>`;
+}
+
+function asBarras(as_req, phi_mm) {
+  const as1 = Math.PI * Math.pow(phi_mm / 2, 2) / 100;
+  const n = Math.max(Math.ceil(as_req / as1), 0);
+  return { n, as_adot: n * as1, as1 };
+}
 function espacamento(largura_cm, n, cob_cm, phi_mm) {
-  if (n <= 1) return largura_cm - 2*cob_cm;
+  if (n <= 1) return largura_cm - 2 * cob_cm;
   const phi = phi_mm / 10;
-  return Math.floor((largura_cm - 2*cob_cm - phi) / (n - 1));
+  return Math.floor((largura_cm - 2 * cob_cm - phi) / (n - 1));
 }
 
 function calcular() {
-  // ── Leitura ──────────────────────────────────────────────────
   const Fz1       = parseFloat(document.getElementById('fz1').value);
   const Mx1       = parseFloat(document.getElementById('mx1').value);
   const Fz2       = parseFloat(document.getElementById('fz2').value);
   const Mx2       = parseFloat(document.getElementById('mx2').value);
-  const bp1       = parseFloat(document.getElementById('bp1').value);   // cm largura transv P1
-  const hp1       = parseFloat(document.getElementById('hp1').value);   // cm comprim long P1
+  const bp1       = parseFloat(document.getElementById('bp1').value);
+  const hp1       = parseFloat(document.getElementById('hp1').value);
   const bp2       = parseFloat(document.getElementById('bp2').value);
   const hp2       = parseFloat(document.getElementById('hp2').value);
-  const deixos    = parseFloat(document.getElementById('deixos').value); // m
-  const A_cm      = parseFloat(document.getElementById('a_sap').value);  // cm
-  const B_cm      = parseFloat(document.getElementById('b_sap').value);  // cm
-  const H_cm      = parseFloat(document.getElementById('h_sap').value);  // cm
+  const deixos    = parseFloat(document.getElementById('deixos').value);
+  const A_cm      = parseFloat(document.getElementById('a_sap').value);
+  const B_cm      = parseFloat(document.getElementById('b_sap').value);
+  const H_cm      = parseFloat(document.getElementById('h_sap').value);
   const sigma_adm = parseFloat(document.getElementById('sigma_adm').value);
-  const fck       = parseFloat(document.getElementById('fck').value);    // MPa
-  const cob       = parseFloat(document.getElementById('cob').value);    // cm
+  const fck       = parseFloat(document.getElementById('fck').value);
+  const cob       = parseFloat(document.getElementById('cob').value);
   const phi_mm    = parseFloat(document.getElementById('phi_princ').value);
-  const rho_min   = parseFloat(document.getElementById('rho_min').value) / 1000;
 
-  // ── Conversões ──────────────────────────────────────────────
-  const A_m  = A_cm  / 100;
-  const B_m  = B_cm  / 100;
-  const H_m  = H_cm  / 100;
-  const phi  = phi_mm / 10; // cm
+  // ρ_min automático conforme NBR 6118:2014 Tabela 17.3 (%)
+  // valores em fração: 0,150% = 0,00150
+  const RHO_MIN_TABELA = {
+    20: 0.00150, 25: 0.00150, 30: 0.00150,
+    35: 0.00164, 40: 0.00179, 45: 0.00194,
+    50: 0.00208
+  };
+  const rho_min = RHO_MIN_TABELA[fck] || 0.00150;
+  // Atualizar display do campo readonly
+  const rhoDisplay = document.getElementById('rho_min_display');
+  if (rhoDisplay) rhoDisplay.value = fmt(rho_min * 1000, 3) + '‰';
 
-  // ── E1: Peso próprio e carga total ──────────────────────────
-  const Pp       = A_m * B_m * H_m * 2.5;
+  const valoresOk = [Fz1, Mx1, Fz2, Mx2, bp1, hp1, bp2, hp2, deixos, A_cm, B_cm, H_cm,
+                     sigma_adm, fck, cob, phi_mm].every(v => isFinite(v));
+  if (!valoresOk || A_cm <= 0 || B_cm <= 0 || H_cm <= 0 || sigma_adm <= 0) {
+    document.getElementById('results').innerHTML = `
+      <div class="results-header">
+        <h2>Resultados</h2>
+        <div class="status fail"><div class="dot"></div>ENTRADA INVÁLIDA</div>
+      </div>
+      ${plantaCardHTML()}
+      <div class="alert danger">⚠️ Verifique os valores de entrada — há campos inválidos ou negativos.</div>`;
+    return;
+  }
+
+  const A_m = A_cm / 100, B_m = B_cm / 100, H_m = H_cm / 100, phi = phi_mm / 10;
+
+  const Pp = A_m * B_m * H_m * 2.5;
   const Nk_total = Fz1 + Fz2 + Pp;
 
-  // ── E2: Área ─────────────────────────────────────────────────
-  const A_min  = Nk_total / sigma_adm;
+  const A_min = Nk_total / sigma_adm;
   const A_adot = A_m * B_m;
   const area_ok = A_adot >= A_min;
 
-  // ── E3: Centroide da resultante ──────────────────────────────
-  // x̄ = distância do eixo P1 à resultante
-  const x_bar = (Fz2 * deixos) / (Fz1 + Fz2); // m
+  const x_bar = (Fz2 * deixos) / (Fz1 + Fz2);
+  const c_esq_eixo = A_m / 2 - x_bar;
+  const c_dir_eixo = A_m - c_esq_eixo - deixos;
+  const borda_esq = c_esq_eixo - hp1 / 200;
+  const borda_dir = c_dir_eixo - hp2 / 200;
 
-  // Posição do eixo de P1 a partir da borda esquerda da sapata
-  // Para pressão uniforme: centroide geom. da sapata = ponto da resultante
-  // centroide geom. = A_m/2 a partir da borda esq
-  // eixo P1 = A_m/2 - x_bar (se resultante está à direita do centro → P1 fica à esquerda)
-  const c_esq_eixo = A_m / 2 - x_bar; // m — dist. borda esq ao eixo P1 (pode ser negativo se mal dimensionada)
-  // eixo P2 = c_esq_eixo + deixos
-  const c_dir_eixo = A_m - c_esq_eixo - deixos; // m — dist. eixo P2 à borda dir
-
-  // Borda livre além da face do pilar (na direção longitudinal)
-  const borda_esq = c_esq_eixo - hp1/200; // m (hp1 em cm → /200 para m e meia seção)
-  const borda_dir = c_dir_eixo - hp2/200;
-
-  // ── E4: Pressão no solo ──────────────────────────────────────
-  const sigma_med  = Nk_total / A_adot;
-  const M_total    = Mx1 + Mx2;
-  const W_b        = (A_m * Math.pow(B_m, 2)) / 6;
-  const delta_sig  = M_total / W_b;
-  const sigma_max  = sigma_med + delta_sig;
-  const sigma_min  = sigma_med - delta_sig;
-  const sigma_ok   = sigma_max <= sigma_adm;
-  const sigmin_ok  = sigma_min >= 0;
-
-  // Pressão de cálculo adotada (conforme solicitado: usar sigma_adm)
+  const sigma_med = Nk_total / A_adot;
+  const M_total = Mx1 + Mx2;
+  const W_b = (A_m * Math.pow(B_m, 2)) / 6;
+  const delta_sig = M_total / W_b;
+  const sigma_max = sigma_med + delta_sig;
+  const sigma_min = sigma_med - delta_sig;
+  const sigma_ok = sigma_max <= sigma_adm;
+  const sigmin_ok = sigma_min >= 0;
   const sigma_sd = sigma_adm;
 
-  // ── E5: Rigidez ──────────────────────────────────────────────
-  // Dir. transversal — borda além da face do pilar (usa pilar de maior largura)
-  const bp_max  = Math.max(bp1, bp2);
-  const aib_cm  = (B_cm - bp_max) / 2; // cm — consola transversal
-  const aib_m   = aib_cm / 100;
-
-  // Dir. longitudinal — borda maior (normalmente borda_esq)
-  const borda_max_m  = Math.max(borda_esq, borda_dir);
+  const bp_max = Math.max(bp1, bp2);
+  const aib_cm = (B_cm - bp_max) / 2;
+  const aib_m = aib_cm / 100;
+  const borda_max_m = Math.max(borda_esq, borda_dir);
   const borda_max_cm = borda_max_m * 100;
+  const rig_transv = aib_cm / H_cm;
+  const rig_long = borda_max_cm / H_cm;
+  const rig_ok = rig_transv <= 3.0 && rig_long <= 3.0;
 
-  const rig_transv = aib_cm  / H_cm;
-  const rig_long   = borda_max_cm / H_cm;
-  const rig_ok     = rig_transv <= 2.5 && rig_long <= 2.5;
+  const d = H_cm - cob - phi / 2;
 
-  // ── E6: Altura útil ──────────────────────────────────────────
-  const d = H_cm - cob - phi / 2; // cm
-
-  // ── E7: Momentos ─────────────────────────────────────────────
-  const q_sd = sigma_sd * B_m; // tf/m
-
-  // Reações — tomando momentos em relação à borda esquerda
+  const q_sd = sigma_sd * B_m;
   const R_P2 = (q_sd * A_m * (A_m / 2)) / (c_esq_eixo + deixos);
   const R_P1 = q_sd * A_m - R_P2;
-
-  // Momentos negativos nas faces dos pilares (balanços)
   const M_neg_P1 = q_sd * Math.pow(borda_esq, 2) / 2;
   const M_neg_P2 = q_sd * Math.pow(borda_dir, 2) / 2;
   const M_neg_max = Math.max(M_neg_P1, M_neg_P2);
-
-  // Momento positivo no vão — ponto V=0
-  const V_apos_P1 = R_P1 - q_sd * c_esq_eixo;
-  const x0 = V_apos_P1 / q_sd; // m a partir do eixo P1
-  let M_pos = 0;
-  if (x0 > 0 && x0 < deixos) {
-    const x_abs = c_esq_eixo + x0;
-    M_pos = Math.abs(q_sd * Math.pow(x_abs, 2) / 2 - R_P1 * (x_abs - c_esq_eixo));
-  }
-
-  // Momento transversal — consola bilateral na face do pilar
+  // Momento positivo no vão — modelo de viga biapoiada entre os eixos dos pilares
+  // M_pos = q · L² / 8 , onde L = distância entre eixos dos pilares
+  const L_vao = deixos; // m — distância entre eixos
+  const M_pos = q_sd * Math.pow(L_vao, 2) / 8;
   const M_transv = sigma_sd * A_m * Math.pow(aib_m, 2) / 2;
 
-  // ── E8: Armaduras ────────────────────────────────────────────
-  // fyd em kgf/cm² : CA-50 → fyd = 500/1.15 MPa = 434.78 MPa = 4347.8 kgf/cm²
-  const fyd = (500 / 1.15) * 10; // kgf/cm²
-
-  // Transversal (dir b) — armadura principal
+  const fyd = (500 / 1.15) * 10;
   const As_tv_calc = (M_transv * 1e5) / (0.9 * d * fyd);
-  const As_tv_min  = rho_min * A_cm * d;
-  const As_tv      = Math.max(As_tv_calc, As_tv_min);
-  const gov_tv     = As_tv_min > As_tv_calc ? 'min' : 'calc';
+  const As_tv_min = rho_min * A_cm * d;
+  const As_tv = Math.max(As_tv_calc, As_tv_min);
+  const gov_tv = As_tv_min > As_tv_calc ? 'min' : 'calc';
 
-  // Long. superior (momento negativo)
   const As_ls_calc = (M_neg_max * 1e5) / (0.9 * d * fyd);
-  const As_ls_min  = rho_min * B_cm * d;
-  const As_ls      = Math.max(As_ls_calc, As_ls_min);
-  const gov_ls     = As_ls_min > As_ls_calc ? 'min' : 'calc';
+  const As_ls_min = rho_min * B_cm * d;
+  const As_ls = Math.max(As_ls_calc, As_ls_min);
+  const gov_ls = As_ls_min > As_ls_calc ? 'min' : 'calc';
 
-  // Long. inferior (momento positivo)
   const As_li_calc = M_pos > 0 ? (M_pos * 1e5) / (0.9 * d * fyd) : 0;
-  const As_li_min  = rho_min * B_cm * d;
-  const As_li      = Math.max(As_li_calc, As_li_min);
-  const gov_li     = As_li_min > As_li_calc ? 'min' : 'calc';
+  const As_li_min = rho_min * B_cm * d;
+  const As_li = Math.max(As_li_calc, As_li_min);
+  const gov_li = As_li_min > As_li_calc ? 'min' : 'calc';
 
   const bar_tv = asBarras(As_tv, phi_mm);
   const bar_ls = asBarras(As_ls, phi_mm);
@@ -408,271 +863,287 @@ function calcular() {
   const esp_ls = espacamento(B_cm, bar_ls.n, cob, phi_mm);
   const esp_li = espacamento(B_cm, bar_li.n, cob, phi_mm);
 
-  // ── E9: Puncionamento ────────────────────────────────────────
-  // Verificar para cada pilar separadamente (NBR 6118 item 19.5)
-  // Perímetro crítico a d/2 da face do pilar
-  const d_semi = d / 2; // cm
-
-  // Pilar que será verificado: o mais carregado
+  const d_semi = d / 2;
   const pilar_punc = Fz1 >= Fz2 ? 1 : 2;
-  const Fz_punc    = Math.max(Fz1, Fz2);
-  const bp_punc    = pilar_punc === 1 ? bp1 : bp2; // cm — largura transv
-  const hp_punc    = pilar_punc === 1 ? hp1 : hp2; // cm — comprim long
-
-  // Perímetro crítico (retângulo a d/2 de cada face)
-  // Lado transversal (dir b): bp + 2*(d/2)
-  // Lado longitudinal (dir a): hp + 2*(d/2)
-  const lad_transv = bp_punc + 2 * d_semi; // cm
-  const lad_long   = hp_punc + 2 * d_semi; // cm
-  const perim      = 2 * lad_transv + 2 * lad_long; // cm
-  const A_crit     = (lad_transv * lad_long) / 1e4;  // m²
-
-  const Fsd_punc = Fz_punc - sigma_sd * A_crit; // tf
-  const tau_sd   = (Fsd_punc * 1000) / (perim * d); // kgf/cm²
-
-  // Taxa de armadura de flexão — usar armadura transversal (principal, dir b)
-  // sobre a largura total da sapata na dir b = A_cm
+  const Fz_punc = Math.max(Fz1, Fz2);
+  const bp_punc = pilar_punc === 1 ? bp1 : bp2;
+  const hp_punc = pilar_punc === 1 ? hp1 : hp2;
+  const lad_transv = bp_punc + 2 * d_semi;
+  const lad_long = hp_punc + 2 * d_semi;
+  const perim = 2 * lad_transv + 2 * lad_long;
+  const A_crit = (lad_transv * lad_long) / 1e4;
+  const Fsd_punc = Fz_punc - sigma_sd * A_crit;
+  const tau_sd = (Fsd_punc * 1000) / (perim * d);
   const rho_flex = bar_tv.as_adot / (A_cm * d);
+  const d_mm = d * 10;
+  const tau_rd1_MPa = 0.13 * (1 + Math.sqrt(200 / d_mm)) * Math.pow(100 * rho_flex * fck, 1 / 3);
+  const tau_rd1 = tau_rd1_MPa * 10.197;
+  const punc_ok = tau_sd < tau_rd1;
 
-  // τ_Rd1 — NBR 6118 eq. 19.5 (fck em MPa)
-  // τ_Rd1 = 0,13 × (1 + √(20/d)) × (100 × ρ × fck)^(1/3)   [MPa]
-  // onde d em mm → converter d de cm para mm
-  const d_mm     = d * 10;
-  const tau_rd1_MPa = 0.13 * (1 + Math.sqrt(200 / d_mm)) * Math.pow(100 * rho_flex * fck, 1/3);
-  // converter MPa → kgf/cm²:  1 MPa = 10.197 kgf/cm²
-  const tau_rd1  = tau_rd1_MPa * 10.197;
-  const punc_ok  = tau_sd < tau_rd1;
+  // ── Cisalhamento na face do pilar (esmagamento da biela) ──
+  // NBR 6118:2014 item 19.5.3.1 — τ_Rd2 = 0,27 · α_v · f_cd
+  // α_v = (1 − f_ck/250) com f_ck em MPa
+  // Perímetro u₀ = contorno do pilar mais carregado
+  const u0_cm = 2 * (bp_punc + hp_punc); // cm — perímetro do pilar
+  const Fsd_cis = Fz_punc; // tf — sem redução, a favor da segurança
+  const tau_sd_cis = (Fsd_cis * 1000) / (u0_cm * d); // kgf/cm²
+  const alpha_v = 1 - fck / 250;
+  const fcd_MPa = fck / 1.4; // f_cd = f_ck / γ_c (γ_c = 1,4)
+  const tau_rd2_MPa = 0.27 * alpha_v * fcd_MPa;
+  const tau_rd2 = tau_rd2_MPa * 10.197; // kgf/cm²
+  const cis_ok = tau_sd_cis < tau_rd2;
 
-  // ── Status geral ─────────────────────────────────────────────
-  const tudo_ok = area_ok && sigma_ok && sigmin_ok && rig_ok && punc_ok;
+  const tudo_ok = area_ok && sigma_ok && sigmin_ok && rig_ok && punc_ok && cis_ok;
+  const inviavel = !area_ok || !sigmin_ok || !cis_ok;
 
-  // ── Helpers de formatação ────────────────────────────────────
-  const f = (v, n=2) => v.toFixed(n).replace('.', ',');
-  const fPhi = (p) => `φ ${p} mm`;
-  const tagOk   = (ok, txtOk, txtFail) =>
-    `<span class="tag ${ok?'ok':'fail'}">${ok?txtOk:txtFail}</span>`;
+  let statusClass = 'ok', statusTxt = 'TODAS AS VERIFICAÇÕES OK';
+  let resultBoxClass = 'result-box';
+  if (inviavel) {
+    statusClass = 'fail'; statusTxt = 'INVIÁVEL — REDIMENSIONAR';
+    resultBoxClass = 'result-box error';
+  } else if (!tudo_ok) {
+    statusClass = 'warn'; statusTxt = 'ATENÇÃO — VERIFICAR PARÂMETROS';
+    resultBoxClass = 'result-box warn';
+  }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  HTML de resultado
-  // ═══════════════════════════════════════════════════════════════
+  const avisos = [];
+  if (!area_ok)   avisos.push({ t: 'danger', m: `Área insuficiente: A<sub>adot</sub> = ${fmt(A_adot)} m² &lt; A<sub>min</sub> = ${fmt(A_min)} m² (NBR 6122 item 7.6).` });
+  if (!sigma_ok)  avisos.push({ t: 'warn',   m: `σ<sub>máx</sub> = ${fmt(sigma_max)} tf/m² excede σ<sub>adm</sub> = ${fmt(sigma_adm, 0)} tf/m².` });
+  if (!sigmin_ok) avisos.push({ t: 'danger', m: `σ<sub>mín</sub> = ${fmt(sigma_min)} tf/m² &lt; 0 — há tração no solo, ampliar a sapata.` });
+  if (!rig_ok)    avisos.push({ t: 'warn',   m: `Sapata flexível (a/h &gt; 3) — aumentar h para usar modelo de bielas (NBR 6118 item 22.6.1).` });
+  if (!punc_ok)   avisos.push({ t: 'warn',   m: `Puncionamento: τ<sub>sd</sub> ≥ τ<sub>Rd1</sub> — requer armadura específica (NBR 6118 item 19.5).` });
+  if (!cis_ok)    avisos.push({ t: 'danger', m: `Cisalhamento — esmagamento da biela: τ<sub>sd</sub> = ${fmt(tau_sd_cis)} kgf/cm² ≥ τ<sub>Rd2</sub> = ${fmt(tau_rd2)} kgf/cm² — aumentar h ou f<sub>ck</sub> (NBR 6118 item 19.5.3.1).` });
+
+  const alertsHTML = avisos.map(a =>
+    `<div class="alert ${a.t === 'danger' ? 'danger' : ''}">⚠️ ${a.m}</div>`
+  ).join('');
+
   document.getElementById('results').innerHTML = `
     <div class="results-header">
-      <h2>RESULTADOS DO DIMENSIONAMENTO</h2>
-      <div class="status ${tudo_ok?'ok':'fail'}">
-        <div class="dot"></div>
-        ${tudo_ok ? 'TODAS AS VERIFICAÇÕES OK' : 'ATENÇÃO — VERIFICAR PARÂMETROS'}
-      </div>
+      <h2>Resultados do Dimensionamento</h2>
+      <div class="status ${statusClass}"><div class="dot"></div>${statusTxt}</div>
+    </div>
+
+    ${plantaCardHTML()}
+
+    ${alertsHTML}
+
+    <div class="${resultBoxClass}">
+      <div class="label">Sapata Associada — Dimensões Adotadas</div>
+      <div class="value">${A_cm}×${B_cm}×${H_cm} cm</div>
     </div>
 
     <div class="cards">
-      <div class="card">
-        <div class="card-label">Dimensões</div>
-        <div class="card-value" style="font-size:16px">${A_cm}×${B_cm}×${H_cm}</div>
-        <div class="card-unit">cm (a × b × h)</div>
+      <div class="card-sum">
+        <div class="card-label">Pressão de cálculo</div>
+        <div class="card-value">${fmt(sigma_max)} / ${fmt(sigma_adm, 0)}</div>
+        <div class="card-unit">tf/m² · ${sigma_ok ? '✓' : '✗ excede'}</div>
       </div>
-      <div class="card green">
-        <div class="card-label">σ máx / σ adm</div>
-        <div class="card-value">${f(sigma_max)} / ${f(sigma_adm,0)}</div>
-        <div class="card-unit">tf/m²  ${sigma_ok ? '✓' : '✗ EXCEDE'}</div>
-      </div>
-      <div class="card blue">
+      <div class="card-sum green">
         <div class="card-label">As transversal</div>
-        <div class="card-value">${f(bar_tv.as_adot)}</div>
+        <div class="card-value">${fmt(bar_tv.as_adot)}</div>
         <div class="card-unit">cm² · ${bar_tv.n} ${fPhi(phi_mm)} c/${esp_tv}cm</div>
       </div>
-      <div class="card purple">
-        <div class="card-label">As long. sup/inf</div>
-        <div class="card-value">${f(bar_ls.as_adot)}</div>
+      <div class="card-sum blue">
+        <div class="card-label">As long. superior</div>
+        <div class="card-value">${fmt(bar_ls.as_adot)}</div>
         <div class="card-unit">cm² · ${bar_ls.n} ${fPhi(phi_mm)} c/${esp_ls}cm</div>
+      </div>
+      <div class="card-sum purple">
+        <div class="card-label">As long. inferior</div>
+        <div class="card-value">${fmt(bar_li.as_adot)}</div>
+        <div class="card-unit">cm² · ${bar_li.n} ${fPhi(phi_mm)} c/${esp_li}cm</div>
       </div>
     </div>
 
-    <!-- E1 -->
     <div class="calc-block">
       <div class="calc-block-header"><div class="step-num">1</div><h3>Carga Total e Peso Próprio</h3></div>
       <div class="calc-body">
-        <div class="eq">P<sub>pp</sub> = ${f(A_m)} × ${f(B_m)} × ${f(H_m)} × 2,5 = <span class="result">${f(Pp)} tf</span></div>
-        <div class="eq">N<sub>k,total</sub> = ${f(Fz1)} + ${f(Fz2)} + ${f(Pp)} = <span class="result">${f(Nk_total)} tf</span></div>
+        <div class="eq">P<sub>pp</sub> = ${fmt(A_m)} × ${fmt(B_m)} × ${fmt(H_m)} × 2,5 = <span class="result">${fmt(Pp)} tf</span></div>
+        <div class="eq">N<sub>k,total</sub> = ${fmt(Fz1)} + ${fmt(Fz2)} + ${fmt(Pp)} = <span class="result">${fmt(Nk_total)} tf</span></div>
       </div>
     </div>
 
-    <!-- E2 -->
     <div class="calc-block">
       <div class="calc-block-header"><div class="step-num">2</div><h3>Área em Planta</h3><span class="ref">NBR 6122:2022 · 7.6</span></div>
       <div class="calc-body">
         <div class="eq">
-          A<sub>min</sub> = ${f(Nk_total)} / ${f(sigma_adm,0)} = <span class="result">${f(A_min)} m²</span>
+          A<sub>min</sub> = ${fmt(Nk_total)} / ${fmt(sigma_adm, 0)} = <span class="result">${fmt(A_min)} m²</span>
           &nbsp;&nbsp;
-          A<sub>adot</sub> = ${f(A_m,2)} × ${f(B_m,2)} = <span class="result">${f(A_adot)} m²</span>
+          A<sub>adot</sub> = ${fmt(A_m)} × ${fmt(B_m)} = <span class="result">${fmt(A_adot)} m²</span>
           &nbsp; ${tagOk(area_ok, '✓ OK', '✗ INSUFICIENTE')}
         </div>
       </div>
     </div>
 
-    <!-- E3 -->
     <div class="calc-block">
       <div class="calc-block-header"><div class="step-num">3</div><h3>Posição da Resultante</h3></div>
       <div class="calc-body">
-        <div class="eq">x̄ = (${f(Fz2)} × ${f(deixos,2)}) / (${f(Fz1)} + ${f(Fz2)}) = <span class="result">${f(x_bar,3)} m de P1</span></div>
+        <div class="eq">x̄ = (${fmt(Fz2)} × ${fmt(deixos)}) / (${fmt(Fz1)} + ${fmt(Fz2)}) = <span class="result">${fmt(x_bar, 3)} m de P1</span></div>
         <div class="eq">
-          Eixo P1 desde borda esq: <span class="result">${f(c_esq_eixo,3)} m</span>
+          Eixo P1 desde borda esq: <span class="result">${fmt(c_esq_eixo, 3)} m</span>
           &nbsp;&nbsp;
-          Eixo P2 desde borda dir: <span class="result">${f(c_dir_eixo,3)} m</span>
+          Eixo P2 desde borda dir: <span class="result">${fmt(c_dir_eixo, 3)} m</span>
         </div>
         <div class="eq">
-          Borda livre P1 (além face): <span class="result">${f(borda_esq*100,1)} cm</span>
+          Borda livre P1 (além face): <span class="result">${fmt(borda_esq * 100, 1)} cm</span>
           &nbsp;&nbsp;
-          Borda livre P2 (além face): <span class="result">${f(borda_dir*100,1)} cm</span>
+          Borda livre P2 (além face): <span class="result">${fmt(borda_dir * 100, 1)} cm</span>
         </div>
       </div>
     </div>
 
-    <!-- E4 -->
     <div class="calc-block">
       <div class="calc-block-header"><div class="step-num">4</div><h3>Pressão no Solo</h3><span class="ref">NBR 6122:2022 · 7.6.2</span></div>
       <div class="calc-body">
-        <div class="eq">σ<sub>med</sub> = ${f(Nk_total)} / ${f(A_adot)} = <span class="result">${f(sigma_med)} tf/m²</span></div>
+        <div class="eq">σ<sub>med</sub> = ${fmt(Nk_total)} / ${fmt(A_adot)} = <span class="result">${fmt(sigma_med)} tf/m²</span></div>
         <div class="eq">
-          W<sub>b</sub> = ${f(A_m,2)} × ${f(B_m,2)}² / 6 = <span class="result">${f(W_b,3)} m³</span>
+          W<sub>b</sub> = ${fmt(A_m)} × ${fmt(B_m)}² / 6 = <span class="result">${fmt(W_b, 3)} m³</span>
           &nbsp;&nbsp;
-          Δσ = ${f(M_total)} / ${f(W_b,3)} = <span class="result">${f(delta_sig)} tf/m²</span>
+          Δσ = ${fmt(M_total)} / ${fmt(W_b, 3)} = <span class="result">${fmt(delta_sig)} tf/m²</span>
         </div>
         <div class="eq">
-          σ<sub>max</sub> = ${f(sigma_max)} tf/m² ${tagOk(sigma_ok, '✓ ≤ '+sigma_adm, '✗ > '+sigma_adm)}
+          σ<sub>max</sub> = ${fmt(sigma_max)} tf/m² ${tagOk(sigma_ok, '✓ ≤ ' + fmt(sigma_adm, 0), '✗ &gt; ' + fmt(sigma_adm, 0))}
           &nbsp;&nbsp;
-          σ<sub>min</sub> = ${f(sigma_min)} tf/m² ${tagOk(sigmin_ok, '✓ ≥ 0', '✗ TRAÇÃO')}
+          σ<sub>min</sub> = ${fmt(sigma_min)} tf/m² ${tagOk(sigmin_ok, '✓ ≥ 0', '✗ TRAÇÃO')}
         </div>
       </div>
     </div>
 
-    <!-- E5 -->
     <div class="calc-block">
-      <div class="calc-block-header"><div class="step-num">5</div><h3>Verificação de Rigidez</h3><span class="ref">NBR 6118:2014 · 22.5.1</span></div>
+      <div class="calc-block-header"><div class="step-num">5</div><h3>Verificação de Rigidez</h3><span class="ref">NBR 6118:2014 · 22.6.1</span></div>
       <div class="calc-body">
-        <div class="eq">d = ${H_cm} − ${cob} − ${f(phi/2,1)} = <span class="result">${f(d,1)} cm</span></div>
+        <div class="eq">d = ${H_cm} − ${cob} − ${fmt(phi / 2, 1)} = <span class="result">${fmt(d, 1)} cm</span></div>
         <div class="eq">
-          Dir. transversal: a<sub>ib</sub>/h = ${f(aib_cm,1)} / ${H_cm} = <span class="result">${f(rig_transv,2)}</span>
-          &nbsp; ${tagOk(rig_transv<=2.5, '✓ ≤ 2,5', '✗ > 2,5')}
+          Dir. transversal: a<sub>ib</sub>/h = ${fmt(aib_cm, 1)} / ${H_cm} = <span class="result">${fmt(rig_transv)}</span>
+          &nbsp; ${tagOk(rig_transv <= 3.0, '✓ ≤ 3', '✗ &gt; 3')}
         </div>
         <div class="eq">
-          Dir. longitudinal: a<sub>ia</sub>/h = ${f(borda_max_cm,1)} / ${H_cm} = <span class="result">${f(rig_long,2)}</span>
-          &nbsp; ${tagOk(rig_long<=2.5, '✓ ≤ 2,5', '✗ > 2,5')}
+          Dir. longitudinal: a<sub>ia</sub>/h = ${fmt(borda_max_cm, 1)} / ${H_cm} = <span class="result">${fmt(rig_long)}</span>
+          &nbsp; ${tagOk(rig_long <= 3.0, '✓ ≤ 3', '✗ &gt; 3')}
         </div>
-        <div class="eq" style="color:${rig_ok?'var(--green-lt)':'var(--red-lt)'}">
-          ${rig_ok ? '✓ Sapata rígida — modelo de bielas válido (NBR 6118 item 22.5.2)' : '✗ Sapata flexível — aumentar altura h'}
-        </div>
+        <div class="eq"><span class="lbl">${rig_ok ? '✓ Sapata rígida — modelo de bielas válido (NBR 6118 item 22.6.2)' : '✗ Sapata flexível — aumentar altura h'}</span></div>
       </div>
     </div>
 
-    <!-- E6 -->
     <div class="calc-block">
-      <div class="calc-block-header"><div class="step-num">6</div><h3>Momentos Fletores</h3><span class="ref">NBR 6118:2014 · 22.5.2</span></div>
+      <div class="calc-block-header"><div class="step-num">6</div><h3>Momentos Fletores</h3><span class="ref">NBR 6118:2014 · 22.6.2.1</span></div>
       <div class="calc-body">
         <div class="eq">
-          <span class="lbl">q_sd = σ_sd × b =</span>
-          ${f(sigma_sd,0)} × ${f(B_m,2)} = <span class="result">${f(q_sd,2)} tf/m</span>
+          <span class="lbl">q_sd = σ_sd × b:</span>
+          ${fmt(sigma_sd, 0)} × ${fmt(B_m)} = <span class="result">${fmt(q_sd)} tf/m</span>
         </div>
         <div class="eq">
           <span class="lbl">Transversal — consola bilateral (face pilar, dir. b):</span><br>
-          a<sub>ib</sub> = (${B_cm} − ${bp_max}) / 2 = ${f(aib_cm,1)} cm = ${f(aib_m,3)} m<br>
-          M<sub>sd,b</sub> = ${f(sigma_sd,0)} × ${f(A_m,2)} × ${f(aib_m,3)}² / 2 = <span class="result">${f(M_transv)} tf·m</span>
+          a<sub>ib</sub> = (${B_cm} − ${bp_max}) / 2 = ${fmt(aib_cm, 1)} cm = ${fmt(aib_m, 3)} m<br>
+          M<sub>sd,b</sub> = ${fmt(sigma_sd, 0)} × ${fmt(A_m)} × ${fmt(aib_m, 3)}² / 2 = <span class="result">${fmt(M_transv)} tf·m</span>
         </div>
         <div class="eq">
-          <span class="lbl">Longitudinal — M negativo face P1 (balanço esq):</span><br>
-          M<sub>neg,P1</sub> = ${f(q_sd,2)} × ${f(borda_esq,3)}² / 2 = <span class="result">${f(M_neg_P1)} tf·m</span>
+          <span class="lbl">Long. — M negativo face P1 (balanço esq):</span><br>
+          M<sub>neg,P1</sub> = ${fmt(q_sd)} × ${fmt(borda_esq, 3)}² / 2 = <span class="result">${fmt(M_neg_P1)} tf·m</span>
         </div>
         <div class="eq">
-          <span class="lbl">Longitudinal — M negativo face P2 (balanço dir):</span><br>
-          M<sub>neg,P2</sub> = ${f(q_sd,2)} × ${f(borda_dir,3)}² / 2 = <span class="result">${f(M_neg_P2)} tf·m</span>
-          &nbsp;← governa: <span class="result">${f(M_neg_max)} tf·m</span>
+          <span class="lbl">Long. — M negativo face P2 (balanço dir):</span><br>
+          M<sub>neg,P2</sub> = ${fmt(q_sd)} × ${fmt(borda_dir, 3)}² / 2 = <span class="result">${fmt(M_neg_P2)} tf·m</span>
+          &nbsp;← governa: <span class="result">${fmt(M_neg_max)} tf·m</span>
         </div>
         <div class="eq">
-          <span class="lbl">Longitudinal — M positivo no vão (x₀ = ${f(x0,3)} m de P1):</span><br>
-          M<sub>pos</sub> = <span class="result">${f(M_pos)} tf·m</span>
-          ${M_pos < 0.1 ? '&nbsp;<span class="tag min">mínimo governa</span>' : ''}
+          <span class="lbl">Long. — M positivo no vão (modelo de viga biapoiada entre eixos, L = ${fmt(L_vao)} m):</span><br>
+          M<sub>pos</sub> = q<sub>sd</sub> × L² / 8 = ${fmt(q_sd)} × ${fmt(L_vao)}² / 8 = <span class="result">${fmt(M_pos)} tf·m</span>
         </div>
       </div>
     </div>
 
-    <!-- E7 -->
     <div class="calc-block">
       <div class="calc-block-header"><div class="step-num">7</div><h3>Armaduras</h3><span class="ref">CA-50 · f<sub>yd</sub> = 434,8 MPa</span></div>
       <div class="calc-body">
         <table>
           <thead>
             <tr>
-              <th>Armadura</th><th>M_sd (tf·m)</th><th>As calc (cm²)</th>
-              <th>As mín (cm²)</th><th>As adot (cm²)</th><th>Detalhamento</th><th>Governa</th>
+              <th>Armadura</th><th>M<sub>sd</sub> (tf·m)</th><th>A<sub>s,calc</sub></th>
+              <th>A<sub>s,min</sub></th><th>A<sub>s,adot</sub></th><th>Detalhamento</th><th>Governa</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>Transversal (dir. b)</td>
-              <td class="mono">${f(M_transv)}</td>
-              <td class="mono">${f(As_tv_calc)}</td>
-              <td class="mono">${f(As_tv_min)}</td>
-              <td class="mono"><strong>${f(bar_tv.as_adot)}</strong></td>
+              <td class="mono">${fmt(M_transv)}</td>
+              <td class="mono">${fmt(As_tv_calc)}</td>
+              <td class="mono">${fmt(As_tv_min)}</td>
+              <td class="mono"><strong>${fmt(bar_tv.as_adot)}</strong></td>
               <td class="mono">${bar_tv.n} ${fPhi(phi_mm)} c/${esp_tv}cm</td>
-              <td><span class="tag ${gov_tv}">${gov_tv==='min'?'MÍNIMO':'CÁLCULO'}</span></td>
+              <td><span class="tag ${gov_tv}">${gov_tv === 'min' ? 'MÍNIMO' : 'CÁLCULO'}</span></td>
             </tr>
             <tr>
               <td>Long. superior (neg.)</td>
-              <td class="mono">${f(M_neg_max)}</td>
-              <td class="mono">${f(As_ls_calc)}</td>
-              <td class="mono">${f(As_ls_min)}</td>
-              <td class="mono"><strong>${f(bar_ls.as_adot)}</strong></td>
+              <td class="mono">${fmt(M_neg_max)}</td>
+              <td class="mono">${fmt(As_ls_calc)}</td>
+              <td class="mono">${fmt(As_ls_min)}</td>
+              <td class="mono"><strong>${fmt(bar_ls.as_adot)}</strong></td>
               <td class="mono">${bar_ls.n} ${fPhi(phi_mm)} c/${esp_ls}cm</td>
-              <td><span class="tag ${gov_ls}">${gov_ls==='min'?'MÍNIMO':'CÁLCULO'}</span></td>
+              <td><span class="tag ${gov_ls}">${gov_ls === 'min' ? 'MÍNIMO' : 'CÁLCULO'}</span></td>
             </tr>
             <tr>
               <td>Long. inferior (pos.)</td>
-              <td class="mono">${f(M_pos)}</td>
-              <td class="mono">${f(As_li_calc)}</td>
-              <td class="mono">${f(As_li_min)}</td>
-              <td class="mono"><strong>${f(bar_li.as_adot)}</strong></td>
+              <td class="mono">${fmt(M_pos)}</td>
+              <td class="mono">${fmt(As_li_calc)}</td>
+              <td class="mono">${fmt(As_li_min)}</td>
+              <td class="mono"><strong>${fmt(bar_li.as_adot)}</strong></td>
               <td class="mono">${bar_li.n} ${fPhi(phi_mm)} c/${esp_li}cm</td>
-              <td><span class="tag ${gov_li}">${gov_li==='min'?'MÍNIMO':'CÁLCULO'}</span></td>
+              <td><span class="tag ${gov_li}">${gov_li === 'min' ? 'MÍNIMO' : 'CÁLCULO'}</span></td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- E8 -->
     <div class="calc-block">
       <div class="calc-block-header"><div class="step-num">8</div><h3>Puncionamento — Pilar ${pilar_punc} (P${pilar_punc}, mais carregado)</h3><span class="ref">NBR 6118:2014 · 19.5</span></div>
       <div class="calc-body">
+        <div class="eq"><span class="lbl">Dimensões do pilar verificado: ${bp_punc}×${hp_punc} cm (bp×hp) · d/2 = ${fmt(d_semi, 1)} cm</span></div>
         <div class="eq">
-          <span class="lbl">Dimensões do pilar verificado: ${bp_punc}×${hp_punc} cm (bp×hp) · d/2 = ${f(d_semi,1)} cm</span>
+          Perímetro crítico: u = 2×(${bp_punc}+2×${fmt(d_semi, 1)}) + 2×(${hp_punc}+2×${fmt(d_semi, 1)})<br>
+          = 2×${fmt(lad_transv, 1)} + 2×${fmt(lad_long, 1)} = <span class="result">${fmt(perim, 1)} cm</span>
         </div>
+        <div class="eq">A<sub>crit</sub> = ${fmt(lad_transv, 1)} × ${fmt(lad_long, 1)} / 10000 = <span class="result">${fmt(A_crit, 3)} m²</span></div>
+        <div class="eq">F<sub>sd,punc</sub> = ${fmt(Fz_punc)} − ${fmt(sigma_sd, 0)} × ${fmt(A_crit, 3)} = <span class="result">${fmt(Fsd_punc)} tf</span></div>
+        <div class="eq">τ<sub>sd</sub> = (${fmt(Fsd_punc)} × 1000) / (${fmt(perim, 1)} × ${fmt(d, 1)}) = <span class="result">${fmt(tau_sd)} kgf/cm²</span></div>
+        <div class="eq">ρ<sub>flex</sub> = ${fmt(bar_tv.as_adot)} / (${A_cm} × ${fmt(d, 1)}) = <span class="result">${fmt(rho_flex * 1000)} ‰</span></div>
         <div class="eq">
-          Perímetro crítico: u = 2×(${bp_punc}+2×${f(d_semi,1)}) + 2×(${hp_punc}+2×${f(d_semi,1)})<br>
-          = 2×${f(lad_transv,1)} + 2×${f(lad_long,1)} = <span class="result">${f(perim,1)} cm</span>
-        </div>
-        <div class="eq">
-          A<sub>crit</sub> = ${f(lad_transv,1)} × ${f(lad_long,1)} / 10000 = <span class="result">${f(A_crit,3)} m²</span>
-        </div>
-        <div class="eq">
-          F<sub>sd,punc</sub> = ${f(Fz_punc)} − ${f(sigma_sd,0)} × ${f(A_crit,3)} = <span class="result">${f(Fsd_punc)} tf</span>
-        </div>
-        <div class="eq">
-          τ<sub>sd</sub> = (${f(Fsd_punc)} × 1000) / (${f(perim,1)} × ${f(d,1)}) = <span class="result">${f(tau_sd,2)} kgf/cm²</span>
-        </div>
-        <div class="eq">
-          ρ<sub>flex</sub> = ${f(bar_tv.as_adot,2)} / (${A_cm} × ${f(d,1)}) = <span class="result">${(rho_flex*1000).toFixed(2)} ‰</span>
-        </div>
-        <div class="eq">
-          τ<sub>Rd1</sub> = 0,13 × (1 + √(200/${f(d_mm,0)})) × (100 × ${(rho_flex).toFixed(5)} × ${fck})^(1/3)<br>
-          = 0,13 × ${f(1+Math.sqrt(200/d_mm),3)} × ${f(Math.pow(100*rho_flex*fck,1/3),3)} MPa × 10,197<br>
-          = <span class="result">${f(tau_rd1,2)} kgf/cm²</span>
-          &nbsp; ${tagOk(punc_ok, '✓ τsd < τRd1 — sem arm. específica', '✗ REQUER armadura de puncionamento')}
+          τ<sub>Rd1</sub> = 0,13 × (1 + √(200/${fmt(d_mm, 0)})) × (100 × ${rho_flex.toFixed(5)} × ${fck})^(1/3)<br>
+          = 0,13 × ${fmt(1 + Math.sqrt(200 / d_mm), 3)} × ${fmt(Math.pow(100 * rho_flex * fck, 1 / 3), 3)} MPa × 10,197<br>
+          = <span class="result">${fmt(tau_rd1)} kgf/cm²</span>
+          &nbsp; ${tagOk(punc_ok, '✓ τsd &lt; τRd1 — sem arm. específica', '✗ REQUER armadura de puncionamento')}
         </div>
       </div>
     </div>
 
-    <!-- Quadro -->
     <div class="calc-block">
-      <div class="calc-block-header"><div class="step-num" style="font-size:9px">QA</div><h3>Quadro de Armaduras</h3></div>
+      <div class="calc-block-header"><div class="step-num">9</div><h3>Cisalhamento — Esmagamento da Biela (Pilar ${pilar_punc})</h3><span class="ref">NBR 6118:2014 · 19.5.3.1</span></div>
+      <div class="calc-body">
+        <div class="eq"><span class="lbl">Verificação da diagonal comprimida no perímetro do pilar (sapata rígida — item 22.6.2)</span></div>
+        <div class="eq">
+          u₀ = 2 × (b<sub>p</sub> + h<sub>p</sub>) = 2 × (${bp_punc} + ${hp_punc}) = <span class="result">${fmt(u0_cm, 1)} cm</span>
+        </div>
+        <div class="eq">
+          F<sub>sd</sub> = ${fmt(Fz_punc)} tf (sem redução, a favor da segurança)<br>
+          τ<sub>sd</sub> = F<sub>sd</sub> / (u₀ · d) = (${fmt(Fz_punc)} × 1000) / (${fmt(u0_cm, 1)} × ${fmt(d, 1)}) = <span class="result">${fmt(tau_sd_cis)} kgf/cm²</span>
+        </div>
+        <div class="eq">
+          α<sub>v</sub> = 1 − f<sub>ck</sub>/250 = 1 − ${fck}/250 = <span class="result">${fmt(alpha_v, 3)}</span>
+          &nbsp;&nbsp;
+          f<sub>cd</sub> = ${fck} / 1,4 = <span class="result">${fmt(fcd_MPa, 2)} MPa</span>
+        </div>
+        <div class="eq">
+          τ<sub>Rd2</sub> = 0,27 · α<sub>v</sub> · f<sub>cd</sub> = 0,27 × ${fmt(alpha_v, 3)} × ${fmt(fcd_MPa, 2)} MPa × 10,197<br>
+          = <span class="result">${fmt(tau_rd2)} kgf/cm²</span>
+          &nbsp; ${tagOk(cis_ok, '✓ τsd &lt; τRd2 — biela OK', '✗ ESMAGAMENTO — aumentar h ou fck')}
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-block">
+      <div class="calc-block-header"><div class="step-num" style="font-size:0.7em">QA</div><h3>Quadro de Armaduras</h3></div>
       <div class="calc-body">
         <table>
           <thead>
@@ -680,45 +1151,52 @@ function calcular() {
           </thead>
           <tbody>
             <tr>
-              <td class="mono" style="color:var(--green-lt)">T1</td>
+              <td class="mono" style="color:#059669;font-weight:700">T1</td>
               <td class="mono">${fPhi(phi_mm)}</td>
               <td class="mono">${bar_tv.n}</td>
               <td class="mono">${B_cm + 20}</td>
-              <td class="mono">${f(bar_tv.n*(B_cm+20)/100,2)}</td>
-              <td>Transversal inf. — dir. b — c/${esp_tv}cm — As=${f(bar_tv.as_adot)}cm²</td>
+              <td class="mono">${fmt(bar_tv.n * (B_cm + 20) / 100)}</td>
+              <td>Transversal inf. — dir. b — c/${esp_tv}cm — As=${fmt(bar_tv.as_adot)}cm²</td>
             </tr>
             <tr>
-              <td class="mono" style="color:var(--blue-lt)">L1</td>
+              <td class="mono" style="color:#2563eb;font-weight:700">L1</td>
               <td class="mono">${fPhi(phi_mm)}</td>
               <td class="mono">${bar_ls.n}</td>
               <td class="mono">${A_cm + 20}</td>
-              <td class="mono">${f(bar_ls.n*(A_cm+20)/100,2)}</td>
-              <td>Long. superior — dir. a — c/${esp_ls}cm — As=${f(bar_ls.as_adot)}cm²</td>
+              <td class="mono">${fmt(bar_ls.n * (A_cm + 20) / 100)}</td>
+              <td>Long. superior — dir. a — c/${esp_ls}cm — As=${fmt(bar_ls.as_adot)}cm²</td>
             </tr>
             <tr>
-              <td class="mono" style="color:var(--purple-lt)">L2</td>
+              <td class="mono" style="color:#7c3aed;font-weight:700">L2</td>
               <td class="mono">${fPhi(phi_mm)}</td>
               <td class="mono">${bar_li.n}</td>
               <td class="mono">${A_cm + 20}</td>
-              <td class="mono">${f(bar_li.n*(A_cm+20)/100,2)}</td>
-              <td>Long. inferior — dir. a — c/${esp_li}cm — As=${f(bar_li.as_adot)}cm²</td>
+              <td class="mono">${fmt(bar_li.n * (A_cm + 20) / 100)}</td>
+              <td>Long. inferior — dir. a — c/${esp_li}cm — As=${fmt(bar_li.as_adot)}cm²</td>
             </tr>
           </tbody>
         </table>
-        <div style="margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:6px;font-size:11px;color:var(--text2);line-height:2.2">
+        <div style="margin-top:14px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:0.82em;color:var(--text3);line-height:1.9">
           <strong style="color:var(--text)">Notas:</strong><br>
           1. Cobrimento nominal: ${cob} cm — Classe CAA II — NBR 6118 Tab. 7.2<br>
-          2. Concreto: fck = ${fck} MPa — Aço CA-50 — fyd = 434,8 MPa<br>
-          3. σ_sd adotado = ${sigma_adm} tf/m² (pressão de cálculo uniforme máxima)<br>
-          4. Armadura mínima: ρ_min = ${(rho_min*1000).toFixed(1)}‰ — NBR 6118 item 22.5.3<br>
-          5. Puncionamento: τ_Rd1 calculado com d em mm (fórmula NBR 6118 eq. 19-5 · fck em MPa)
+          2. Concreto: f<sub>ck</sub> = ${fck} MPa — Aço CA-50 — f<sub>yd</sub> = 434,8 MPa<br>
+          3. σ<sub>sd</sub> adotado = ${sigma_adm} tf/m² (pressão de cálculo uniforme máxima)<br>
+          4. Armadura mínima: ρ<sub>min</sub> = ${fmt(rho_min * 1000, 3)}‰ — NBR 6118 Tab. 17.3 (f<sub>ck</sub> = ${fck} MPa) · item 22.6.4.1.1<br>
+          5. Puncionamento: τ<sub>Rd1</sub> calculado com d em mm (NBR 6118 eq. 19-5 · f<sub>ck</sub> em MPa)
         </div>
       </div>
     </div>
   `;
 }
 
-window.addEventListener('load', calcular);
+const ids = ['fz1','mx1','fz2','mx2','bp1','hp1','bp2','hp2','deixos',
+             'a_sap','b_sap','h_sap','sigma_adm','fck','cob','phi_princ'];
+ids.forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', calcular);
+  el.addEventListener('change', calcular);
+});
+calcular();
 </script>
 </body>
 </html>
