@@ -492,6 +492,7 @@
 <script>
 const G = 10.0; // 1 tf = 10 kN
 let ultimoCalculo = null;
+let ultimoMRd = null; // última verificação inversa MRd ← As
 
 function fmtBR(v, dec) {
   if (!isFinite(v)) return '—';
@@ -886,6 +887,39 @@ function armaduraMinMax(As, Asl, bw, h, fck) {
     alerta = `<div class="alert alert-warning">As calculado &lt; As,min. Adotada armadura mínima: ${fmtBR(As_min, 2)} cm².</div>`;
   }
   return { Ac, rho_min_pct, As_min, As_max, As_adotada, As_total_secao, alerta };
+}
+
+
+// ====== Memória da verificação inversa (PDF) ======
+function memoriaMRd(m, num) {
+  const r = m.r;
+  const concreto = r.partes.map(q => `${fmtBR(q.F / G, 2)} × (${fmtBR(m.d, 2)} − ${fmtBR(q.yc, 2)})`).join(' + ');
+  return `
+    <h2>${num}. Verificação inversa — momento resistente a partir da armadura adotada</h2>
+    <p>Conforme NBR 6118:2023, item 17.2.2, com o diagrama retangular simplificado e compatibilidade de deformações
+    (εcu conforme 8.2.10.1, Es = 210 GPa, σs = Es·εs ≤ fyd).</p>
+    <table>
+      <tr><td class="label">Armadura tracionada</td><td class="val">${m.descAs}</td></tr>
+      <tr><td class="label">Armadura comprimida (A's)</td><td class="val">${fmtBR(m.Asl, 2)} cm²</td></tr>
+      <tr><td class="label">σcd = αc · ηc · fcd</td><td class="val">${fmtBR(m.alpha_c, 3)} × ${fmtBR(m.eta_c, 3)} × ${fmtBR(m.fcd * 10, 2)} = ${fmtBR(m.sigma_cd * 10, 2)} MPa</td></tr>
+      <tr><td class="label">λ · εcu · εyd</td><td class="val">${fmtBR(m.lambda, 3)} · ${fmtBR(m.eps_cu, 2)}‰ · ${fmtBR(m.eps_yd, 3)}‰</td></tr>
+    </table>
+    <p>Equilíbrio de forças: Fc + F's = Fs, com εs = εcu·(d − x)/x e ε's = εcu·(x − d')/x.</p>
+    <table>
+      <tr><td class="label">Linha neutra (x) · x/d (limite ${fmtBR(m.xlim_rel, 2)}, item 14.6.4.3)</td><td class="val">${fmtBR(r.x, 2)} cm · ${fmtBR(m.xd, 3)}</td></tr>
+      <tr><td class="label">εs · σs · Fs</td><td class="val">${fmtBR(r.eps_s * 1000, 2)}‰ · ${fmtBR(r.sig_s * 10, 1)} MPa · ${fmtBR(r.Fs / G, 2)} tf</td></tr>
+      ${m.Asl > 0 ? `<tr><td class="label">ε's · σ's · F's</td><td class="val">${fmtBR(r.eps_sl * 1000, 2)}‰ · ${fmtBR(r.sig_sl * 10, 1)} MPa · ${fmtBR(r.Fsl / G, 2)} tf</td></tr>` : ''}
+      <tr><td class="label">Fc (y = λx = ${fmtBR(r.y, 2)} cm)</td><td class="val">${fmtBR(r.Fc / G, 2)} tf</td></tr>
+      <tr><td class="label">Domínio</td><td class="val">${m.dominio}</td></tr>
+    </table>
+    <div class="formula">MRd = ${concreto}${m.Asl > 0 ? ` + ${fmtBR(r.Fsl / G, 2)} × (${fmtBR(m.d, 2)} − ${fmtBR(m.dl, 2)})` : ''} = ${fmtBR(m.MRd_tfm, 2)} tf·m</div>
+    <div class="highlight">
+      MRd = ${fmtBR(m.MRd_tfm, 2)} tf·m &nbsp;·&nbsp; Mk,máx = MRd/γf = ${fmtBR(m.MRd_tfm / m.gf, 2)} tf·m<br>
+      Md / MRd = ${fmtBR(m.Md_tfm, 2)} / ${fmtBR(m.MRd_tfm, 2)} = <strong>${fmtBR(m.util * 100, 1)} % ${m.ok ? '— OK' : '— NÃO ATENDE'}</strong>
+    </div>
+    ${m.alertas.join('')}
+    <p class="note">A área de concreto ocupada por A's não é descontada.</p>
+  `;
 }
 
 // ====== Memória de cálculo do cisalhamento (PDF) ======
@@ -1302,6 +1336,9 @@ function gerarMemoriaPDF() {
   const c = ultimoCalculo;
   const hoje = new Date().toLocaleDateString('pt-BR');
   const tipoTexto = c.tipoSecao === 't' ? 'Seção T' : 'Seção retangular';
+  // Recalcula a verificação inversa com os dados atuais, se ela foi usada
+  let mrdPDF = null;
+  if (ultimoMRd) { calcularMRd(); mrdPDF = ultimoMRd; }
 
   let html = `
     <h1>Memória de cálculo — armadura longitudinal de viga</h1>
@@ -1393,7 +1430,9 @@ function gerarMemoriaPDF() {
 
     ${c.cis ? memoriaCisalhamento(c.cis, numCis) : ''}
 
-    <h2>${numRef}. Referências</h2>
+    ${mrdPDF ? memoriaMRd(mrdPDF, numRef) : ''}
+
+    <h2>${mrdPDF ? numRef + 1 : numRef}. Referências</h2>
     <p>ABNT NBR 6118:2023 — Projeto de estruturas de concreto — Procedimento. Rio de Janeiro: ABNT, 2023.</p>
   `;
 
@@ -1691,6 +1730,9 @@ function calcularMRd() {
   if (Asl > 0 && eps_sl < 0) alertas.push(`<div class="alert alert-warning">A linha neutra está acima de d' (x &lt; d'): A's está tracionada e foi considerada com esse sinal.</div>`);
   const ok = util <= 1;
   if (!ok) alertas.push(`<div class="alert alert-danger">Md = ${fmtBR(Md_tfm, 2)} tf·m &gt; MRd = ${fmtBR(MRd_tfm, 2)} tf·m — armadura insuficiente.</div>`);
+
+  ultimoMRd = { descAs, As, Asl, alpha_c, eta_c, fcd, sigma_cd, lambda, fyd, eps_yd, eps_cu, xlim_rel, xd, d, dl,
+    r, MRd_tfm, gf, Md_tfm, util, ok, dominio, alertas: alertas.slice() };
 
   const linhasConcreto = r.partes.map(q => `${fmtBR(q.F / G, 2)} tf × (${fmtBR(d, 2)} − ${fmtBR(q.yc, 2)})`).join(' + ');
 

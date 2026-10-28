@@ -35,10 +35,10 @@ const CALCULADORAS = [
  
    {
      categoria: 'Vigas',
-     id: 'Espaçamento-Barras',
+     id: 'espacamento-barras',
      nome: 'Viga — Espaçamento barras',
      arquivo: 'espacamento-barras-viga.html',
-     descricao: 'Cálculo espamento entre barras long.'
+     descricao: 'Espaçamento entre barras longitudinais.'
    },
 
   // ===== PILARES =====
@@ -60,13 +60,13 @@ const CALCULADORAS = [
   // },
 
   // ===== FUNDAÇÕES =====
-  // {
-  //   categoria: 'Fundações',
-  //   id: 'sapata-associada',
-  //  nome: 'Sapata associada',
-  //   arquivo: 'calculadora_sapata_associadaa.html',
-  //   descricao: 'Dimensionamento de sapata associada.'
-  // },
+  {
+    categoria: 'Fundações',
+    id: 'sapata-associada',
+    nome: 'Sapata associada',
+    arquivo: 'calculadora_sapata_associada.html',
+    descricao: 'Dimensionamento de sapata associada (NBR 6122:2022 e NBR 6118:2023).'
+  },
 
   // ===== ESCADAS =====
   // {
