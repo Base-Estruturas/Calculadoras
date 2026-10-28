@@ -534,14 +534,16 @@ function calcular() {
     x_lim_rel = 0.35;
   }
 
-  const sigma_cd = eta * fcd;
+  // NBR 6118:2023, 8.2.10.1 e 17.2.2-e: σcd = αc · ηc · fcd
+  const eta_c = fck <= 40 ? 1.0 : Math.pow(40 / fck, 1/3);
+  const sigma_cd = eta * eta_c * fcd;
   const x_lim = x_lim_rel * d;
   const z_lim = d - lambda * x_lim / 2;
 
   const dados = {
     tipoSecao: tipo, Mk_tfm, gf, Md_tfm, Md_kNm, bw, h, d, dl, bf, hf,
     fck, aco, fyk, gc, gs, fcd_MPa, fyd_MPa, fyd,
-    lambda, eta, x_lim_rel, sigma_cd, x_lim, z_lim
+    lambda, eta, eta_c, x_lim_rel, sigma_cd, x_lim, z_lim
   };
 
   // Calcular Mlim conforme tipo de seção (para alerta de armadura dupla)
@@ -894,7 +896,8 @@ function memoriaCisalhamento(cis, num) {
 
     <div class="highlight">
       Asw/s adotado = ${fmtBR(cis.Asw_per_m_final, 3)} cm²/m ${cis.usouMinimo ? '(governado pela armadura mínima)' : ''}<br>
-      Espaçamento máximo: s,máx = ${fmtBR(cis.s_max, 1)} cm
+      Espaçamento máximo: s,máx = ${fmtBR(cis.s_max, 1)} cm<br>
+      Espaçamento transversal máximo entre ramos: st,máx = ${fmtBR(cis.st_max, 1)} cm (item 18.3.3.2)
     </div>
 
     <h3>${num}.7 Bitolas e espaçamentos</h3>
@@ -910,12 +913,12 @@ function memoriaCisalhamento(cis, num) {
             <td class="val">${fmtBR(b.A_phi, 3)}</td>
             <td class="val">${fmtBR(b.Asw_estribo, 3)}</td>
             <td class="val">${b.s_nec >= 999 ? '—' : fmtBR(Math.min(b.s_nec, cis.s_max), 1)}</td>
-            <td class="val"><strong>c/ ${b.s_adotado} cm</strong></td>
+            <td class="val">${b.viavel ? `<strong>c/ ${b.s_adotado} cm</strong>` : `✗ ${b.obs}`}</td>
           </tr>
         `).join('')}
       </tbody>
     </table>
-    <p class="note">O espaçamento adotado é o mínimo entre o calculado e o s,máx de norma, arredondado para baixo a múltiplo de 1 cm.</p>
+    <p class="note">O espaçamento adotado é o mínimo entre o calculado e o s,máx de norma, arredondado para baixo a múltiplo de 1 cm. Bitolas com Ø &gt; bw/10 ou s &lt; 5 cm são indicadas como inviáveis (item 18.3.3.2).</p>
   `;
 
   return html;
@@ -961,7 +964,7 @@ function calcularCisalhamento(dados) {
   // fctm e fctd
   let fctm_MPa;
   if (fck <= 50) fctm_MPa = 0.3 * Math.pow(fck, 2/3);
-  else fctm_MPa = 2.12 * Math.log(1 + 0.11 * fck);
+  else fctm_MPa = 2.12 * Math.log(1 + 0.1 * (fck + 8)); // NBR 6118:2023, item 8.2.5
   const fctk_inf_MPa = 0.7 * fctm_MPa;
   const fctd_MPa = fctk_inf_MPa / gc;
   const fctd_kNcm2 = fctd_MPa / 10;
@@ -1019,7 +1022,7 @@ function calcularCisalhamento(dados) {
 
   // Armadura mínima (item 17.4.1.1.1)
   // ρsw,min = 0,2 · fctm / fywk  (com fywk ≤ 500 MPa para o cálculo)
-  const fywk_min = Math.min(fyk_est, 500);
+  const fywk_min = fyk_est; // item 17.4.1.1.1: fywk (sem limitação)
   const rho_sw_min = 0.2 * fctm_MPa / fywk_min;
   const Asw_per_m_min = rho_sw_min * bw * 100; // cm²/m
 
@@ -1036,6 +1039,17 @@ function calcularCisalhamento(dados) {
     criterio_smax = `Vd > 0,67·Vrd2 → s,máx = min(0,3·d; 20 cm)`;
   }
 
+  // Espaçamento transversal máximo entre ramos (item 18.3.3.2)
+  let st_max, criterio_stmax;
+  if (Vd <= 0.20 * Vrd2) {
+    st_max = Math.min(d, 80);
+    criterio_stmax = `Vd ≤ 0,20·Vrd2 → st,máx = min(d; 80 cm)`;
+  } else {
+    st_max = Math.min(0.6 * d, 35);
+    criterio_stmax = `Vd > 0,20·Vrd2 → st,máx = min(0,6·d; 35 cm)`;
+  }
+  const phi_est_max = bw; // Øt ≤ bw/10 → em mm, numericamente igual a bw em cm
+
   // Falha na biela?
   const falhaBiela = Vd > Vrd2;
 
@@ -1045,7 +1059,7 @@ function calcularCisalhamento(dados) {
     Vrd2, Vc0, Vc, Vsw, cotgTheta,
     Asw_per_m_calc, Asw_per_m_min, Asw_per_m_final, usouMinimo,
     rho_sw_min_pct: rho_sw_min*100,
-    s_max, criterio_smax, falhaBiela
+    s_max, criterio_smax, st_max, criterio_stmax, phi_est_max, falhaBiela
   };
 
   // Tabela de bitolas
@@ -1054,9 +1068,13 @@ function calcularCisalhamento(dados) {
     const A_phi = Math.PI * Math.pow(phi/10, 2) / 4; // cm²
     const Asw_estribo = 2 * A_phi; // 2 ramos
     const s_nec = Asw_per_m_final > 0 ? (Asw_estribo / Asw_per_m_final) * 100 : 999;
-    const s_adotado = Math.max(Math.min(Math.floor(Math.min(s_nec, s_max)), 30), 5);
-    const viavel = s_adotado >= 5;
-    return { phi, A_phi, Asw_estribo, s_nec, s_adotado, viavel };
+    const s_calc = Math.floor(Math.min(s_nec, s_max));
+    const s_adotado = s_calc;
+    const espacoOk = s_calc >= 5;          // espaçamento mínimo prático (passagem do vibrador, 18.3.3.2)
+    const bitolaOk = phi <= phi_est_max;   // Øt ≤ bw/10 (18.3.3.2)
+    const viavel = espacoOk && bitolaOk;
+    const obs = !bitolaOk ? `Ø &gt; bw/10 (${fmtBR(phi_est_max, 1)} mm)` : (!espacoOk ? 's &lt; 5 cm — usar mais ramos ou bitola maior' : '');
+    return { phi, A_phi, Asw_estribo, s_nec, s_adotado, viavel, obs };
   });
 
   Object.assign(dados, { cis: dCis });
@@ -1082,7 +1100,7 @@ function calcularCisalhamento(dados) {
         <div>
           <div class="result-label">Verificações</div>
           <div class="result-value" style="font-size: 18px;">${modeloTexto}</div>
-          <div class="result-meta">Vd = ${fmtBR(Vd_tf, 2)} tf · Vrd2 = ${fmtBR(Vrd2/G, 2)} tf ✓ · s,máx = ${fmtBR(s_max, 1)} cm</div>
+          <div class="result-meta">Vd = ${fmtBR(Vd_tf, 2)} tf · Vrd2 = ${fmtBR(Vrd2/G, 2)} tf ✓ · s,máx = ${fmtBR(s_max, 1)} cm · st,máx = ${fmtBR(st_max, 1)} cm</div>
         </div>
       </div>
     `;
@@ -1107,7 +1125,7 @@ function calcularCisalhamento(dados) {
                 <td style="text-align: right; padding: 6px 8px;">${fmtBR(b.A_phi, 3)}</td>
                 <td style="text-align: right; padding: 6px 8px;">${fmtBR(b.Asw_estribo, 3)}</td>
                 <td style="text-align: right; padding: 6px 8px;">${b.s_nec >= 999 ? '—' : fmtBR(Math.min(b.s_nec, s_max), 1)}</td>
-                <td style="text-align: right; padding: 6px 8px;"><strong>c/ ${b.s_adotado} cm</strong></td>
+                <td style="text-align: right; padding: 6px 8px;">${b.viavel ? `<strong>c/ ${b.s_adotado} cm</strong>` : `<span style="color: var(--danger-text);">✗ ${b.obs}</span>`}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1116,13 +1134,19 @@ function calcularCisalhamento(dados) {
     `;
   }
 
+  if (!falhaBiela && bw > st_max) {
+    html += `<div class="alert alert-warning" style="margin-top: 12px;">bw = ${fmtBR(bw, 1)} cm &gt; st,máx = ${fmtBR(st_max, 1)} cm: verificar a distância entre ramos com o cobrimento real; pode ser necessário estribo com mais de 2 ramos (item 18.3.3.2).</div>`;
+  }
+  if (!falhaBiela && dCis.tabelaBitolas.every(b => !b.viavel)) {
+    html += `<div class="alert alert-danger" style="margin-top: 12px;">Nenhuma bitola de 2 ramos atende Øt ≤ bw/10 e s ≥ 5 cm. Usar estribo com mais ramos ou revisar a seção.</div>`;
+  }
   resCis.innerHTML = html;
 
   let detHtml = `
     <p class="section-title" style="margin-top: 0;">Cisalhamento — ${modeloTexto} (NBR 6118:2023, item 17.4.2)</p>
     Vk = ${fmtBR(Vk_tf, 2)} tf &nbsp;·&nbsp; γf = ${fmtBR(gf, 2)} &nbsp;·&nbsp; <strong>Vd = γf · Vk = ${fmtBR(Vd_tf, 2)} tf</strong><br>
     fcd = ${fmtBR(fcd_MPa, 2)} MPa &nbsp;·&nbsp; fywd = min(fywk/γs ; 435 MPa) = ${fmtBR(fywd_MPa, 1)} MPa<br>
-    fctm = ${fmtBR(fctm_MPa, 3)} MPa &nbsp;·&nbsp; fctd = ${fmtBR(fctd_MPa, 3)} MPa<br>
+    fctm = ${fck <= 50 ? '0,3·fck^(2/3)' : '2,12·ln[1 + 0,1·(fck + 8)]'} = ${fmtBR(fctm_MPa, 3)} MPa &nbsp;·&nbsp; fctd = ${fmtBR(fctd_MPa, 3)} MPa<br>
     αv2 = 1 − fck/250 = ${fmtBR(alpha_v2, 3)}<br><br>
     <strong>Verificação da biela comprimida:</strong><br>
     Vrd2 = ${fmtBR(Vrd2/G, 2)} tf<br>
@@ -1137,7 +1161,9 @@ function calcularCisalhamento(dados) {
     ρsw,min = 0,2 · fctm / fywk = ${fmtBR(dCis.rho_sw_min_pct, 4)} %<br>
     Asw/s,min = ρsw,min · bw = ${fmtBR(Asw_per_m_min, 3)} cm²/m<br><br>
     <strong>Asw/s adotado = ${fmtBR(Asw_per_m_final, 3)} cm²/m</strong> ${usouMinimo ? '(mínima)' : '(calculada)'}<br>
-    ${criterio_smax} = <strong>${fmtBR(s_max, 1)} cm</strong>
+    ${criterio_smax} = <strong>${fmtBR(s_max, 1)} cm</strong><br>
+    ${criterio_stmax} = <strong>${fmtBR(st_max, 1)} cm</strong> (espaçamento transversal entre ramos)<br>
+    Øt: 5 mm ≤ Øt ≤ bw/10 = ${fmtBR(phi_est_max, 1)} mm (item 18.3.3.2)
   `;
 
   detCis.innerHTML = detHtml;
@@ -1149,7 +1175,7 @@ function detalhesRetSimples(c, f) {
     <p class="section-title" style="margin-top: 0;">Detalhes do cálculo — seção retangular, armadura simples</p>
     Mk = ${fmtBR(c.Mk_tfm, 3)} tf·m &nbsp;·&nbsp; γf = ${fmtBR(c.gf, 2)} &nbsp;·&nbsp; Md = γf · Mk = <strong>${fmtBR(c.Md_tfm, 3)} tf·m</strong><br>
     fcd = fck/γc = ${c.fck}/${fmtBR(c.gc, 2)} = ${fmtBR(c.fcd_MPa, 2)} MPa &nbsp;·&nbsp; fyd = ${fmtBR(c.fyd_MPa, 1)} MPa<br>
-    λ = ${fmtBR(c.lambda, 3)} &nbsp;·&nbsp; η = ${fmtBR(c.eta, 3)} &nbsp;·&nbsp; σcd = η·fcd = ${fmtBR(c.sigma_cd, 3)} kN/cm²<br>
+    λ = ${fmtBR(c.lambda, 3)} &nbsp;·&nbsp; αc = ${fmtBR(c.eta, 3)} &nbsp;·&nbsp; ηc = ${fmtBR(c.eta_c, 3)} &nbsp;·&nbsp; σcd = αc·ηc·fcd = ${fmtBR(c.sigma_cd, 3)} kN/cm²<br>
     Mlim = ${fmtBR(c.M_lim_tfm, 3)} tf·m &nbsp;·&nbsp; Md ≤ Mlim → armadura simples<br>
     x = ${fmtBR(c.x, 2)} cm &nbsp;·&nbsp; x/d = ${fmtBR(c.x/c.d, 3)} &nbsp;·&nbsp; z = ${fmtBR(c.z, 2)} cm<br>
     εs = ${fmtBR(c.eps_s, 2)}‰ &nbsp;·&nbsp; εyd = ${fmtBR(c.eps_yd, 2)}‰<br>
@@ -1265,13 +1291,16 @@ function gerarMemoriaPDF() {
     </table>
 
     <h2>2. Parâmetros do diagrama retangular simplificado</h2>
-    <p>Conforme NBR 6118:2023, item 17.2.2, adotam-se os parâmetros λ e η em função do fck:</p>
+    <p>Conforme NBR 6118:2023, item 17.2.2, adotam-se os parâmetros λ, αc e ηc (item 8.2.10.1) em função do fck:</p>
     <div class="formula">${c.fck <= 50
-      ? `Para fck ≤ 50 MPa: λ = 0,80 e η = 0,85`
-      : `Para fck > 50 MPa: λ = 0,80 − (fck − 50)/400 = ${fmtBR(c.lambda, 3)} e η = 0,85·(1 − (fck − 50)/200) = ${fmtBR(c.eta, 3)}`}
+      ? `Para fck ≤ 50 MPa: λ = 0,80 e αc = 0,85`
+      : `Para fck > 50 MPa: λ = 0,80 − (fck − 50)/400 = ${fmtBR(c.lambda, 3)} e αc = 0,85·(1 − (fck − 50)/200) = ${fmtBR(c.eta, 3)}`}<br>
+      ${c.fck <= 40
+      ? `Para fck ≤ 40 MPa: ηc = 1,00`
+      : `Para fck > 40 MPa: ηc = (40/fck)^(1/3) = ${fmtBR(c.eta_c, 3)}`}
     </div>
     <table>
-      <tr><td class="label">Tensão de compressão de cálculo (σcd = η · fcd)</td><td class="val">${fmtBR(c.sigma_cd, 3)} kN/cm²</td></tr>
+      <tr><td class="label">Tensão de compressão de cálculo (σcd = αc · ηc · fcd)</td><td class="val">${fmtBR(c.sigma_cd, 3)} kN/cm²</td></tr>
       <tr><td class="label">Limite de x/d (ductilidade)</td><td class="val">${fmtBR(c.x_lim_rel, 2)}</td></tr>
       <tr><td class="label">x,lim = ${fmtBR(c.x_lim_rel, 2)} · d</td><td class="val">${fmtBR(c.x_lim, 2)} cm</td></tr>
       <tr><td class="label">z,lim = d − λ · x,lim / 2</td><td class="val">${fmtBR(c.z_lim, 2)} cm</td></tr>
