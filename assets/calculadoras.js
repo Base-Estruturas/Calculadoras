@@ -60,13 +60,14 @@ const CALCULADORAS = [
   // },
 
   // ===== FUNDAÇÕES =====
-  {
-    categoria: 'Fundações',
-    id: 'sapata-associada',
-    nome: 'Sapata associada',
-    arquivo: 'calculadora_sapata_associada.html',
-    descricao: 'Dimensionamento de sapata associada (NBR 6122:2022 e NBR 6118:2023).'
-  },
+  // DESATIVADA — em revisão (auditoria de 28/10/2026). Para reativar, remova os // abaixo.
+  // {
+  //   categoria: 'Fundações',
+  //   id: 'sapata-associada',
+  //   nome: 'Sapata associada',
+  //   arquivo: 'calculadora_sapata_associada.html',
+  //   descricao: 'Dimensionamento de sapata associada (NBR 6122:2022 e NBR 6118:2023).'
+  // },
 
   // ===== ESCADAS =====
   // {
