@@ -30,7 +30,7 @@ const CALCULADORAS = [
     id: 'viga-flexao-cisalhamento',
     nome: 'Viga — Flexão e Cisalhamento',
     arquivo: 'calculadora_armadura_viga.html',
-    descricao: 'Armadura longitudinal e transversal de vigas retangulares ou T conforme NBR 6118:2014.'
+    descricao: 'Armadura longitudinal e transversal de vigas retangulares ou T conforme NBR 6118:2023.'
   },
  
    {

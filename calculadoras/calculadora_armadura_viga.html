@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calculadora de Armadura de Viga — NBR 6118:2014</title>
+<title>Calculadora de Armadura de Viga — NBR 6118:2023</title>
 <style>
   :root {
     --bg: #f5f5f0;
@@ -263,7 +263,7 @@
 
   <header>
     <h1>Calculadora de armadura de viga</h1>
-    <p class="subtitle">Flexão simples · seção retangular ou T · NBR 6118:2014</p>
+    <p class="subtitle">Flexão simples · seção retangular ou T · NBR 6118:2023</p>
   </header>
 
   <div class="card">
@@ -428,7 +428,7 @@
   <div class="details" id="detalhes-cis"></div>
 
   <p class="footer">
-    Cálculo conforme NBR 6118:2014 (item 17.2.2) com diagrama retangular simplificado.
+    Cálculo conforme NBR 6118:2023 (item 17.2.2) com diagrama retangular simplificado.
     Parâmetros λ e η ajustados para fck ≤ 50 MPa ou fck &gt; 50 MPa.
     Limite de x/d = 0,45 (fck ≤ 50) ou 0,35 (fck &gt; 50).
     Em seções T, verifica-se a posição da linha neutra: se cair dentro da mesa, dimensiona-se como retangular com largura bf; caso contrário, decompõe-se em parcela das abas + parcela da alma.
@@ -816,26 +816,29 @@ function atualizarBitola() {
 
 function armaduraMinMax(As, Asl, bw, h, fck) {
   const Ac = bw * h;
-  const tab = {20: 0.150, 25: 0.150, 30: 0.150, 35: 0.164, 40: 0.179, 45: 0.194, 50: 0.208, 55: 0.211, 60: 0.219, 70: 0.233, 80: 0.245, 90: 0.256};
+  // Tabela 17.3 (seção retangular) — NBR 6118:2023
+  const tab = {20: 0.150, 25: 0.150, 30: 0.150, 35: 0.164, 40: 0.179, 45: 0.194, 50: 0.208, 55: 0.211, 60: 0.219, 65: 0.226, 70: 0.233, 75: 0.239, 80: 0.245, 85: 0.251, 90: 0.256};
   const rho_min_pct = tab[fck] || 0.260;
   const rho_min = rho_min_pct / 100;
   const As_min = rho_min * Ac;
   const As_max = 0.04 * Ac;
   const As_adotada = Math.max(As, As_min);
   let alerta = '';
-  if (As_adotada > As_max) {
-    alerta = `<div class="alert alert-danger">As ultrapassa o máximo permitido (4 %·Ac). Redimensionar a seção.</div>`;
+  // Item 17.3.5.2.4: a soma As + A's não pode superar 4 %·Ac
+  const As_total_secao = As_adotada + (Asl || 0);
+  if (As_total_secao > As_max) {
+    alerta = `<div class="alert alert-danger">As + A's = ${fmtBR(As_total_secao, 2)} cm² ultrapassa o máximo permitido (4 %·Ac = ${fmtBR(As_max, 2)} cm², item 17.3.5.2.4). Redimensionar a seção.</div>`;
   } else if (As < As_min) {
     alerta = `<div class="alert alert-warning">As calculado &lt; As,min. Adotada armadura mínima: ${fmtBR(As_min, 2)} cm².</div>`;
   }
-  return { Ac, rho_min_pct, As_min, As_max, As_adotada, alerta };
+  return { Ac, rho_min_pct, As_min, As_max, As_adotada, As_total_secao, alerta };
 }
 
 // ====== Memória de cálculo do cisalhamento (PDF) ======
 function memoriaCisalhamento(cis, num) {
   let html = `
     <h2>${num}. Verificação ao cisalhamento</h2>
-    <p>Dimensionamento da armadura transversal conforme NBR 6118:2014, item 17.4.2 — ${cis.modeloTexto}.</p>
+    <p>Dimensionamento da armadura transversal conforme NBR 6118:2023, item 17.4.2 — ${cis.modeloTexto}.</p>
 
     <h3>${num}.1 Esforço cortante</h3>
     <table>
@@ -918,7 +921,7 @@ function memoriaCisalhamento(cis, num) {
   return html;
 }
 
-// ====== CÁLCULO DE CISALHAMENTO (NBR 6118:2014 item 17.4.2) ======
+// ====== CÁLCULO DE CISALHAMENTO (NBR 6118:2023 item 17.4.2) ======
 function calcularCisalhamento(dados) {
   const resCis = document.getElementById('resultado-cis');
   const detCis = document.getElementById('detalhes-cis');
@@ -927,6 +930,7 @@ function calcularCisalhamento(dados) {
 
   const Vk_tf = parseFloat(document.getElementById('vk').value);
   const gf = dados.gf;
+  const gs = dados.gs;
   const bw = dados.bw, d = dados.d;
   const fck = dados.fck, gc = dados.gc;
   const acoEst = parseFloat(document.getElementById('aco_estribo').value);
@@ -950,8 +954,8 @@ function calcularCisalhamento(dados) {
   const fcd_MPa = fck / gc;
   const fcd_kNcm2 = fcd_MPa / 10;
   const fyk_est = acoEst * 10; // MPa
-  // NBR 17.4.2: fywd ≤ 435 MPa para estribos
-  const fywd_MPa = Math.min(fyk_est / 1.15, 435);
+  // NBR 6118:2023, item 17.4.2.2: fywd = fywk/γs ≤ 435 MPa (estribos)
+  const fywd_MPa = Math.min(fyk_est / gs, 435);
   const fywd_kNcm2 = fywd_MPa / 10;
 
   // fctm e fctd
@@ -1022,7 +1026,7 @@ function calcularCisalhamento(dados) {
   const Asw_per_m_final = Math.max(Asw_per_m_calc, Asw_per_m_min);
   const usouMinimo = Asw_per_m_calc < Asw_per_m_min;
 
-  // Espaçamento máximo (item 17.4.1.2.4 NBR 6118:2014)
+  // Espaçamento máximo dos estribos (item 18.3.3.2 NBR 6118:2023)
   let s_max, criterio_smax;
   if (Vd <= 0.67 * Vrd2) {
     s_max = Math.min(0.6 * d, 30);
@@ -1115,7 +1119,7 @@ function calcularCisalhamento(dados) {
   resCis.innerHTML = html;
 
   let detHtml = `
-    <p class="section-title" style="margin-top: 0;">Cisalhamento — ${modeloTexto} (NBR 6118:2014, item 17.4.2)</p>
+    <p class="section-title" style="margin-top: 0;">Cisalhamento — ${modeloTexto} (NBR 6118:2023, item 17.4.2)</p>
     Vk = ${fmtBR(Vk_tf, 2)} tf &nbsp;·&nbsp; γf = ${fmtBR(gf, 2)} &nbsp;·&nbsp; <strong>Vd = γf · Vk = ${fmtBR(Vd_tf, 2)} tf</strong><br>
     fcd = ${fmtBR(fcd_MPa, 2)} MPa &nbsp;·&nbsp; fywd = min(fywk/γs ; 435 MPa) = ${fmtBR(fywd_MPa, 1)} MPa<br>
     fctm = ${fmtBR(fctm_MPa, 3)} MPa &nbsp;·&nbsp; fctd = ${fmtBR(fctd_MPa, 3)} MPa<br>
@@ -1151,7 +1155,7 @@ function detalhesRetSimples(c, f) {
     εs = ${fmtBR(c.eps_s, 2)}‰ &nbsp;·&nbsp; εyd = ${fmtBR(c.eps_yd, 2)}‰<br>
     As = Md / (fyd · z) = <strong>${fmtBR(c.As, 2)} cm²</strong><br><br>
     <p class="section-title">Armadura mínima e máxima</p>
-    ρmin = ${fmtBR(f.rho_min_pct, 3)} % &nbsp;·&nbsp; As,min = ${fmtBR(f.As_min, 2)} cm² &nbsp;·&nbsp; As,máx = ${fmtBR(f.As_max, 2)} cm²<br>
+    ρmin = ${fmtBR(f.rho_min_pct, 3)} % &nbsp;·&nbsp; As,min = ${fmtBR(f.As_min, 2)} cm² &nbsp;·&nbsp; (As + A's),máx = ${fmtBR(f.As_max, 2)} cm²<br>
     <strong>As adotada = ${fmtBR(f.As_adotada, 2)} cm²</strong>
   `;
 }
@@ -1223,7 +1227,7 @@ function gerarMemoriaPDF() {
 
   let html = `
     <h1>Memória de cálculo — armadura longitudinal de viga</h1>
-    <p class="doc-subtitle">Flexão simples · ${tipoTexto} · NBR 6118:2014</p>
+    <p class="doc-subtitle">Flexão simples · ${tipoTexto} · NBR 6118:2023</p>
     <p class="doc-date">Data de emissão: ${hoje}</p>
 
     <h2>1. Dados de entrada</h2>
@@ -1261,7 +1265,7 @@ function gerarMemoriaPDF() {
     </table>
 
     <h2>2. Parâmetros do diagrama retangular simplificado</h2>
-    <p>Conforme NBR 6118:2014, item 17.2.2, adotam-se os parâmetros λ e η em função do fck:</p>
+    <p>Conforme NBR 6118:2023, item 17.2.2, adotam-se os parâmetros λ e η em função do fck:</p>
     <div class="formula">${c.fck <= 50
       ? `Para fck ≤ 50 MPa: λ = 0,80 e η = 0,85`
       : `Para fck > 50 MPa: λ = 0,80 − (fck − 50)/400 = ${fmtBR(c.lambda, 3)} e η = 0,85·(1 − (fck − 50)/200) = ${fmtBR(c.eta, 3)}`}
@@ -1288,11 +1292,11 @@ function gerarMemoriaPDF() {
 
   html += `
     <h2>${numArmMin}. Armadura mínima e máxima — armadura longitudinal</h2>
-    <p>Conforme NBR 6118:2014, item 17.3.5 e tabela 17.3, devem ser respeitados os limites de armadura mínima e máxima:</p>
+    <p>Conforme NBR 6118:2023, item 17.3.5 e tabela 17.3, devem ser respeitados os limites de armadura mínima e máxima:</p>
     <table>
       <tr><td class="label">Taxa mínima de armadura (ρmin)</td><td class="val">${fmtBR(c.rho_min_pct, 3)} %</td></tr>
       <tr><td class="label">Armadura mínima (As,min = ρmin · Ac)</td><td class="val">${fmtBR(c.As_min, 2)} cm²</td></tr>
-      <tr><td class="label">Armadura máxima (As,máx = 4 % · Ac)</td><td class="val">${fmtBR(c.As_max, 2)} cm²</td></tr>
+      <tr><td class="label">Armadura máxima (As + A's ≤ 4 % · Ac)</td><td class="val">${fmtBR(c.As_max, 2)} cm²</td></tr>
     </table>
 
     <h2>${numResultFlex}. Resultado da flexão</h2>
@@ -1303,13 +1307,13 @@ function gerarMemoriaPDF() {
     <p class="note">
       Valor obtido como o máximo entre a armadura calculada e a armadura mínima de norma.
       A armadura final deve respeitar o detalhamento, número mínimo de barras e
-      espaçamentos conforme NBR 6118:2014.
+      espaçamentos conforme NBR 6118:2023.
     </p>
 
     ${c.cis ? memoriaCisalhamento(c.cis, numCis) : ''}
 
     <h2>${numRef}. Referências</h2>
-    <p>ABNT NBR 6118:2014 — Projeto de estruturas de concreto — Procedimento. Rio de Janeiro: ABNT, 2014.</p>
+    <p>ABNT NBR 6118:2023 — Projeto de estruturas de concreto — Procedimento. Rio de Janeiro: ABNT, 2023.</p>
   `;
 
   document.getElementById('print-area').innerHTML = html;
