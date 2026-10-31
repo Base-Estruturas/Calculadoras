@@ -113,8 +113,9 @@
   .est-tab { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
   .est-tab th, .est-tab td { text-align: center; padding: 3px 2px; border: 1px solid var(--borda); }
   .est-tab th { font-weight: 600; color: var(--texto-2); background: var(--corpo); }
-  .est-tab tr th:first-child { width: 58px; text-align: left; padding-left: 6px; }
+  .est-tab tr th:first-child { width: 82px; text-align: left; padding-left: 6px; }
   .est-tab td strong { font-weight: 600; color: var(--texto); }
+  .est-tab tr.calc td { color: var(--texto-2); font-size: 12px; }
   .est-tab td.inv { color: var(--vermelho); font-size: 10.5px; white-space: nowrap; }
   .kv6 { grid-template-columns: repeat(6, 1fr); }
   .btn-bloco { width: 100%; }
@@ -139,6 +140,8 @@
     .mkas { margin-top: 8px; padding: 8px 10px; }
     .mkas-row { margin-bottom: 4px; }
     .btn-bloco { height: 30px; }
+    .est-tab th, .est-tab td { padding: 2px; }
+    #estribos-tab { margin-top: 8px; padding-top: 6px; }
     .pele .card-hd { margin-bottom: 4px; }
     .linha-info { padding: 5px 10px; }
     .linha-info { margin-top: 6px; }
@@ -1537,10 +1540,10 @@ function atualizarEstribo() {
     return `<td class="inv" title="${dica}">${motivo}</td>`;
   };
   out.innerHTML = `
-    <div class="est-hd">Estribo de 2 ramos — espaçamento adotado (cm)</div>
-    <table class="est-tab">
-      <tr><th>Ø (mm)</th>${bits.map(b => `<th>${lbl(b.phi)}</th>`).join('')}</tr>
-      <tr><th>s</th>${bits.map(cel).join('')}</tr>
+    <table class="est-tab" title="Estribo de 2 ramos. s adot. = mín(s calc.; s,máx), arredondado para baixo (cm)">
+      <tr><th>Estribo 2R</th>${bits.map(b => `<th>${lbl(b.phi)}</th>`).join('')}</tr>
+      <tr><th>s adot. (cm)</th>${bits.map(cel).join('')}</tr>
+      <tr class="calc"><th>s calc. (cm)</th>${bits.map(b => `<td>${b.s_nec >= 999 ? '—' : fmtBR(b.s_nec, 1)}</td>`).join('')}</tr>
     </table>`;
 }
 
@@ -1626,13 +1629,12 @@ function calcularPele() {
   const num = id => parseFloat(document.getElementById(id).value);
   const tipo = tipoSecao();
   const bw = num('bw'), h = num('h'), d = num('d'), dl = num('dl');
-  const hf = tipo === 't' ? num('hf') : 0;
   const phi = num('pele_phi');
-  if (!(bw > 0 && h > 0 && d > dl && dl > 0) || (tipo === 't' && !(hf > 0 && hf < h))) {
+  if (!(bw > 0 && h > 0 && d > dl && dl > 0)) {
     res.innerHTML = '<span style="color: var(--vermelho);">Verifique a seção.</span>'; memo.innerHTML = ''; st.innerHTML = ''; al.innerHTML = ''; return;
   }
-  // Ac,alma: retangular = bw·h; seção T = bw·(h − hf)
-  const hAlma = h - hf;
+  // Ac,alma = bw·h — sempre como seção retangular, também na seção T (decisão BASE)
+  const hAlma = h;
   const AsMin = 0.0010 * bw * hAlma;           // 0,10 % Ac,alma por face
   const AsLim = 5 * hAlma / 100;               // não é necessário mais que 5 cm²/m por face
   const AsFace = Math.min(AsMin, AsLim);
@@ -1653,14 +1655,15 @@ function calcularPele() {
   st.innerHTML = dispensa ? pill('warn', 'h ≤ 60: dispensável') : pill('ok', 'h &gt; 60: necessária');
   res.innerHTML = `<strong>${n} ${lbl} por face</strong> · ${2 * n} no total<br>
     ${fmtBR(AsFace, 2)} → ${fmtBR(AsEf, 2)} cm²/face · s ≈ ${fmtBR(sp, 1)} cm`;
-  al.innerHTML = sp > s15
-    ? `<div class="alert alert-warning" title="Recomendação da NOTA de 17.3.3.2 para a armadura de pele na zona tracionada">s ≈ ${fmtBR(sp, 1)} &gt; 15Ø = ${fmtBR(s15, 1)} cm (NOTA 17.3.3.2)</div>`
-    : '';
+  const avisos = [];
+  if (limGoverna) avisos.push(`<div class="alert alert-warning" title="0,10 %·bw·h = ${fmtBR(AsMin, 2)} cm²/face ultrapassa 5 cm²/m × h">0,10 %·bw·h = ${fmtBR(AsMin, 2)} &gt; 5 cm²/m × ${fmtBR(h / 100, 2)} m: adotado ${fmtBR(AsLim, 2)} cm²/face</div>`);
+  if (sp > s15) avisos.push(`<div class="alert alert-warning" title="Recomendação da NOTA de 17.3.3.2 para a armadura de pele na zona tracionada">s ≈ ${fmtBR(sp, 1)} &gt; 15Ø = ${fmtBR(s15, 1)} cm (NOTA 17.3.3.2)</div>`);
+  al.innerHTML = avisos.join('');
   memo.innerHTML = `
     <p class="section-title" style="margin-top: 0;">Armadura de pele — NBR 6118:2023, item 17.3.5.2.3</p>
     ${dispensa ? 'h = ' + fmtBR(h, 1) + ' cm ≤ 60 cm → pode ser dispensada (valores abaixo apenas informativos).' : 'h = ' + fmtBR(h, 1) + ' cm &gt; 60 cm → armadura de pele necessária.'}<br>
-    As,pele = 0,10 % · Ac,alma = 0,001 × ${fmtBR(bw, 1)} × ${fmtBR(hAlma, 1)}${tipo === 't' ? ' (h − hf)' : ''} = ${fmtBR(AsMin, 2)} cm² por face<br>
-    Limite: 5 cm²/m × ${fmtBR(hAlma / 100, 2)} m = ${fmtBR(AsLim, 2)} cm² por face ${limGoverna ? '→ <strong>governa</strong>' : '(não governa)'}<br>
+    As,pele = 0,10 % · bw · h = 0,001 × ${fmtBR(bw, 1)} × ${fmtBR(h, 1)} = ${fmtBR(AsMin, 2)} cm² por face${tipo === 't' ? ' (seção T tratada como retangular bw × h)' : ''}<br>
+    Limite: 5 cm²/m × h = 5 × ${fmtBR(h / 100, 2)} m = ${fmtBR(AsLim, 2)} cm² por face ${limGoverna ? '→ <strong>ultrapassado: adota-se o limite</strong>' : '(não ultrapassado)'}<br>
     <strong>As,pele = ${fmtBR(AsFace, 2)} cm² por face</strong><br><br>
     Número de barras (${lbl}, Aφ = ${fmtBR(Aphi, 3)} cm²):<br>
     · por área: ${fmtBR(AsFace, 2)} / ${fmtBR(Aphi, 3)} → ${nArea} barra(s)<br>
