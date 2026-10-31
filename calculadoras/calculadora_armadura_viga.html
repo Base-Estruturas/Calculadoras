@@ -117,11 +117,20 @@
   .est-tab td strong { font-weight: 600; color: var(--texto); }
   .est-tab td.inv { color: var(--vermelho); font-size: 10.5px; white-space: nowrap; }
   .kv6 { grid-template-columns: repeat(6, 1fr); }
+  .btn-bloco { width: 100%; }
+  .btn-bloco[aria-pressed="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
+  .pele { display: none; }
+  .pele.ativo { display: block; }
+  .pele-row { display: grid; grid-template-columns: 112px 1fr; gap: 10px; align-items: end; }
+  #pele-res { font-size: 12.5px; color: var(--texto-2); line-height: 1.35; padding-bottom: 2px; }
+  #pele-res strong { color: var(--texto); font-size: 15px; font-weight: 600; }
+  .pele-memo { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--borda); font-size: 11.5px; color: var(--texto-2); line-height: 1.45; }
+  .pele-memo b { color: var(--texto); font-weight: 600; }
   .kv6 b { white-space: nowrap; }
   @media (max-height: 760px) {
     .hdr { height: 60px; flex-basis: 60px; }
     .hdr img { height: 48px; }
-    .corpo { gap: 10px; padding: 10px; }
+    .corpo { gap: 10px; padding: 10px 10px 6px; }
     .col { gap: 10px; }
     .card { padding: 10px 12px; }
     .res-num .val { font-size: 26px; }
@@ -129,6 +138,9 @@
     .rodape { padding: 8px 16px; }
     .mkas { margin-top: 8px; padding: 8px 10px; }
     .mkas-row { margin-bottom: 4px; }
+    .btn-bloco { height: 30px; }
+    .pele .card-hd { margin-bottom: 4px; }
+    .linha-info { padding: 5px 10px; }
     .linha-info { margin-top: 6px; }
   }
   .det-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--borda); flex-wrap: wrap; }
@@ -261,6 +273,7 @@
           <div class="f"><label for="gs">γs</label><input type="number" id="gs" value="1.15" step="0.05" min="1"></div>
         </div>
       </div>
+
     </section>
 
     <!-- ===== Coluna 2: esforços e cisalhamento ===== -->
@@ -313,6 +326,27 @@
           </div>
         </div>
       </div>
+      <button type="button" class="btn btn-bloco" id="btn-pele" aria-pressed="false">Armadura de pele</button>
+
+      <div class="card pele" id="card-pele">
+        <div class="card-hd"><span class="rot">Armadura de pele</span><span id="pele-status"></span></div>
+        <div class="pele-row">
+          <div class="f"><label for="pele_phi">Bitola</label>
+            <select id="pele_phi">
+              <option value="5">Ø 5,0 mm</option>
+              <option value="6.3" selected>Ø 6,3 mm</option>
+              <option value="8">Ø 8,0 mm</option>
+              <option value="10">Ø 10,0 mm</option>
+              <option value="12.5">Ø 12,5 mm</option>
+              <option value="16">Ø 16,0 mm</option>
+              <option value="20">Ø 20,0 mm</option>
+            </select>
+          </div>
+          <div id="pele-res"></div>
+        </div>
+        <div class="alertas" id="pele-alertas"></div>
+      </div>
+
     </section>
 
     <!-- ===== Coluna 3: resultados ===== -->
@@ -367,6 +401,7 @@
     <div class="modal-body">
       <div class="card" id="detalhes"></div>
       <div class="card" id="detalhes-cis"></div>
+      <div class="card" id="detalhes-pele" style="display: none;"></div>
       <div class="card nota">
         Cálculo conforme NBR 6118:2023 (item 17.2.2) com diagrama retangular simplificado: λ, αc e ηc conforme fck (8.2.10.1);
         x/d ≤ 0,45 (fck ≤ 50) ou 0,35 (fck &gt; 50), item 14.6.4.3. Em seção T, se λx ≤ hf a seção é dimensionada como retangular bf × d;
@@ -1582,6 +1617,67 @@ function alternarMkAs() {
   atualizar();
 }
 
+// ====== Armadura de pele — NBR 6118:2023, item 17.3.5.2.3 ======
+let peleAtiva = false;
+
+function calcularPele() {
+  const res = document.getElementById('pele-res'), memo = document.getElementById('detalhes-pele');
+  const st = document.getElementById('pele-status'), al = document.getElementById('pele-alertas');
+  const num = id => parseFloat(document.getElementById(id).value);
+  const tipo = tipoSecao();
+  const bw = num('bw'), h = num('h'), d = num('d'), dl = num('dl');
+  const hf = tipo === 't' ? num('hf') : 0;
+  const phi = num('pele_phi');
+  if (!(bw > 0 && h > 0 && d > dl && dl > 0) || (tipo === 't' && !(hf > 0 && hf < h))) {
+    res.innerHTML = '<span style="color: var(--vermelho);">Verifique a seção.</span>'; memo.innerHTML = ''; st.innerHTML = ''; al.innerHTML = ''; return;
+  }
+  // Ac,alma: retangular = bw·h; seção T = bw·(h − hf)
+  const hAlma = h - hf;
+  const AsMin = 0.0010 * bw * hAlma;           // 0,10 % Ac,alma por face
+  const AsLim = 5 * hAlma / 100;               // não é necessário mais que 5 cm²/m por face
+  const AsFace = Math.min(AsMin, AsLim);
+  const limGoverna = AsLim < AsMin;
+  const Aphi = areaBarra(phi);
+  // Faixa a distribuir: entre as armaduras principais (d − d'); espaçamento ≤ 20 cm
+  const faixa = d - dl;
+  const nArea = Math.ceil(AsFace / Aphi - 1e-9);
+  const nEsp = Math.max(Math.ceil(faixa / 20 - 1e-9) - 1, 0);
+  const n = Math.max(nArea, nEsp, 1);
+  const sp = faixa / (n + 1);
+  const AsEf = n * Aphi;
+  const s15 = 15 * phi / 10;                   // cm — NOTA de 17.3.3.2
+  const lbl = `Ø ${fmtBR(phi, phi % 1 === 0 ? 0 : 1)}`;
+  const dispensa = h <= 60;
+  const governa = nArea >= nEsp ? 'área' : 'espaçamento ≤ 20 cm';
+
+  st.innerHTML = dispensa ? pill('warn', 'h ≤ 60: dispensável') : pill('ok', 'h &gt; 60: necessária');
+  res.innerHTML = `<strong>${n} ${lbl} por face</strong> · ${2 * n} no total<br>
+    ${fmtBR(AsFace, 2)} → ${fmtBR(AsEf, 2)} cm²/face · s ≈ ${fmtBR(sp, 1)} cm`;
+  al.innerHTML = sp > s15
+    ? `<div class="alert alert-warning" title="Recomendação da NOTA de 17.3.3.2 para a armadura de pele na zona tracionada">s ≈ ${fmtBR(sp, 1)} &gt; 15Ø = ${fmtBR(s15, 1)} cm (NOTA 17.3.3.2)</div>`
+    : '';
+  memo.innerHTML = `
+    <p class="section-title" style="margin-top: 0;">Armadura de pele — NBR 6118:2023, item 17.3.5.2.3</p>
+    ${dispensa ? 'h = ' + fmtBR(h, 1) + ' cm ≤ 60 cm → pode ser dispensada (valores abaixo apenas informativos).' : 'h = ' + fmtBR(h, 1) + ' cm &gt; 60 cm → armadura de pele necessária.'}<br>
+    As,pele = 0,10 % · Ac,alma = 0,001 × ${fmtBR(bw, 1)} × ${fmtBR(hAlma, 1)}${tipo === 't' ? ' (h − hf)' : ''} = ${fmtBR(AsMin, 2)} cm² por face<br>
+    Limite: 5 cm²/m × ${fmtBR(hAlma / 100, 2)} m = ${fmtBR(AsLim, 2)} cm² por face ${limGoverna ? '→ <strong>governa</strong>' : '(não governa)'}<br>
+    <strong>As,pele = ${fmtBR(AsFace, 2)} cm² por face</strong><br><br>
+    Número de barras (${lbl}, Aφ = ${fmtBR(Aphi, 3)} cm²):<br>
+    · por área: ${fmtBR(AsFace, 2)} / ${fmtBR(Aphi, 3)} → ${nArea} barra(s)<br>
+    · por espaçamento: faixa entre as armaduras principais d − d' = ${fmtBR(faixa, 1)} cm, s ≤ 20 cm → ${nEsp} barra(s)<br>
+    <strong>Adotado: ${n} ${lbl} por face</strong> (governa: ${governa}) · As,ef = ${fmtBR(AsEf, 2)} cm² · s ≈ ${fmtBR(faixa, 1)}/${n + 1} = ${fmtBR(sp, 1)} cm<br>
+    NOTA de 17.3.3.2 (recomendação): s ≤ 15Ø = ${fmtBR(s15, 1)} cm na zona tracionada → ${sp <= s15 ? 'atende' : 'não atende'}.<br>
+    Barras CA-50 ou CA-60, ancoradas nos apoios; as armaduras principais de tração e compressão não entram no cálculo.`;
+}
+
+function alternarPele() {
+  peleAtiva = !peleAtiva;
+  document.getElementById('btn-pele').setAttribute('aria-pressed', String(peleAtiva));
+  document.getElementById('card-pele').classList.toggle('ativo', peleAtiva);
+  document.getElementById('detalhes-pele').style.display = peleAtiva ? '' : 'none';
+  if (peleAtiva) calcularPele();
+}
+
 // ====== Atualização reativa ======
 function atualizar() {
   atualizarD();
@@ -1594,6 +1690,7 @@ function atualizar() {
   if (mkAsAtivo) mkDeAs();
   atualizarMd();
   calcular();
+  if (peleAtiva) calcularPele();
 }
 
 // ====== Memorial (janela sobreposta) ======
@@ -1607,6 +1704,7 @@ document.querySelectorAll('.corpo input, .corpo select').forEach(el => {
   el.addEventListener('change', atualizar);
 });
 document.getElementById('btn-mkas').addEventListener('click', alternarMkAs);
+document.getElementById('btn-pele').addEventListener('click', alternarPele);
 document.getElementById('btn-pdf').addEventListener('click', gerarMemoriaPDF);
 document.getElementById('btn-pdf2').addEventListener('click', gerarMemoriaPDF);
 document.getElementById('btn-memo').addEventListener('click', abrirMemorial);
