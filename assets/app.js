@@ -73,7 +73,8 @@ function abrir(calc) {
   topbarTitle.textContent = calc.nome;
   btnReload.disabled = false;
 
-  frame.src = `calculadoras/${calc.arquivo}`;
+  // ?v= evita que o navegador mostre uma versão antiga em cache da calculadora
+  frame.src = `calculadoras/${calc.arquivo}?v=${Date.now()}`;
   frame.classList.remove('hidden');
   welcome.classList.add('hidden');
 
@@ -107,7 +108,7 @@ search.addEventListener('input', () => {
 // === Recarregar calculadora ativa ===
 btnReload.addEventListener('click', () => {
   if (calculadoraAtiva) {
-    const src = frame.src;
+    const src = frame.src.split('?')[0] + '?v=' + Date.now();
     frame.src = 'about:blank';
     setTimeout(() => { frame.src = src; }, 50);
   }
