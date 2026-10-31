@@ -93,11 +93,13 @@
   .mkas-hint strong { color: var(--texto); }
 
   /* Resultados */
-  .res-topo { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .res-topo { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .res-num { display: flex; align-items: baseline; gap: 6px; }
   .res-num .lbl { font-size: 13px; color: var(--texto-2); font-weight: 600; }
   .res-num .val { font-size: 30px; font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
   .res-num .un { font-size: 13px; color: var(--texto-2); }
+  .res-num.sm .val { font-size: 20px; }
+  .res-num.sm .un { font-size: 12px; }
   .res-sub { margin-top: 4px; font-size: 12.5px; color: var(--texto-2); }
   .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--borda); }
   .kv div { font-size: 12px; color: var(--texto-2); }
@@ -232,6 +234,8 @@
     #print-area .formula { font-family: "Courier New", monospace; background: #f4f4f4; padding: 6px 10px; border-left: 3px solid #333; margin: 6px 0; font-size: 10pt; page-break-inside: avoid; }
     #print-area p { margin: 4px 0; text-align: justify; }
     #print-area .highlight { background: #f0f0f0; padding: 8px 12px; border-left: 4px solid #000; margin: 10px 0; font-weight: bold; page-break-inside: avoid; }
+    #print-area .memo-pdf { font-size: 10.5pt; line-height: 1.55; text-align: left; }
+    #print-area .memo-pdf span { color: black !important; }
     #print-area .note { font-size: 9.5pt; color: #555; font-style: italic; margin-top: 4px; }
   }
 
@@ -1215,7 +1219,7 @@ function gerarMemoriaPDF() {
   }
 
   // Numeração base depende do tipo
-  const numArmMin = c.tipoSecao === 't' ? 5 : 4;
+  const numArmMin = 5; // memoriaRet e memoriaT ocupam as seções 3 e 4
   const numResultFlex = numArmMin + 1;
   const numCis = numResultFlex + 1;
   const numRef = numCis + 1;
@@ -1242,7 +1246,9 @@ function gerarMemoriaPDF() {
 
     ${c.cis ? memoriaCisalhamento(c.cis, numCis) : ''}
 
-    <h2>${numRef}. Referências</h2>
+    ${secoesExtrasPDF(numRef)}
+
+    <h2>${numRef + nExtrasPDF()}. Referências</h2>
     <p>ABNT NBR 6118:2023 — Projeto de estruturas de concreto — Procedimento. Rio de Janeiro: ABNT, 2023.</p>
   `;
 
@@ -1541,7 +1547,7 @@ function renderCisalhamento(cis, c) {
   document.getElementById('resultado-cis').innerHTML = `
     <div class="res-topo">
       <div class="res-num"><span class="lbl">Asw/s${t ? ' (V + T)' : ''}</span><span class="val">${cis.falhaBiela ? '—' : fmtBR(cis.Asw_per_m_final, 2)}</span><span class="un">cm²/m</span></div>
-      ${t && !cis.falhaBiela ? `<div class="res-num" title="Asl de torção: ${fmtBR(t.Asl_hor, 2)} cm² por face inferior/superior + ${fmtBR(t.Asl_lat, 2)} cm² por face lateral; barra em cada vértice; s ≤ 35 cm; estribo fechado (17.5.1.6, 18.3.4)"><span class="lbl">Asl,tor</span><span class="val">${fmtBR(t.Asl, 2)}</span><span class="un">cm²</span></div>` : ''}
+      ${t && !cis.falhaBiela ? `<div class="res-num sm" title="Asl de torção: ${fmtBR(t.Asl_hor, 2)} cm² por face inferior/superior + ${fmtBR(t.Asl_lat, 2)} cm² por face lateral; barra em cada vértice; s ≤ 35 cm; estribo fechado (17.5.1.6, 18.3.4)"><span class="lbl">Asl,tor</span><span class="val">${fmtBR(t.Asl, 2)}</span><span class="un">cm² <span title="Asl por metro de perímetro (forma do TQS)">(${fmtBR(t.Asl_por_m, 2)}/m)</span></span></div>` : ''}
     </div>
     <div class="res-sub">${cis.modeloTexto} · ${sub}</div>`;
 
@@ -1787,13 +1793,14 @@ function calcularTorcao(p) {
   const rho_l = 0.2 * fctm_MPa / Math.min(fyk_long, 500);
   const Asw_min_m = rho_w * bw * 100;                // cm²/m (estribos totais)
   const Asl_min = rho_l * he * ue;                   // cm²
+  const A90_min_ramo = rho_w * he * 100;             // cm²/m por ramo (critério TQS, K136 = he)
   const Asl = Math.max(Asl_calc, Asl_min);
   const Asl_por_m = Asl / ue * 100;                  // cm²/m de perímetro
   const Asl_hor = Asl * (bw - he) / ue;              // por face horizontal (inferior / superior)
   const Asl_lat = Asl * (h - he) / ue;               // por face lateral
   return { Tk, Td_tfm, Td, A, u, c1, Au, he, caso, Ae, ue, TRd2, TRd2_tfm: TRd2 / 100 / G, interacao,
     Vd, Vrd2, fywd_t, fyd_l, A90_m, Asw_T_m, Asl_calc, rho_w, rho_l, Asw_min_m, Asl_min, Asl, Asl_por_m,
-    Asl_hor, Asl_lat, thetaDeg: thetaRad * 180 / Math.PI, compat: Vd <= 0.7 * Vrd2 };
+    Asl_hor, Asl_lat, A90_min_ramo, thetaDeg: thetaRad * 180 / Math.PI, compat: Vd <= 0.7 * Vrd2 };
 }
 
 function memorialTorcao(t, c) {
@@ -1811,10 +1818,11 @@ function memorialTorcao(t, c) {
     Vd/VRd2 + Td/TRd2 = ${fmtBR(t.Vd / G, 2)}/${fmtBR(t.Vrd2 / G, 2)} + ${fmtBR(t.Td_tfm, 2)}/${fmtBR(t.TRd2_tfm, 2)} = <strong>${fmtBR(t.interacao, 3)}</strong> ${t.interacao <= 1 ? '≤ 1 ✓' : '&gt; 1 ✗ RUÍNA DA BIELA'}<br><br>
     <strong>Estribos (17.5.1.6-a):</strong> A90/s = Td / (2·Ae·fywd·cotg θ), fywd = ${fmtBR(t.fywd_t * 10, 1)} MPa<br>
     A90/s = ${fmtBR(t.A90_m, 3)} cm²/m por ramo → estribo de 2 ramos: 2·A90/s = <strong>${fmtBR(t.Asw_T_m, 3)} cm²/m</strong> (somado ao cortante, 17.7.2.3)<br>
-    Mínima (17.5.1.2): ρsw = 0,2·fctm/fywk (fywk ≤ 500 MPa) = ${fmtBR(t.rho_w * 100, 4)} % → ${fmtBR(t.Asw_min_m, 3)} cm²/m<br><br>
+    Mínima (17.5.1.2): ρsw = 0,2·fctm/fywk (fywk ≤ 500 MPa) = ${fmtBR(t.rho_w * 100, 4)} % → Asw,mín = ρsw·bw = ${fmtBR(t.Asw_min_m, 3)} cm²/m (total do estribo)<br>
+    Mínima por ramo (critério do TQS, largura he): A90,mín = ρsw·he = ${fmtBR(t.rho_w * 100, 4)} % × ${fmtBR(t.he, 2)} × 100 = ${fmtBR(t.A90_min_ramo, 3)} cm²/m por ramo → A90/s = ${fmtBR(t.A90_m, 3)} ${t.A90_m >= t.A90_min_ramo ? '≥ mínimo ✓' : '&lt; mínimo: adotar ' + fmtBR(t.A90_min_ramo, 3)}<br><br>
     <strong>Armadura longitudinal (17.5.1.6-b):</strong> Asl = Td·ue / (2·Ae·fyd·tg θ) = ${fmtBR(t.Asl_calc, 2)} cm²<br>
     Mínima (17.5.1.2): ρsl = ${fmtBR(t.rho_l * 100, 4)} % → Asl,mín = ρsl·he·ue = ${fmtBR(t.Asl_min, 2)} cm²<br>
-    <strong>Asl = ${fmtBR(t.Asl, 2)} cm²</strong> = ${fmtBR(t.Asl_por_m, 2)} cm²/m de perímetro →
+    <strong>Asl = ${fmtBR(t.Asl, 2)} cm²</strong> (total) = ${fmtBR(t.Asl_por_m, 2)} cm²/m de perímetro (forma do TQS); Asl,mín = ${fmtBR(t.rho_l * t.he * 100, 2)} cm²/m →
     face inferior ou superior (bw − he): ${fmtBR(t.Asl_hor, 2)} cm² · cada face lateral (h − he): ${fmtBR(t.Asl_lat, 2)} cm²<br>
     Na zona tracionada pela flexão, somar à armadura de flexão (17.7.1.2). Pelo menos uma barra em cada vértice; barras espaçadas no máximo 350 mm (18.3.4).<br>
     Estribos de torção fechados, com ganchos a 45° (18.3.4). ${!t.compat ? '<br><span style="color: var(--ambar);">Torção de compatibilidade: para desprezá-la, Vsd ≤ 0,7·VRd2 — não atendido (17.5.1.2).</span>' : ''}`;
@@ -1828,6 +1836,28 @@ function alternarTorcao() {
   g.classList.toggle('g4', torcaoAtiva);
   g.classList.toggle('g3', !torcaoAtiva);
   atualizar();
+}
+
+// ====== Torção e armadura de pele na memória em PDF ======
+function _corpoMemorial(id) {
+  const el = document.getElementById(id);
+  if (!el || el.style.display === 'none' || !el.innerHTML.trim()) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = el.innerHTML;
+  const t = tmp.querySelector('.section-title'); if (t) t.remove();
+  return tmp.innerHTML;
+}
+function _extrasPDF() {
+  const lista = [];
+  if (torcaoAtiva) { const b = _corpoMemorial('detalhes-tor'); if (b) lista.push(['Torção — NBR 6118:2023, itens 17.5.1 e 17.7.2', b]); }
+  if (peleAtiva) { calcularPele(); const b = _corpoMemorial('detalhes-pele'); if (b) lista.push(['Armadura de pele — NBR 6118:2023, itens 17.3.5.2.3 e 18.3.5', b]); }
+  return lista;
+}
+function nExtrasPDF() { return _extrasPDF().length; }
+function secoesExtrasPDF(n0) {
+  return _extrasPDF().map(([tit, corpo], i) => `
+    <h2>${n0 + i}. ${tit}</h2>
+    <div class="memo-pdf">${corpo}</div>`).join('');
 }
 
 // ====== Atualização reativa ======
