@@ -118,6 +118,10 @@
   .est-tab tr.calc td { color: var(--texto-2); font-size: 12px; }
   .est-tab td.inv { color: var(--vermelho); font-size: 10.5px; white-space: nowrap; }
   .kv6 { grid-template-columns: repeat(6, 1fr); }
+  .hd-btns { display: flex; gap: 6px; }
+  .g4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px 10px; }
+  .tor-field { display: none; }
+  .tor-on .tor-field { display: block; }
   .btn-bloco { width: 100%; }
   .btn-bloco[aria-pressed="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
   .pele { display: none; }
@@ -127,7 +131,10 @@
   #pele-res strong { color: var(--texto); font-size: 15px; font-weight: 600; }
   .pele-memo { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--borda); font-size: 11.5px; color: var(--texto-2); line-height: 1.45; }
   .pele-memo b { color: var(--texto); font-weight: 600; }
-  .kv6 b { white-space: nowrap; }
+  .tor-flex { color: #1E3A8A; }
+  .tor-flex strong { color: #1E3A8A; font-weight: 600; }
+  .kv6 b, .kv6 > div { white-space: nowrap; }
+  .kv6 > div { overflow: hidden; text-overflow: ellipsis; }
   @media (max-height: 760px) {
     .hdr { height: 60px; flex-basis: 60px; }
     .hdr img { height: 48px; }
@@ -284,14 +291,18 @@
       <div class="card">
         <div class="card-hd">
           <span class="rot">Esforços</span>
-          <button type="button" class="btn-sm" id="btn-mkas" aria-pressed="false" title="Preencher Mk a partir da armadura de flexão adotada">M<sub>k</sub> ← A<sub>s</sub></button>
+          <span class="hd-btns">
+            <button type="button" class="btn-sm" id="btn-tor" aria-pressed="false" title="Incluir momento torçor (NBR 6118:2023, 17.5 e 17.7.2)">Torção</button>
+            <button type="button" class="btn-sm" id="btn-mkas" aria-pressed="false" title="Preencher Mk a partir da armadura de flexão adotada">M<sub>k</sub> ← A<sub>s</sub></button>
+          </span>
         </div>
-        <div class="g3">
+        <div class="g3" id="grid-esf">
           <div class="f"><label for="mk">Mk <span class="un">(tf·m)</span></label><input type="number" id="mk" value="10.00" step="0.01"></div>
           <div class="f"><label for="vk">Vk <span class="un">(tf)</span></label><input type="number" id="vk" value="8.00" step="0.01"></div>
+          <div class="f tor-field"><label for="tk">Tk <span class="un">(tf·m)</span></label><input type="number" id="tk" value="1.00" step="0.01" min="0"></div>
           <div class="f"><label for="gf">γf</label><input type="number" id="gf" value="1.4" step="0.05" min="1"></div>
         </div>
-        <div class="linha-info">Md = γf·Mk = <strong><span id="md_tfm">14,000</span> tf·m</strong> &nbsp;·&nbsp; Vd = γf·Vk = <strong><span id="vd_tf">11,200</span> tf</strong></div>
+        <div class="linha-info">Md = γf·Mk = <strong><span id="md_tfm">14,000</span> tf·m</strong> &nbsp;·&nbsp; Vd = γf·Vk = <strong><span id="vd_tf">11,200</span> tf</strong><span id="td-info"></span></div>
 
         <div class="mkas" id="mkas-panel">
           <div class="mkas-row">
@@ -404,6 +415,7 @@
     <div class="modal-body">
       <div class="card" id="detalhes"></div>
       <div class="card" id="detalhes-cis"></div>
+      <div class="card" id="detalhes-tor" style="display: none;"></div>
       <div class="card" id="detalhes-pele" style="display: none;"></div>
       <div class="card nota">
         Cálculo conforme NBR 6118:2023 (item 17.2.2) com diagrama retangular simplificado: λ, αc e ηc conforme fck (8.2.10.1);
@@ -439,6 +451,9 @@ function atualizarMd() {
   const gf = parseFloat(document.getElementById('gf').value) || 0;
   document.getElementById('md_tfm').textContent = fmtBR(Mk * gf, 3);
   document.getElementById('vd_tf').textContent = fmtBR(Vk * gf, 3);
+  const tdi = document.getElementById('td-info');
+  if (tdi) tdi.innerHTML = (typeof torcaoAtiva !== 'undefined' && torcaoAtiva)
+    ? ` &nbsp;·&nbsp; Td = γf·Tk = <strong>${fmtBR((parseFloat(document.getElementById('tk').value) || 0) * gf, 3)} tf·m</strong>` : '';
 }
 
 function atualizarD() {
@@ -953,10 +968,23 @@ function calcularCisalhamento(dados) {
   // ρsw,min = 0,2 · fctm / fywk  (com fywk ≤ 500 MPa para o cálculo)
   const fywk_min = fyk_est; // item 17.4.1.1.1: fywk (sem limitação)
   const rho_sw_min = 0.2 * fctm_MPa / fywk_min;
-  const Asw_per_m_min = rho_sw_min * bw * 100; // cm²/m
+  let Asw_per_m_min = rho_sw_min * bw * 100; // cm²/m
 
-  const Asw_per_m_final = Math.max(Asw_per_m_calc, Asw_per_m_min);
-  const usouMinimo = Asw_per_m_calc < Asw_per_m_min;
+  let Asw_per_m_final = Math.max(Asw_per_m_calc, Asw_per_m_min);
+  let usouMinimo = Asw_per_m_calc < Asw_per_m_min;
+
+  // ===== Torção (NBR 6118:2023, 17.5 e 17.7.2) — só quando habilitada =====
+  let tor = null;
+  if (torcaoAtiva) {
+    tor = calcularTorcao({ bw, h: dados.h, dl: dados.dl, fck, gf, fcd_kNcm2, alpha_v2, thetaRad, cotgTheta,
+      fctm_MPa, fyk_est, fyk_long: dados.fyk, gs, Vd, Vrd2 });
+    if (!tor.erro) {
+      // 17.7.2.3: soma das armaduras calculadas separadamente (estribo de 2 ramos: Asw,V/s + 2·A90/s)
+      Asw_per_m_min = tor.Asw_min_m;                     // ρsw,mín com fywk ≤ 500 MPa (17.5.1.2)
+      Asw_per_m_final = Math.max(Asw_per_m_calc + tor.Asw_T_m, Asw_per_m_min);
+      usouMinimo = (Asw_per_m_calc + tor.Asw_T_m) < Asw_per_m_min;
+    }
+  }
 
   // Espaçamento máximo dos estribos (item 18.3.3.2 NBR 6118:2023)
   let s_max, criterio_smax;
@@ -980,7 +1008,7 @@ function calcularCisalhamento(dados) {
   const phi_est_max = bw; // Øt ≤ bw/10 → em mm, numericamente igual a bw em cm
 
   // Falha na biela?
-  const falhaBiela = Vd > Vrd2;
+  const falhaBiela = (tor && !tor.erro) ? tor.interacao > 1 : Vd > Vrd2;
 
   const dCis = {
     Vk_tf, Vd_tf, Vd, modeloTexto, modelo, thetaDeg,
@@ -988,7 +1016,7 @@ function calcularCisalhamento(dados) {
     Vrd2, Vc0, Vc, Vsw, cotgTheta,
     Asw_per_m_calc, Asw_per_m_min, Asw_per_m_final, usouMinimo,
     rho_sw_min_pct: rho_sw_min*100,
-    s_max, criterio_smax, st_max, criterio_stmax, phi_est_max, falhaBiela
+    s_max, criterio_smax, st_max, criterio_stmax, phi_est_max, falhaBiela, tor
   };
 
   // Tabela de bitolas
@@ -1029,6 +1057,7 @@ function calcularCisalhamento(dados) {
     <strong>Armadura mínima (item 17.4.1.1.1):</strong><br>
     ρsw,min = 0,2 · fctm / fywk = ${fmtBR(dCis.rho_sw_min_pct, 4)} %<br>
     Asw/s,min = ρsw,min · bw = ${fmtBR(Asw_per_m_min, 3)} cm²/m<br><br>
+    ${tor && !tor.erro ? `<strong>Com torção (17.7.2.3):</strong> Asw/s = Asw,V/s + 2·A90/s = ${fmtBR(Asw_per_m_calc, 3)} + ${fmtBR(tor.Asw_T_m, 3)} = ${fmtBR(Asw_per_m_calc + tor.Asw_T_m, 3)} cm²/m · mínima (fywk ≤ 500 MPa, 17.5.1.2) = ${fmtBR(Asw_per_m_min, 3)} cm²/m<br>` : ''}
     <strong>Asw/s adotado = ${fmtBR(Asw_per_m_final, 3)} cm²/m</strong> ${usouMinimo ? '(mínima)' : '(calculada)'}<br>
     ${criterio_smax} = <strong>${fmtBR(s_max, 1)} cm</strong><br>
     ${criterio_stmax} = <strong>${fmtBR(st_max, 1)} cm</strong> (espaçamento transversal entre ramos)<br>
@@ -1036,6 +1065,9 @@ function calcularCisalhamento(dados) {
   `;
 
   detCis.innerHTML = detHtml + tabelaEstribosHTML(dCis);
+  const detTor = document.getElementById('detalhes-tor');
+  detTor.style.display = tor ? '' : 'none';
+  detTor.innerHTML = tor ? memorialTorcao(tor, dados) : '';
 }
 
 // ====== Funções de detalhamento na tela ======
@@ -1495,35 +1527,58 @@ function cisErro(msg) {
 
 function renderCisalhamento(cis, c) {
   ultimoCis = cis;
-  const util = cis.Vd / cis.Vrd2;
+  const t = cis.tor && !cis.tor.erro ? cis.tor : null;
+  const util = t ? t.interacao : cis.Vd / cis.Vrd2;
   const pct = Math.min(util * 100, 100);
   document.getElementById('cis-status').innerHTML = cis.falhaBiela
-    ? pill('fail', 'Biela: Vd &gt; VRd2')
-    : pill('ok', 'OK');
+    ? pill('fail', t ? 'Biela: V/VRd2 + T/TRd2 &gt; 1' : 'Biela: Vd &gt; VRd2')
+    : pill('ok', t ? 'OK (V + T)' : 'OK');
+  document.querySelector('#cis-status').closest('.card').querySelector('.rot').textContent =
+    t ? 'Cisalhamento + torção — estribos' : 'Cisalhamento — estribos';
 
+  const sub = cis.falhaBiela ? 'ruptura da biela comprimida'
+    : (cis.usouMinimo ? `mínima governa (${fmtBR(cis.Asw_per_m_min, 2)} cm²/m)` : `calculada · mín. ${fmtBR(cis.Asw_per_m_min, 2)} cm²/m`);
   document.getElementById('resultado-cis').innerHTML = `
     <div class="res-topo">
-      <div class="res-num"><span class="lbl">Asw/s</span><span class="val">${cis.falhaBiela ? '—' : fmtBR(cis.Asw_per_m_final, 2)}</span><span class="un">cm²/m</span></div>
+      <div class="res-num"><span class="lbl">Asw/s${t ? ' (V + T)' : ''}</span><span class="val">${cis.falhaBiela ? '—' : fmtBR(cis.Asw_per_m_final, 2)}</span><span class="un">cm²/m</span></div>
+      ${t && !cis.falhaBiela ? `<div class="res-num" title="Asl de torção: ${fmtBR(t.Asl_hor, 2)} cm² por face inferior/superior + ${fmtBR(t.Asl_lat, 2)} cm² por face lateral; barra em cada vértice; s ≤ 35 cm; estribo fechado (17.5.1.6, 18.3.4)"><span class="lbl">Asl,tor</span><span class="val">${fmtBR(t.Asl, 2)}</span><span class="un">cm²</span></div>` : ''}
     </div>
-    <div class="res-sub">${cis.modeloTexto} · ${cis.falhaBiela ? 'ruptura da biela comprimida' : (cis.usouMinimo ? `mínima governa (${fmtBR(cis.Asw_per_m_min, 2)} cm²/m)` : `calculada · mín. ${fmtBR(cis.Asw_per_m_min, 2)} cm²/m`)}</div>`;
-  document.getElementById('cis-kv').innerHTML = `
-    <div class="kv kv6">
+    <div class="res-sub">${cis.modeloTexto} · ${sub}</div>`;
+
+  const kvV = `
       <div>Vd<b>${fmtBR(cis.Vd_tf, 2)} tf</b></div>
       <div>VRd2<b>${fmtBR(cis.Vrd2 / G, 2)} tf</b></div>
       <div>Vd / VRd2<b>${fmtBR(util * 100, 1)} %</b><div class="barra${cis.falhaBiela ? ' fail' : ''}"><span style="width: ${pct}%"></span></div></div>
-      <div>Vc<b>${fmtBR(cis.Vc / G, 2)} tf</b></div>
-      <div>s,máx<b>${fmtBR(cis.s_max, 1)} cm</b></div>
-      <div>st,máx<b>${fmtBR(cis.st_max, 1)} cm</b></div>
+      <div>Vc<b>${fmtBR(cis.Vc / G, 2)} tf</b></div>`;
+  const kvT = t ? `
+      <div title="Td = γf·Tk (tf·m)">Td<b>${fmtBR(t.Td_tfm, 2)} tf·m</b></div>
+      <div title="TRd2 = 0,50·αv2·fcd·Ae·he·sen 2θ (tf·m) — VRd2 = ${fmtBR(cis.Vrd2 / G, 2)} tf">TRd2<b>${fmtBR(t.TRd2_tfm, 2)} tf·m</b></div>
+      <div title="Vd/VRd2 + Td/TRd2 ≤ 1 (17.7.2.2)">Interação<b>${fmtBR(util, 3)}</b><div class="barra${cis.falhaBiela ? ' fail' : ''}"><span style="width: ${pct}%"></span></div></div>
+      <div title="Asw,V/s do cortante (cm²/m)">Asw,V<b>${fmtBR(cis.Asw_per_m_calc, 2)}</b></div>
+      <div title="2·A90/s da torção, estribo de 2 ramos (cm²/m)">Asw,T<b>${fmtBR(t.Asw_T_m, 2)}</b></div>` : '';
+  document.getElementById('cis-kv').innerHTML = `
+    <div class="kv kv6">
+      ${t ? kvT : kvV}
+      ${t ? `<div title="s,máx / st,máx (cm)">s / st,máx<b>${fmtBR(cis.s_max, 0)}/${fmtBR(cis.st_max, 0)}</b></div>`
+          : `<div>s,máx<b>${fmtBR(cis.s_max, 1)} cm</b></div><div>st,máx<b>${fmtBR(cis.st_max, 1)} cm</b></div>`}
     </div>`;
 
   const al = [];
+  if (cis.tor && cis.tor.erro) al.push(`<div class="alert alert-danger">Torção: ${cis.tor.erro}</div>`);
   if (cis.falhaBiela) {
-    al.push(`<div class="alert alert-danger"><strong>Vd = ${fmtBR(cis.Vd_tf, 2)} tf &gt; VRd2 = ${fmtBR(cis.Vrd2 / G, 2)} tf</strong> — ruptura por compressão diagonal. Aumentar bw, d ou fck.</div>`);
+    al.push(t
+      ? `<div class="alert alert-danger"><strong>Vd/VRd2 + Td/TRd2 = ${fmtBR(t.interacao, 3)} &gt; 1</strong> — ruptura da biela (17.7.2.2). Aumentar a seção ou fck.</div>`
+      : `<div class="alert alert-danger"><strong>Vd = ${fmtBR(cis.Vd_tf, 2)} tf &gt; VRd2 = ${fmtBR(cis.Vrd2 / G, 2)} tf</strong> — ruptura por compressão diagonal. Aumentar bw, d ou fck.</div>`);
   } else {
     if (c.bw > cis.st_max) al.push(`<div class="alert alert-warning">bw = ${fmtBR(c.bw, 1)} cm &gt; st,máx = ${fmtBR(cis.st_max, 1)} cm: verificar a distância entre ramos; pode ser necessário estribo com mais de 2 ramos (item 18.3.3.2).</div>`);
     if (cis.tabelaBitolas.every(b => !b.viavel)) al.push(`<div class="alert alert-danger">Nenhuma bitola de 2 ramos atende Øt ≤ bw/10 e s ≥ 5 cm. Usar mais ramos ou revisar a seção.</div>`);
   }
   document.getElementById('cis-alertas').innerHTML = al.join('');
+
+  // Lembrete na flexão: somar Asl de torção na face tracionada (17.7.1.2)
+  const sf = document.querySelector('#resultado .res-sub');
+  if (sf && t && !cis.falhaBiela) sf.insertAdjacentHTML('beforeend',
+    `<br><span class="tor-flex" title="Na zona tracionada, a armadura longitudinal de torção é somada à de flexão (17.7.1.2)">+ Asl,tor ${fmtBR(t.Asl_hor, 2)} na face tracionada → <strong>As = ${fmtBR(c.As_adotada + t.Asl_hor, 2)} cm²</strong></span>`);
   atualizarEstribo();
 }
 
@@ -1643,7 +1698,8 @@ function calcularPele() {
   // Faixa a distribuir: entre as armaduras principais (d − d'); espaçamento ≤ 20 cm
   const faixa = d - dl;
   const nArea = Math.ceil(AsFace / Aphi - 1e-9);
-  const nEsp = Math.max(Math.ceil(faixa / 20 - 1e-9) - 1, 0);
+  const sMaxP = Math.min(d / 3, 20);           // 17.3.5.2.3 (20 cm) e 18.3.5 (d/3 e 20 cm)
+  const nEsp = Math.max(Math.ceil(faixa / sMaxP - 1e-9) - 1, 0);
   const n = Math.max(nArea, nEsp, 1);
   const sp = faixa / (n + 1);
   const AsEf = n * Aphi;
@@ -1654,11 +1710,11 @@ function calcularPele() {
 
   st.innerHTML = dispensa ? pill('warn', 'h ≤ 60: dispensável') : pill('ok', 'h &gt; 60: necessária');
   res.innerHTML = `<strong>${n} ${lbl} por face</strong> · ${2 * n} no total<br>
-    ${fmtBR(AsFace, 2)} → ${fmtBR(AsEf, 2)} cm²/face · s ≈ ${fmtBR(sp, 1)} cm ${sp <= 20 + 1e-9 ? '≤ 20 ✓' : '&gt; 20 ✗'}`;
+    ${fmtBR(AsFace, 2)} → ${fmtBR(AsEf, 2)} cm²/face · s ≈ ${fmtBR(sp, 1)} cm ${sp <= sMaxP + 1e-9 ? `≤ ${fmtBR(sMaxP, 1)} ✓` : `&gt; ${fmtBR(sMaxP, 1)} ✗`}`;
   const avisos = [];
   if (limGoverna) avisos.push(`<div class="alert alert-warning" title="0,10 %·bw·h = ${fmtBR(AsMin, 2)} cm²/face ultrapassa 5 cm²/m × h">0,10 %·bw·h = ${fmtBR(AsMin, 2)} &gt; 5 cm²/m × ${fmtBR(h / 100, 2)} m: adotado ${fmtBR(AsLim, 2)} cm²/face</div>`);
-  // s ≤ 20 cm (17.3.5.2.3) — garantido pela escolha de n; verificado explicitamente
-  if (sp > 20 + 1e-9) avisos.push(`<div class="alert alert-danger">s ≈ ${fmtBR(sp, 1)} cm &gt; 20 cm (item 17.3.5.2.3)</div>`);
+  // s ≤ mín(d/3; 20 cm) (17.3.5.2.3 e 18.3.5) — garantido pela escolha de n; verificado explicitamente
+  if (sp > sMaxP + 1e-9) avisos.push(`<div class="alert alert-danger">s ≈ ${fmtBR(sp, 1)} cm &gt; ${fmtBR(sMaxP, 1)} cm (17.3.5.2.3 / 18.3.5)</div>`);
   // 15Ø (NOTA de 17.3.3.2): só para h ≥ 1,20 m — abaixo disso a pele conforme 17.3.5.2.3 basta (17.3.3.2)
   const verif15 = h >= 120;
   if (verif15 && sp > s15) avisos.push(`<div class="alert alert-warning" title="Recomendação da NOTA de 17.3.3.2 para a armadura de pele na zona tracionada">s ≈ ${fmtBR(sp, 1)} &gt; 15Ø = ${fmtBR(s15, 1)} cm (NOTA 17.3.3.2)</div>`);
@@ -1671,9 +1727,9 @@ function calcularPele() {
     <strong>As,pele = ${fmtBR(AsFace, 2)} cm² por face</strong><br><br>
     Número de barras (${lbl}, Aφ = ${fmtBR(Aphi, 3)} cm²):<br>
     · por área: ${fmtBR(AsFace, 2)} / ${fmtBR(Aphi, 3)} → ${nArea} barra(s)<br>
-    · por espaçamento: faixa entre as armaduras principais d − d' = ${fmtBR(faixa, 1)} cm, s ≤ 20 cm → ${nEsp} barra(s)<br>
+    · por espaçamento: faixa entre as armaduras principais d − d' = ${fmtBR(faixa, 1)} cm, s ≤ mín(d/3; 20) = ${fmtBR(sMaxP, 1)} cm → ${nEsp} barra(s)<br>
     <strong>Adotado: ${n} ${lbl} por face</strong> (governa: ${governa}) · As,ef = ${fmtBR(AsEf, 2)} cm² · s ≈ ${fmtBR(faixa, 1)}/${n + 1} = ${fmtBR(sp, 1)} cm<br>
-    Verificação s ≤ 20 cm (17.3.5.2.3): s ≈ ${fmtBR(sp, 1)} cm → ${sp <= 20 + 1e-9 ? 'atende' : 'não atende'}.<br>
+    Verificação s ≤ mín(d/3 = ${fmtBR(d / 3, 1)}; 20) = ${fmtBR(sMaxP, 1)} cm (17.3.5.2.3 e 18.3.5): s ≈ ${fmtBR(sp, 1)} cm → ${sp <= sMaxP + 1e-9 ? 'atende' : 'não atende'}.<br>
     ${verif15
       ? `NOTA de 17.3.3.2 (recomendação, h ≥ 1,20 m): s ≤ 15Ø = ${fmtBR(s15, 1)} cm na zona tracionada → ${sp <= s15 ? 'atende' : 'não atende'}.`
       : `15Ø (NOTA de 17.3.3.2) não verificado: h &lt; 1,20 m — nas vigas usuais a pele conforme 17.3.5.2.3 atende à abertura de fissuras (17.3.3.2).`}<br>
@@ -1686,6 +1742,87 @@ function alternarPele() {
   document.getElementById('card-pele').classList.toggle('ativo', peleAtiva);
   document.getElementById('detalhes-pele').style.display = peleAtiva ? '' : 'none';
   if (peleAtiva) calcularPele();
+}
+
+// ====== TORÇÃO — NBR 6118:2023, 17.5.1 (torção uniforme) e 17.7.2 (torção + cortante) ======
+let torcaoAtiva = false;
+
+function calcularTorcao(p) {
+  const { bw, h, dl, fck, gf, fcd_kNcm2, alpha_v2, thetaRad, cotgTheta, fctm_MPa, fyk_est, fyk_long, gs, Vd, Vrd2 } = p;
+  const Tk = parseFloat(document.getElementById('tk').value);
+  if (!(Tk >= 0)) return { erro: 'Informe Tk ≥ 0.' };
+  const Td_tfm = gf * Tk;
+  const Td = Td_tfm * G * 100;                       // kN·cm
+  // 17.5.1.4.1 — seção cheia retangular bw × h (na seção T, só a alma: ADOTADO)
+  const A = bw * h, u = 2 * (bw + h);
+  const c1 = dl;                                     // eixo da barra de canto à face (ADOTADO = d')
+  const Au = A / u;
+  let he = Au, caso;
+  if (Au >= 2 * c1) caso = `2·c1 = ${fmtBR(2 * c1, 2)} ≤ he = A/u`;
+  else {
+    caso = `A/u &lt; 2·c1 → he = A/u ≤ bw − 2·c1 = ${fmtBR(bw - 2 * c1, 2)} cm`;
+    if (Au > bw - 2 * c1) return { erro: 'A/u < 2·c1 e A/u > bw − 2·c1: seção inadequada para torção (17.5.1.4.1).' };
+  }
+  const Ae = (bw - he) * (h - he);                   // área limitada pela linha média da parede
+  const ue = 2 * ((bw - he) + (h - he));             // perímetro de Ae
+  if (!(Ae > 0)) return { erro: 'Ae ≤ 0: verifique a seção.' };
+  const sen2t = Math.sin(2 * thetaRad), tgt = Math.tan(thetaRad);
+  // 17.5.1.5 — compressão diagonal
+  const TRd2 = 0.50 * alpha_v2 * fcd_kNcm2 * Ae * he * sen2t;
+  const interacao = Vd / Vrd2 + Td / TRd2;           // 17.7.2.2
+  // 17.5.1.6 — armaduras (fywd ≤ 435 MPa)
+  const fywd_t = Math.min(fyk_est / gs, 435) / 10;   // estribos, kN/cm²
+  const fyd_l = Math.min(fyk_long / gs, 435) / 10;   // longitudinal, kN/cm²
+  const A90s = Td / (2 * Ae * fywd_t * cotgTheta);   // cm²/cm por ramo
+  const A90_m = A90s * 100;                          // cm²/m por ramo
+  const Asw_T_m = 2 * A90_m;                         // estribo de 2 ramos
+  const Asl_calc = Td * ue / (2 * Ae * fyd_l * tgt); // cm² (total)
+  // 17.5.1.2 — taxas mínimas, fywk ≤ 500 MPa
+  const rho_w = 0.2 * fctm_MPa / Math.min(fyk_est, 500);
+  const rho_l = 0.2 * fctm_MPa / Math.min(fyk_long, 500);
+  const Asw_min_m = rho_w * bw * 100;                // cm²/m (estribos totais)
+  const Asl_min = rho_l * he * ue;                   // cm²
+  const Asl = Math.max(Asl_calc, Asl_min);
+  const Asl_por_m = Asl / ue * 100;                  // cm²/m de perímetro
+  const Asl_hor = Asl * (bw - he) / ue;              // por face horizontal (inferior / superior)
+  const Asl_lat = Asl * (h - he) / ue;               // por face lateral
+  return { Tk, Td_tfm, Td, A, u, c1, Au, he, caso, Ae, ue, TRd2, TRd2_tfm: TRd2 / 100 / G, interacao,
+    Vd, Vrd2, fywd_t, fyd_l, A90_m, Asw_T_m, Asl_calc, rho_w, rho_l, Asw_min_m, Asl_min, Asl, Asl_por_m,
+    Asl_hor, Asl_lat, thetaDeg: thetaRad * 180 / Math.PI, compat: Vd <= 0.7 * Vrd2 };
+}
+
+function memorialTorcao(t, c) {
+  if (t.erro) return `<p class="section-title" style="margin-top: 0;">Torção</p><span style="color: var(--vermelho);">${t.erro}</span>`;
+  return `
+    <p class="section-title" style="margin-top: 0;">Torção — NBR 6118:2023, itens 17.5.1 e 17.7.2 (θ = ${fmtBR(t.thetaDeg, 0)}°)</p>
+    Tk = ${fmtBR(t.Tk, 2)} tf·m · γf = ${fmtBR(c.gf, 2)} · <strong>Td = ${fmtBR(t.Td_tfm, 2)} tf·m</strong><br>
+    ${c.tipoSecao === 't' ? 'Seção T: torção considerada só na alma bw × h (a favor da segurança).<br>' : ''}
+    <strong>Seção vazada equivalente (17.5.1.4.1):</strong><br>
+    A = bw·h = ${fmtBR(t.A, 0)} cm² · u = 2·(bw + h) = ${fmtBR(t.u, 1)} cm · A/u = ${fmtBR(t.Au, 2)} cm · c1 = d' = ${fmtBR(t.c1, 2)} cm<br>
+    he = A/u = <strong>${fmtBR(t.he, 2)} cm</strong> (${t.caso})<br>
+    Ae = (bw − he)·(h − he) = ${fmtBR(t.Ae, 0)} cm² · ue = 2·[(bw − he) + (h − he)] = ${fmtBR(t.ue, 1)} cm<br><br>
+    <strong>Compressão diagonal (17.5.1.5 e 17.7.2.2):</strong><br>
+    TRd2 = 0,50·αv2·fcd·Ae·he·sen 2θ = ${fmtBR(t.TRd2_tfm, 2)} tf·m<br>
+    Vd/VRd2 + Td/TRd2 = ${fmtBR(t.Vd / G, 2)}/${fmtBR(t.Vrd2 / G, 2)} + ${fmtBR(t.Td_tfm, 2)}/${fmtBR(t.TRd2_tfm, 2)} = <strong>${fmtBR(t.interacao, 3)}</strong> ${t.interacao <= 1 ? '≤ 1 ✓' : '&gt; 1 ✗ RUÍNA DA BIELA'}<br><br>
+    <strong>Estribos (17.5.1.6-a):</strong> A90/s = Td / (2·Ae·fywd·cotg θ), fywd = ${fmtBR(t.fywd_t * 10, 1)} MPa<br>
+    A90/s = ${fmtBR(t.A90_m, 3)} cm²/m por ramo → estribo de 2 ramos: 2·A90/s = <strong>${fmtBR(t.Asw_T_m, 3)} cm²/m</strong> (somado ao cortante, 17.7.2.3)<br>
+    Mínima (17.5.1.2): ρsw = 0,2·fctm/fywk (fywk ≤ 500 MPa) = ${fmtBR(t.rho_w * 100, 4)} % → ${fmtBR(t.Asw_min_m, 3)} cm²/m<br><br>
+    <strong>Armadura longitudinal (17.5.1.6-b):</strong> Asl = Td·ue / (2·Ae·fyd·tg θ) = ${fmtBR(t.Asl_calc, 2)} cm²<br>
+    Mínima (17.5.1.2): ρsl = ${fmtBR(t.rho_l * 100, 4)} % → Asl,mín = ρsl·he·ue = ${fmtBR(t.Asl_min, 2)} cm²<br>
+    <strong>Asl = ${fmtBR(t.Asl, 2)} cm²</strong> = ${fmtBR(t.Asl_por_m, 2)} cm²/m de perímetro →
+    face inferior ou superior (bw − he): ${fmtBR(t.Asl_hor, 2)} cm² · cada face lateral (h − he): ${fmtBR(t.Asl_lat, 2)} cm²<br>
+    Na zona tracionada pela flexão, somar à armadura de flexão (17.7.1.2). Pelo menos uma barra em cada vértice; barras espaçadas no máximo 350 mm (18.3.4).<br>
+    Estribos de torção fechados, com ganchos a 45° (18.3.4). ${!t.compat ? '<br><span style="color: var(--ambar);">Torção de compatibilidade: para desprezá-la, Vsd ≤ 0,7·VRd2 — não atendido (17.5.1.2).</span>' : ''}`;
+}
+
+function alternarTorcao() {
+  torcaoAtiva = !torcaoAtiva;
+  document.getElementById('btn-tor').setAttribute('aria-pressed', String(torcaoAtiva));
+  const g = document.getElementById('grid-esf');
+  g.classList.toggle('tor-on', torcaoAtiva);
+  g.classList.toggle('g4', torcaoAtiva);
+  g.classList.toggle('g3', !torcaoAtiva);
+  atualizar();
 }
 
 // ====== Atualização reativa ======
@@ -1715,6 +1852,7 @@ document.querySelectorAll('.corpo input, .corpo select').forEach(el => {
 });
 document.getElementById('btn-mkas').addEventListener('click', alternarMkAs);
 document.getElementById('btn-pele').addEventListener('click', alternarPele);
+document.getElementById('btn-tor').addEventListener('click', alternarTorcao);
 document.getElementById('btn-pdf').addEventListener('click', gerarMemoriaPDF);
 document.getElementById('btn-pdf2').addEventListener('click', gerarMemoriaPDF);
 document.getElementById('btn-memo').addEventListener('click', abrirMemorial);
