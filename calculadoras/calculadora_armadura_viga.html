@@ -1700,13 +1700,18 @@ function calcularPele() {
   const nArea = Math.ceil(AsFace / Aphi - 1e-9);
   const sMaxP = Math.min(d / 3, 20);           // 17.3.5.2.3 (20 cm) e 18.3.5 (d/3 e 20 cm)
   const nEsp = Math.max(Math.ceil(faixa / sMaxP - 1e-9) - 1, 0);
-  const n = Math.max(nArea, nEsp, 1);
+  // Número de barras só pela área (decisão BASE); o espaçamento é apenas verificado e alertado
+  const n = Math.max(nArea, 1);
   const sp = faixa / (n + 1);
   const AsEf = n * Aphi;
   const s15 = 15 * phi / 10;                   // cm — NOTA de 17.3.3.2
   const lbl = `Ø ${fmtBR(phi, phi % 1 === 0 ? 0 : 1)}`;
   const dispensa = h <= 60;
-  const governa = nArea >= nEsp ? 'área' : 'espaçamento ≤ 20 cm';
+  // Bitolas que atenderiam o espaçamento, cada uma com n pela própria área
+  const sugestoes = [5, 6.3, 8, 10, 12.5, 16, 20].filter(ph => {
+    const nn = Math.max(Math.ceil(AsFace / areaBarra(ph) - 1e-9), 1);
+    return faixa / (nn + 1) <= sMaxP + 1e-9;
+  }).map(ph => 'Ø ' + fmtBR(ph, ph % 1 === 0 ? 0 : 1));
 
   st.innerHTML = dispensa ? pill('warn', 'h ≤ 60: dispensável') : pill('ok', 'h &gt; 60: necessária');
   res.innerHTML = `<strong>${n} ${lbl} por face</strong> · ${2 * n} no total<br>
@@ -1714,7 +1719,7 @@ function calcularPele() {
   const avisos = [];
   if (limGoverna) avisos.push(`<div class="alert alert-warning" title="0,10 %·bw·h = ${fmtBR(AsMin, 2)} cm²/face ultrapassa 5 cm²/m × h">0,10 %·bw·h = ${fmtBR(AsMin, 2)} &gt; 5 cm²/m × ${fmtBR(h / 100, 2)} m: adotado ${fmtBR(AsLim, 2)} cm²/face</div>`);
   // s ≤ mín(d/3; 20 cm) (17.3.5.2.3 e 18.3.5) — garantido pela escolha de n; verificado explicitamente
-  if (sp > sMaxP + 1e-9) avisos.push(`<div class="alert alert-danger">s ≈ ${fmtBR(sp, 1)} cm &gt; ${fmtBR(sMaxP, 1)} cm (17.3.5.2.3 / 18.3.5)</div>`);
+  if (sp > sMaxP + 1e-9) avisos.push(`<div class="alert alert-danger" title="Espaçamento máximo da armadura de pele: mín(d/3 = ${fmtBR(d / 3, 1)}; 20) cm — 17.3.5.2.3 e 18.3.5">s ≈ ${fmtBR(sp, 1)} &gt; ${d / 3 < 20 ? `d/3 = ${fmtBR(sMaxP, 1)}` : '20'} cm${sugestoes.length ? ' · atendem: ' + sugestoes.join(', ') : ' · aumentar n de barras'}</div>`);
   // 15Ø (NOTA de 17.3.3.2): só para h ≥ 1,20 m — abaixo disso a pele conforme 17.3.5.2.3 basta (17.3.3.2)
   const verif15 = h >= 120;
   if (verif15 && sp > s15) avisos.push(`<div class="alert alert-warning" title="Recomendação da NOTA de 17.3.3.2 para a armadura de pele na zona tracionada">s ≈ ${fmtBR(sp, 1)} &gt; 15Ø = ${fmtBR(s15, 1)} cm (NOTA 17.3.3.2)</div>`);
@@ -1727,8 +1732,8 @@ function calcularPele() {
     <strong>As,pele = ${fmtBR(AsFace, 2)} cm² por face</strong><br><br>
     Número de barras (${lbl}, Aφ = ${fmtBR(Aphi, 3)} cm²):<br>
     · por área: ${fmtBR(AsFace, 2)} / ${fmtBR(Aphi, 3)} → ${nArea} barra(s)<br>
-    · por espaçamento: faixa entre as armaduras principais d − d' = ${fmtBR(faixa, 1)} cm, s ≤ mín(d/3; 20) = ${fmtBR(sMaxP, 1)} cm → ${nEsp} barra(s)<br>
-    <strong>Adotado: ${n} ${lbl} por face</strong> (governa: ${governa}) · As,ef = ${fmtBR(AsEf, 2)} cm² · s ≈ ${fmtBR(faixa, 1)}/${n + 1} = ${fmtBR(sp, 1)} cm<br>
+    <strong>Adotado: ${n} ${lbl} por face</strong> (pela área) · As,ef = ${fmtBR(AsEf, 2)} cm² · s ≈ (d − d')/(n + 1) = ${fmtBR(faixa, 1)}/${n + 1} = ${fmtBR(sp, 1)} cm<br>
+    ${sp > sMaxP + 1e-9 ? `<span style="color: var(--vermelho);">Espaçamento acima de mín(d/3; 20) = ${fmtBR(sMaxP, 1)} cm: seriam necessárias ${nEsp} barra(s) por face. ${sugestoes.length ? 'Bitolas que atendem com n pela área: ' + sugestoes.join(', ') + '.' : ''}</span><br>` : ''}
     Verificação s ≤ mín(d/3 = ${fmtBR(d / 3, 1)}; 20) = ${fmtBR(sMaxP, 1)} cm (17.3.5.2.3 e 18.3.5): s ≈ ${fmtBR(sp, 1)} cm → ${sp <= sMaxP + 1e-9 ? 'atende' : 'não atende'}.<br>
     ${verif15
       ? `NOTA de 17.3.3.2 (recomendação, h ≥ 1,20 m): s ≤ 15Ø = ${fmtBR(s15, 1)} cm na zona tracionada → ${sp <= s15 ? 'atende' : 'não atende'}.`
