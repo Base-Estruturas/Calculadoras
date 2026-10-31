@@ -1654,10 +1654,14 @@ function calcularPele() {
 
   st.innerHTML = dispensa ? pill('warn', 'h ≤ 60: dispensável') : pill('ok', 'h &gt; 60: necessária');
   res.innerHTML = `<strong>${n} ${lbl} por face</strong> · ${2 * n} no total<br>
-    ${fmtBR(AsFace, 2)} → ${fmtBR(AsEf, 2)} cm²/face · s ≈ ${fmtBR(sp, 1)} cm`;
+    ${fmtBR(AsFace, 2)} → ${fmtBR(AsEf, 2)} cm²/face · s ≈ ${fmtBR(sp, 1)} cm ${sp <= 20 + 1e-9 ? '≤ 20 ✓' : '&gt; 20 ✗'}`;
   const avisos = [];
   if (limGoverna) avisos.push(`<div class="alert alert-warning" title="0,10 %·bw·h = ${fmtBR(AsMin, 2)} cm²/face ultrapassa 5 cm²/m × h">0,10 %·bw·h = ${fmtBR(AsMin, 2)} &gt; 5 cm²/m × ${fmtBR(h / 100, 2)} m: adotado ${fmtBR(AsLim, 2)} cm²/face</div>`);
-  if (sp > s15) avisos.push(`<div class="alert alert-warning" title="Recomendação da NOTA de 17.3.3.2 para a armadura de pele na zona tracionada">s ≈ ${fmtBR(sp, 1)} &gt; 15Ø = ${fmtBR(s15, 1)} cm (NOTA 17.3.3.2)</div>`);
+  // s ≤ 20 cm (17.3.5.2.3) — garantido pela escolha de n; verificado explicitamente
+  if (sp > 20 + 1e-9) avisos.push(`<div class="alert alert-danger">s ≈ ${fmtBR(sp, 1)} cm &gt; 20 cm (item 17.3.5.2.3)</div>`);
+  // 15Ø (NOTA de 17.3.3.2): só para h ≥ 1,20 m — abaixo disso a pele conforme 17.3.5.2.3 basta (17.3.3.2)
+  const verif15 = h >= 120;
+  if (verif15 && sp > s15) avisos.push(`<div class="alert alert-warning" title="Recomendação da NOTA de 17.3.3.2 para a armadura de pele na zona tracionada">s ≈ ${fmtBR(sp, 1)} &gt; 15Ø = ${fmtBR(s15, 1)} cm (NOTA 17.3.3.2)</div>`);
   al.innerHTML = avisos.join('');
   memo.innerHTML = `
     <p class="section-title" style="margin-top: 0;">Armadura de pele — NBR 6118:2023, item 17.3.5.2.3</p>
@@ -1669,7 +1673,10 @@ function calcularPele() {
     · por área: ${fmtBR(AsFace, 2)} / ${fmtBR(Aphi, 3)} → ${nArea} barra(s)<br>
     · por espaçamento: faixa entre as armaduras principais d − d' = ${fmtBR(faixa, 1)} cm, s ≤ 20 cm → ${nEsp} barra(s)<br>
     <strong>Adotado: ${n} ${lbl} por face</strong> (governa: ${governa}) · As,ef = ${fmtBR(AsEf, 2)} cm² · s ≈ ${fmtBR(faixa, 1)}/${n + 1} = ${fmtBR(sp, 1)} cm<br>
-    NOTA de 17.3.3.2 (recomendação): s ≤ 15Ø = ${fmtBR(s15, 1)} cm na zona tracionada → ${sp <= s15 ? 'atende' : 'não atende'}.<br>
+    Verificação s ≤ 20 cm (17.3.5.2.3): s ≈ ${fmtBR(sp, 1)} cm → ${sp <= 20 + 1e-9 ? 'atende' : 'não atende'}.<br>
+    ${verif15
+      ? `NOTA de 17.3.3.2 (recomendação, h ≥ 1,20 m): s ≤ 15Ø = ${fmtBR(s15, 1)} cm na zona tracionada → ${sp <= s15 ? 'atende' : 'não atende'}.`
+      : `15Ø (NOTA de 17.3.3.2) não verificado: h &lt; 1,20 m — nas vigas usuais a pele conforme 17.3.5.2.3 atende à abertura de fissuras (17.3.3.2).`}<br>
     Barras CA-50 ou CA-60, ancoradas nos apoios; as armaduras principais de tração e compressão não entram no cálculo.`;
 }
 
