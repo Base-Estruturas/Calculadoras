@@ -107,6 +107,17 @@
   .det-box .det-out { font-size: 12.5px; line-height: 1.35; }
   .det-box .det-out strong { font-size: 14px; }
   .kv .barra { margin-top: 3px; }
+  #estribos-tab:empty { display: none; }
+  #estribos-tab { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--borda); }
+  .est-hd { font-size: 12px; color: var(--texto-2); margin-bottom: 4px; }
+  .est-tab { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
+  .est-tab th, .est-tab td { text-align: center; padding: 3px 2px; border: 1px solid var(--borda); }
+  .est-tab th { font-weight: 600; color: var(--texto-2); background: var(--corpo); }
+  .est-tab tr th:first-child { width: 58px; text-align: left; padding-left: 6px; }
+  .est-tab td strong { font-weight: 600; color: var(--texto); }
+  .est-tab td.inv { color: var(--vermelho); font-size: 10.5px; white-space: nowrap; }
+  .kv6 { grid-template-columns: repeat(6, 1fr); }
+  .kv6 b { white-space: nowrap; }
   @media (max-height: 760px) {
     .hdr { height: 60px; flex-basis: 60px; }
     .hdr img { height: 48px; }
@@ -176,7 +187,7 @@
     .hdr img { height: 48px; }
     .hdr-tool strong { font-size: 13px; }
     .credito { display: none; }
-    .kv { grid-template-columns: 1fr 1fr; }
+    .kv, .kv6 { grid-template-columns: 1fr 1fr; }
   }
 
   /* ===== Memória de cálculo em PDF (impressão) ===== */
@@ -333,22 +344,9 @@
 
       <div class="card">
         <div class="card-hd"><span class="rot">Cisalhamento — estribos</span><span id="cis-status"></span></div>
-        <div class="res-head">
-          <div id="resultado-cis"></div>
-          <div class="det-box">
-            <div class="f"><label for="bitola_est">Estribo (2 ramos)</label>
-            <select id="bitola_est">
-              <option value="5">Ø 5,0 mm</option>
-              <option value="6.3" selected>Ø 6,3 mm</option>
-              <option value="8">Ø 8,0 mm</option>
-              <option value="10">Ø 10,0 mm</option>
-              <option value="12.5">Ø 12,5 mm</option>
-            </select>
-            </div>
-            <div class="det-out" id="estribo-out">—</div>
-          </div>
-        </div>
+        <div id="resultado-cis"></div>
         <div id="cis-kv"></div>
+        <div id="estribos-tab"></div>
         <div class="alertas" id="cis-alertas"></div>
       </div>
     </section>
@@ -1454,7 +1452,7 @@ function cisErro(msg) {
   document.getElementById('cis-kv').innerHTML = '';
   document.getElementById('cis-alertas').innerHTML = '';
   document.getElementById('cis-status').innerHTML = '';
-  document.getElementById('estribo-out').innerHTML = '—';
+  document.getElementById('estribos-tab').innerHTML = '';
 }
 
 function renderCisalhamento(cis, c) {
@@ -1471,7 +1469,7 @@ function renderCisalhamento(cis, c) {
     </div>
     <div class="res-sub">${cis.modeloTexto} · ${cis.falhaBiela ? 'ruptura da biela comprimida' : (cis.usouMinimo ? `mínima governa (${fmtBR(cis.Asw_per_m_min, 2)} cm²/m)` : `calculada · mín. ${fmtBR(cis.Asw_per_m_min, 2)} cm²/m`)}</div>`;
   document.getElementById('cis-kv').innerHTML = `
-    <div class="kv">
+    <div class="kv kv6">
       <div>Vd<b>${fmtBR(cis.Vd_tf, 2)} tf</b></div>
       <div>VRd2<b>${fmtBR(cis.Vrd2 / G, 2)} tf</b></div>
       <div>Vd / VRd2<b>${fmtBR(util * 100, 1)} %</b><div class="barra${cis.falhaBiela ? ' fail' : ''}"><span style="width: ${pct}%"></span></div></div>
@@ -1491,16 +1489,24 @@ function renderCisalhamento(cis, c) {
   atualizarEstribo();
 }
 
+// Todas as bitolas de estribo (2 ramos) com o espaçamento adotado
 function atualizarEstribo() {
-  const out = document.getElementById('estribo-out');
-  if (!ultimoCis || ultimoCis.falhaBiela) { out.innerHTML = '—'; return; }
-  const phi = parseFloat(document.getElementById('bitola_est').value);
-  const b = ultimoCis.tabelaBitolas.find(t => Math.abs(t.phi - phi) < 1e-6);
-  if (!b) { out.innerHTML = '—'; return; }
-  const lbl = `Ø ${fmtBR(b.phi, b.phi % 1 === 0 ? 0 : 1)}`;
-  out.innerHTML = b.viavel
-    ? `<strong>${lbl} c/ ${b.s_adotado} cm</strong><br>Asw = ${fmtBR(b.Asw_estribo, 3)} cm²`
-    : `<span style="color: var(--vermelho);">${lbl}: ✗ ${b.obs}</span>`;
+  const out = document.getElementById('estribos-tab');
+  if (!ultimoCis || ultimoCis.falhaBiela) { out.innerHTML = ''; return; }
+  const bits = ultimoCis.tabelaBitolas;
+  const lbl = phi => fmtBR(phi, phi % 1 === 0 ? 0 : 1);
+  const cel = b => {
+    if (b.viavel) return `<td><strong>c/ ${b.s_adotado}</strong></td>`;
+    const motivo = b.phi > ultimoCis.phi_est_max ? 'Ø&gt;bw/10' : 's&lt;5';
+    const dica = b.phi > ultimoCis.phi_est_max ? `Ø > bw/10 = ${fmtBR(ultimoCis.phi_est_max, 1)} mm` : 's < 5 cm: usar mais ramos ou bitola maior';
+    return `<td class="inv" title="${dica}">${motivo}</td>`;
+  };
+  out.innerHTML = `
+    <div class="est-hd">Estribo de 2 ramos — espaçamento adotado (cm)</div>
+    <table class="est-tab">
+      <tr><th>Ø (mm)</th>${bits.map(b => `<th>${lbl(b.phi)}</th>`).join('')}</tr>
+      <tr><th>s</th>${bits.map(cel).join('')}</tr>
+    </table>`;
 }
 
 function tabelaEstribosHTML(cis) {
