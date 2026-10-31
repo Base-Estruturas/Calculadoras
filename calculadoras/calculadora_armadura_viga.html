@@ -843,7 +843,7 @@ function memoriaCisalhamento(cis, num) {
     </table>
 
     <div class="highlight">
-      Asw/s adotado = ${fmtBR(cis.Asw_per_m_final, 3)} cm²/m ${cis.usouMinimo ? '(governado pela armadura mínima)' : ''}<br>
+      Asw/s adotado = ${fmtBR(cis.Asw_per_m_final, 3)} cm²/m ${cis.usouMinimo ? '(governado pela armadura mínima)' : ''}${cis.tor && !cis.tor.erro ? ` — inclui a torção: ${fmtBR(cis.Asw_per_m_calc, 3)} (cortante) + ${fmtBR(cis.tor.Asw_T_m, 3)} (2·A90/s), ver seção de torção` : ''}<br>
       Espaçamento máximo: s,máx = ${fmtBR(cis.s_max, 1)} cm<br>
       Espaçamento transversal máximo entre ramos: st,máx = ${fmtBR(cis.st_max, 1)} cm (item 18.3.3.2)
     </div>
