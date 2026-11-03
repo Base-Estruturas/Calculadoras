@@ -121,6 +121,11 @@
   .est-tab td.inv { color: var(--vermelho); font-size: 10.5px; white-space: nowrap; }
   .kv6 { grid-template-columns: repeat(6, 1fr); }
   .hd-btns { display: flex; gap: 6px; }
+  .btn-esq { margin-left: auto; align-self: center; }
+  #esq-tor svg { width: 100%; height: auto; display: block; }
+  #esq-tor svg text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
+  .esq-lista { margin: 10px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.6; color: var(--texto-2); }
+  .esq-lista b { color: var(--texto); font-weight: 600; }
   .g4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px 10px; }
   .tor-field { display: none; }
   .tor-on .tor-field { display: block; }
@@ -395,7 +400,7 @@
       </div>
 
       <div class="card">
-        <div class="card-hd"><span class="rot">Cisalhamento — estribos</span><span id="cis-status"></span></div>
+        <div class="card-hd"><span class="rot">Cisalhamento — estribos</span><span class="hd-btns"><button type="button" class="btn-sm" id="btn-esq-tor" style="display: none;" title="Desenho esquemático do posicionamento das armaduras com torção">Posicionamento</button><span id="cis-status"></span></span></div>
         <div id="resultado-cis"></div>
         <div id="cis-kv"></div>
         <div id="estribos-tab"></div>
@@ -431,6 +436,19 @@
     <div class="modal-ft">
       <button type="button" class="btn" id="btn-memo-fechar">Fechar</button>
       <button type="button" class="btn btn-pri" id="btn-pdf2">Gerar memória (PDF)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Posicionamento das armaduras com torção -->
+<div class="modal" id="modal-tor" role="dialog" aria-modal="true" aria-labelledby="tor-tit">
+  <div class="modal-box">
+    <div class="modal-hd"><span><strong id="tor-tit">Posicionamento das armaduras — torção</strong> &nbsp;corte esquemático da viga</span><button type="button" id="btn-tor-x" aria-label="Fechar">×</button></div>
+    <div class="modal-body">
+      <div class="card" id="esq-tor"></div>
+    </div>
+    <div class="modal-ft">
+      <button type="button" class="btn" id="btn-tor-fechar">Fechar</button>
     </div>
   </div>
 </div>
@@ -1529,18 +1547,20 @@ function cisErro(msg) {
   document.getElementById('cis-alertas').innerHTML = '';
   document.getElementById('cis-status').innerHTML = '';
   document.getElementById('estribos-tab').innerHTML = '';
+  document.getElementById('btn-esq-tor').style.display = 'none';
 }
 
 function renderCisalhamento(cis, c) {
   ultimoCis = cis;
   const t = cis.tor && !cis.tor.erro ? cis.tor : null;
   const util = t ? t.interacao : cis.Vd / cis.Vrd2;
+  document.getElementById('btn-esq-tor').style.display = (t && !cis.falhaBiela) ? '' : 'none';
   const pct = Math.min(util * 100, 100);
   document.getElementById('cis-status').innerHTML = cis.falhaBiela
     ? pill('fail', t ? 'Biela: V/VRd2 + T/TRd2 &gt; 1' : 'Biela: Vd &gt; VRd2')
-    : pill('ok', t ? 'OK (V + T)' : 'OK');
+    : pill('ok', 'OK');
   document.querySelector('#cis-status').closest('.card').querySelector('.rot').textContent =
-    t ? 'Cisalhamento + torção — estribos' : 'Cisalhamento — estribos';
+    t ? 'Cortante + torção — estribos' : 'Cisalhamento — estribos';
 
   const sub = cis.falhaBiela ? 'ruptura da biela comprimida'
     : (cis.usouMinimo ? `mínima governa (${fmtBR(cis.Asw_per_m_min, 2)} cm²/m)` : `calculada · mín. ${fmtBR(cis.Asw_per_m_min, 2)} cm²/m`);
@@ -1860,6 +1880,88 @@ function secoesExtrasPDF(n0) {
     <div class="memo-pdf">${corpo}</div>`).join('');
 }
 
+// ====== Desenho esquemático: posicionamento das armaduras com torção ======
+const COR_TOR = '#D9480F', COR_FLEX = '#1A56DB';
+
+function desenharTorcao() {
+  const c = ultimoCalculo, cis = ultimoCis, t = cis && cis.tor;
+  const box = document.getElementById('esq-tor');
+  if (!c || !t || t.erro) { box.innerHTML = '<div class="msg">Ative a torção para ver o posicionamento.</div>'; return; }
+  const bw = c.bw, h = c.h, dl = c.dl, he = t.he;
+  // Escala do corte: cabe em 210 × 360 px
+  const k = Math.min(360 / h, 210 / bw);
+  const W = bw * k, H = h * k, x0 = 40, y0 = 24;
+  const X = cm => x0 + cm * k, Y = cm => y0 + cm * k;
+  const c1 = dl;                                   // eixo das barras de canto (c1 = d')
+  const est = Math.max(c1 - 1, 1);                 // linha do estribo (esquemática)
+  // Barras inferiores: As de flexão + parcela de torção, com a bitola escolhida
+  const sel = document.getElementById('bitola');
+  const aBit = parseFloat(sel.value);
+  const lblBit = sel.options[sel.selectedIndex].text.split('(')[0].trim();
+  const AsInf = c.As_adotada + t.Asl_hor;
+  const nInf = Math.max(Math.ceil(AsInf / aBit - 1e-9), 2);
+  // Barras laterais intermediárias: espaçamento ≤ 35 cm (18.3.4)
+  const faixaLat = h - 2 * c1;
+  const nLat = Math.max(Math.ceil(faixaLat / 35 - 1e-9) - 1, 0);
+  const r = 5;
+  let bars = '';
+  const bar = (cx, cy, cor, rr = r) => `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${rr}" fill="${cor}"/>`;
+  // cantos superiores (torção)
+  bars += bar(X(c1), Y(c1), COR_TOR) + bar(X(bw - c1), Y(c1), COR_TOR);
+  // laterais intermediárias (torção)
+  for (let i = 1; i <= nLat; i++) {
+    const yy = c1 + faixaLat * i / (nLat + 1);
+    bars += bar(X(c1), Y(yy), COR_TOR, 4.5) + bar(X(bw - c1), Y(yy), COR_TOR, 4.5);
+  }
+  // inferiores (flexão + torção), incluindo os cantos
+  // no desenho, limita a quantidade ao que cabe sem sobrepor (o rótulo mostra o número real)
+  const nDes = Math.max(2, Math.min(nInf, Math.floor((bw - 2 * c1) * k / 13) + 1));
+  for (let i = 0; i < nDes; i++) {
+    const xx = c1 + (bw - 2 * c1) * (nDes === 1 ? 0.5 : i / (nDes - 1));
+    bars += bar(X(xx), Y(h - c1), COR_FLEX, 5.5);
+  }
+  const xr = x0 + W;                               // borda direita do corte
+  const lx = xr + 46;                              // coluna de rótulos
+  const yLat = nLat ? Y(c1 + faixaLat / (nLat + 1)) : Y(h / 2);
+  const lbl = (x1, y1, ty, txt, sub) => `
+    <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${lx - 6}" y2="${ty - 4}" stroke="#9AA0A6" stroke-width="0.7" stroke-dasharray="3 2"/>
+    <circle cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="1.8" fill="#5F6368"/>
+    <text x="${lx}" y="${ty}" font-size="12.5" font-weight="600" fill="#1F2328">${txt}</text>
+    ${sub ? `<text x="${lx}" y="${ty + 15}" font-size="11.5" fill="#5F6368">${sub}</text>` : ''}`;
+  const Hsvg = Math.max(y0 + H + 70, 420);
+  const svg = `
+  <svg viewBox="0 0 760 ${Hsvg}" role="img" aria-label="Corte esquemático da viga com as armaduras de torção">
+    <rect x="${x0}" y="${y0}" width="${W.toFixed(1)}" height="${H.toFixed(1)}" fill="#F1F3F4" stroke="#1F2328" stroke-width="1.4"/>
+    <rect x="${X(he / 2).toFixed(1)}" y="${Y(he / 2).toFixed(1)}" width="${((bw - he) * k).toFixed(1)}" height="${((h - he) * k).toFixed(1)}" fill="none" stroke="${COR_TOR}" stroke-width="1" stroke-dasharray="5 4"/>
+    <rect x="${X(est).toFixed(1)}" y="${Y(est).toFixed(1)}" width="${((bw - 2 * est) * k).toFixed(1)}" height="${((h - 2 * est) * k).toFixed(1)}" rx="5" fill="none" stroke="#1F2328" stroke-width="2.2"/>
+    <path d="M${(X(bw - est) - 16).toFixed(1)} ${Y(est).toFixed(1)} L${(X(bw - est) - 2).toFixed(1)} ${(Y(est) + 14).toFixed(1)} L${(X(bw - est) - 10).toFixed(1)} ${(Y(est) + 22).toFixed(1)}" fill="none" stroke="#1F2328" stroke-width="2.2" stroke-linecap="round"/>
+    ${bars}
+    ${lbl(X(bw - c1) + 5, Y(c1), y0 + 10, 'Cantos superiores (porta-estribos)', `Asl,tor = ${fmtBR(t.Asl_hor, 2)} cm² na face superior · 1 barra por vértice`)}
+    ${lbl(X(bw - est), Y(est) + 40, y0 + 62, `Estribo fechado (V + T): Asw/s = ${fmtBR(cis.Asw_per_m_final, 2)} cm²/m`, `= ${fmtBR(cis.Asw_per_m_calc, 2)} (cortante) + ${fmtBR(t.Asw_T_m, 2)} (2·A90/s) · ganchos a 45°`)}
+    ${lbl(X(bw - c1) + 4.5, yLat, y0 + 114, `Faces laterais: Asl,tor = ${fmtBR(t.Asl_lat, 2)} cm² por face`, `${nLat} barra(s) intermediária(s) por face · s ≤ 35 cm (18.3.4)`)}
+    ${lbl(X(bw - he / 2), Y(h * 0.62), y0 + 166, `Linha média da parede: he = ${fmtBR(he, 2)} cm`, `Ae = ${fmtBR(t.Ae, 0)} cm² · ue = ${fmtBR(t.ue, 1)} cm (17.5.1.4.1)`)}
+    ${lbl(X(bw - c1) + 5.5, Y(h - c1), Math.min(y0 + H - 8, Hsvg - 74), `Face inferior (tracionada): As = ${fmtBR(c.As_adotada, 2)} + ${fmtBR(t.Asl_hor, 2)} = ${fmtBR(AsInf, 2)} cm²`, `≈ ${nInf} ${lblBit} (bitola do painel)${nDes < nInf ? ' · desenho simplificado' : ''} · 17.7.1.2`)}
+    <g transform="translate(${x0}, ${Hsvg - 22})" font-size="11.5" fill="#5F6368">
+      <circle cx="5" cy="-4" r="5" fill="${COR_TOR}"/><text x="16" y="0">Torção (Asl)</text>
+      <circle cx="120" cy="-4" r="5.5" fill="${COR_FLEX}"/><text x="131" y="0">Flexão + parcela de torção</text>
+      <line x1="300" y1="-4" x2="326" y2="-4" stroke="${COR_TOR}" stroke-dasharray="5 4"/><text x="332" y="0">Linha média da seção vazada equivalente</text>
+    </g>
+  </svg>`;
+  const T = v => fmtBR(v, 2);
+  box.innerHTML = svg + `
+    <ul class="esq-lista">
+      <li><b>Estribo:</b> um único estribo fechado no contorno resiste ao cortante e à torção (17.7.2.3): ${T(cis.Asw_per_m_final)} cm²/m (2 ramos). Ganchos a 45° (18.3.4). Em estribos com mais de 2 ramos, só o externo conta para a torção.</li>
+      <li><b>Asl de torção:</b> ${T(t.Asl)} cm² = ${T(t.Asl_por_m)} cm²/m de perímetro, distribuída com ΔAsl/Δu constante (17.5.1.6): 2 × ${T(t.Asl_hor)} (inferior e superior) + 2 × ${T(t.Asl_lat)} (laterais) = ${T(2 * t.Asl_hor + 2 * t.Asl_lat)} cm².</li>
+      <li><b>Face tracionada:</b> a parcela de torção é somada ao As de flexão (17.7.1.2). Na face comprimida ela pode ser reduzida (17.7.1.3); usualmente as barras de canto já atendem.</li>
+      <li><b>Detalhamento:</b> pelo menos uma barra em cada vértice do estribo; barras longitudinais espaçadas no máximo 35 cm; todas ancoradas nos apoios (18.3.4).</li>
+    </ul>
+    <p class="nota" style="margin-top: 6px;">Desenho esquemático, sem escala de detalhamento. Barras de canto com eixo a c1 = d' = ${fmtBR(c1, 1)} cm das faces.</p>`;
+}
+
+const modalTor = document.getElementById('modal-tor');
+function abrirEsquemaTorcao() { desenharTorcao(); modalTor.classList.add('aberto'); }
+function fecharEsquemaTorcao() { modalTor.classList.remove('aberto'); }
+
 // ====== Atualização reativa ======
 function atualizar() {
   atualizarD();
@@ -1894,7 +1996,11 @@ document.getElementById('btn-memo').addEventListener('click', abrirMemorial);
 document.getElementById('btn-memo-x').addEventListener('click', fecharMemorial);
 document.getElementById('btn-memo-fechar').addEventListener('click', fecharMemorial);
 modal.addEventListener('click', e => { if (e.target === modal) fecharMemorial(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharMemorial(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { fecharMemorial(); fecharEsquemaTorcao(); } });
+document.getElementById('btn-esq-tor').addEventListener('click', abrirEsquemaTorcao);
+document.getElementById('btn-tor-x').addEventListener('click', fecharEsquemaTorcao);
+document.getElementById('btn-tor-fechar').addEventListener('click', fecharEsquemaTorcao);
+modalTor.addEventListener('click', e => { if (e.target === modalTor) fecharEsquemaTorcao(); });
 
 mrdPreencherBitolas();
 atualizar();
