@@ -1599,13 +1599,15 @@ function renderCisalhamento(cis, c) {
     if (c.bw > cis.st_max) al.push(`<div class="alert alert-warning">bw = ${fmtBR(c.bw, 1)} cm &gt; st,máx = ${fmtBR(cis.st_max, 1)} cm: verificar a distância entre ramos; pode ser necessário estribo com mais de 2 ramos (item 18.3.3.2).</div>`);
     if (cis.tabelaBitolas.every(b => !b.viavel)) al.push(`<div class="alert alert-danger">Nenhuma bitola de 2 ramos atende Øt ≤ bw/10 e s ≥ 5 cm. Usar mais ramos ou revisar a seção.</div>`);
   }
-  if (t && !cis.falhaBiela && t.soCantos) al.push(`<div class="alert alert-info" title="18.3.4: arranjo concentrado permitido — distância entre eixos das barras de canto ≤ 35 cm nas duas direções; ΔAsl/Δu constante · h − 2c1 = ${fmtBR(t.faixaLat, 1)} cm e bw − 2c1 = ${fmtBR(t.faixaHor, 1)} cm ≤ 35 cm">Asl só nos cantos: 4 × ${fmtBR(t.Asl_canto, 2)} cm² (18.3.4)</div>`);
+  if (t && !cis.falhaBiela && t.soCantos) al.push(`<div class="alert alert-info" title="18.3.4: arranjo concentrado permitido — distância entre eixos das barras de canto ≤ 35 cm nas duas direções; ΔAsl/Δu constante · h − 2c1 = ${fmtBR(t.faixaLat, 1)} cm e bw − 2c1 = ${fmtBR(t.faixaHor, 1)} cm ≤ 35 cm">Opção (b): Asl só nos cantos, 4 × ${fmtBR(t.Asl_canto, 2)} cm² (18.3.4)</div>`);
   document.getElementById('cis-alertas').innerHTML = al.join('');
 
   // Lembrete na flexão: somar Asl de torção na face tracionada (17.7.1.2)
   const sf = document.querySelector('#resultado .res-sub');
   if (sf && t && !cis.falhaBiela) sf.insertAdjacentHTML('beforeend',
-    `<br><span class="tor-flex" title="Na zona tracionada, a armadura longitudinal de torção é somada à de flexão (17.7.1.2)">+ Asl,tor ${fmtBR(t.Asl_hor, 2)} na face tracionada → <strong>As = ${fmtBR(c.As_adotada + t.Asl_hor, 2)} cm²</strong></span>`);
+    t.soCantos
+      ? `<br><span class="tor-flex" title="Na zona tracionada, a armadura longitudinal de torção é somada à de flexão (17.7.1.2). Escolha um dos arranjos (18.3.4): (a) distribuído — face inferior + ${fmtBR(t.Asl_hor, 2)} cm² e barras laterais com ${fmtBR(t.Asl_lat, 2)} cm² por face; (b) só nos cantos — cada canto ≥ Asl/4 = ${fmtBR(t.Asl_canto, 2)} cm², face inferior + 2 × Asl/4, sem barras laterais. Não misturar os dois.">+ Asl,tor: (a) ${fmtBR(t.Asl_hor, 2)} → <strong>As = ${fmtBR(c.As_adotada + t.Asl_hor, 2)} cm²</strong> com laterais de ${fmtBR(t.Asl_lat, 2)}/face · (b) só nos cantos ${fmtBR(2 * t.Asl_canto, 2)} → <strong>As = ${fmtBR(c.As_adotada + 2 * t.Asl_canto, 2)} cm²</strong></span>`
+      : `<br><span class="tor-flex" title="Na zona tracionada, a armadura longitudinal de torção é somada à de flexão (17.7.1.2). Barras laterais com ${fmtBR(t.Asl_lat, 2)} cm² por face, s ≤ 35 cm (18.3.4).">+ Asl,tor ${fmtBR(t.Asl_hor, 2)} na face tracionada → <strong>As = ${fmtBR(c.As_adotada + t.Asl_hor, 2)} cm²</strong></span>`);
   atualizarEstribo();
 }
 
@@ -1850,7 +1852,9 @@ function memorialTorcao(t, c) {
     <strong>Asl = ${fmtBR(t.Asl, 2)} cm²</strong> (total) = ${fmtBR(t.Asl_por_m, 2)} cm²/m de perímetro (forma do TQS); Asl,mín = ${fmtBR(t.rho_l * t.he * 100, 2)} cm²/m →
     face inferior ou superior (bw − he): ${fmtBR(t.Asl_hor, 2)} cm² · cada face lateral (h − he): ${fmtBR(t.Asl_lat, 2)} cm²<br>
     ${t.soCantos
-      ? `Arranjo concentrado só nos cantos possível (18.3.4): h − 2·c1 = ${fmtBR(t.faixaLat, 1)} cm e bw − 2·c1 = ${fmtBR(t.faixaHor, 1)} cm ≤ 35 cm → <strong>4 barras de canto com ≥ Asl/4 = ${fmtBR(t.Asl_canto, 2)} cm² cada</strong> (cantos inferiores somados ao As de flexão).<br>`
+      ? `Como h − 2·c1 = ${fmtBR(t.faixaLat, 1)} cm e bw − 2·c1 = ${fmtBR(t.faixaHor, 1)} cm ≤ 35 cm, há dois arranjos possíveis (18.3.4), sem misturar:<br>
+         (a) distribuído: face inferior As + ${fmtBR(t.Asl_hor, 2)} = ${fmtBR(c.As_adotada + t.Asl_hor, 2)} cm²; face superior ${fmtBR(t.Asl_hor, 2)} cm²; barras laterais com ${fmtBR(t.Asl_lat, 2)} cm² por face;<br>
+         (b) só nos cantos: 4 barras com ≥ Asl/4 = ${fmtBR(t.Asl_canto, 2)} cm² cada; face inferior As + 2 × ${fmtBR(t.Asl_canto, 2)} = ${fmtBR(c.As_adotada + 2 * t.Asl_canto, 2)} cm²; sem barras laterais.<br>`
       : `Arranjo só nos cantos não permitido: ${t.faixaLat > 35 ? `h − 2·c1 = ${fmtBR(t.faixaLat, 1)} cm` : `bw − 2·c1 = ${fmtBR(t.faixaHor, 1)} cm`} &gt; 35 cm → barras intermediárias (18.3.4).<br>`}
     Na zona tracionada pela flexão, somar à armadura de flexão (17.7.1.2). Pelo menos uma barra em cada vértice; barras espaçadas no máximo 350 mm (18.3.4).<br>
     Estribos de torção fechados, com ganchos a 45° (18.3.4). ${!t.compat ? '<br><span style="color: var(--ambar);">Torção de compatibilidade: para desprezá-la, Vsd ≤ 0,7·VRd2 — não atendido (17.5.1.2).</span>' : ''}`;
@@ -1977,7 +1981,7 @@ function desenharTorcao() {
     <ul class="esq-lista">
       <li><b>Estribo:</b> um único estribo fechado no contorno resiste ao cortante e à torção (17.7.2.3): ${T(cis.Asw_per_m_final)} cm²/m (2 ramos). Ganchos a 45° (18.3.4). Em estribos com mais de 2 ramos, só o externo conta para a torção.</li>
       <li><b>Asl de torção:</b> ${T(t.Asl)} cm² = ${T(t.Asl_por_m)} cm²/m de perímetro, distribuída com ΔAsl/Δu constante (17.5.1.6): 2 × ${T(t.Asl_hor)} (inferior e superior) + 2 × ${T(t.Asl_lat)} (laterais) = ${T(2 * t.Asl_hor + 2 * t.Asl_lat)} cm².</li>
-      ${soC ? `<li><b>Só nos cantos (18.3.4):</b> como h − 2·c1 = ${T(faixaLat)} cm e bw − 2·c1 = ${T(faixaHor)} cm são ≤ 35 cm, a Asl pode ser concentrada nas 4 barras de canto, cada uma com ≥ Asl/4 = ${T(t.Asl_canto)} cm² (ΔAsl/Δu constante: cada canto cobre ue/4). Nos cantos inferiores, somar ao As de flexão: face inferior = ${T(c.As_adotada)} + 2 × ${T(t.Asl_canto)} = ${T(AsInf)} cm². O painel mostra a distribuição contínua (${T(t.Asl_hor)} cm² na face inferior).</li>` : ''}
+      ${soC ? `<li><b>Só nos cantos (18.3.4):</b> como h − 2·c1 = ${T(faixaLat)} cm e bw − 2·c1 = ${T(faixaHor)} cm são ≤ 35 cm, a Asl pode ser concentrada nas 4 barras de canto, cada uma com ≥ Asl/4 = ${T(t.Asl_canto)} cm² (ΔAsl/Δu constante: cada canto cobre ue/4). Nos cantos inferiores, somar ao As de flexão: face inferior = ${T(c.As_adotada)} + 2 × ${T(t.Asl_canto)} = ${T(AsInf)} cm². <b>O desenho mostra esta opção (b).</b> Alternativa (a), distribuída: face inferior ${T(c.As_adotada)} + ${T(t.Asl_hor)} = ${T(c.As_adotada + t.Asl_hor)} cm² e barras laterais com ${T(t.Asl_lat)} cm² por face. Não misturar as duas.</li>` : ''}
       <li><b>Face tracionada:</b> a parcela de torção é somada ao As de flexão (17.7.1.2). Na face comprimida ela pode ser reduzida (17.7.1.3); usualmente as barras de canto já atendem.</li>
       <li><b>Detalhamento:</b> pelo menos uma barra em cada vértice do estribo; barras longitudinais espaçadas no máximo 35 cm; todas ancoradas nos apoios (18.3.4).</li>
     </ul>
