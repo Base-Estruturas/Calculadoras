@@ -1599,6 +1599,7 @@ function renderCisalhamento(cis, c) {
     if (c.bw > cis.st_max) al.push(`<div class="alert alert-warning">bw = ${fmtBR(c.bw, 1)} cm &gt; st,máx = ${fmtBR(cis.st_max, 1)} cm: verificar a distância entre ramos; pode ser necessário estribo com mais de 2 ramos (item 18.3.3.2).</div>`);
     if (cis.tabelaBitolas.every(b => !b.viavel)) al.push(`<div class="alert alert-danger">Nenhuma bitola de 2 ramos atende Øt ≤ bw/10 e s ≥ 5 cm. Usar mais ramos ou revisar a seção.</div>`);
   }
+  if (t && !cis.falhaBiela && t.soCantos) al.push(`<div class="alert alert-info" title="18.3.4: arranjo concentrado permitido — distância entre eixos das barras de canto ≤ 35 cm nas duas direções; ΔAsl/Δu constante · h − 2c1 = ${fmtBR(t.faixaLat, 1)} cm e bw − 2c1 = ${fmtBR(t.faixaHor, 1)} cm ≤ 35 cm">Asl só nos cantos: 4 × ${fmtBR(t.Asl_canto, 2)} cm² (18.3.4)</div>`);
   document.getElementById('cis-alertas').innerHTML = al.join('');
 
   // Lembrete na flexão: somar Asl de torção na face tracionada (17.7.1.2)
@@ -1818,9 +1819,13 @@ function calcularTorcao(p) {
   const Asl_por_m = Asl / ue * 100;                  // cm²/m de perímetro
   const Asl_hor = Asl * (bw - he) / ue;              // por face horizontal (inferior / superior)
   const Asl_lat = Asl * (h - he) / ue;               // por face lateral
+  // 18.3.4: arranjo concentrado nos 4 cantos possível se a distância entre eixos ≤ 35 cm nas duas direções
+  const faixaLat = h - 2 * c1, faixaHor = bw - 2 * c1;
+  const soCantos = faixaLat <= 35 && faixaHor <= 35;
+  const Asl_canto = Asl / 4;                         // ΔAsl/Δu constante: cada canto cobre ue/4
   return { Tk, Td_tfm, Td, A, u, c1, Au, he, caso, Ae, ue, TRd2, TRd2_tfm: TRd2 / 100 / G, interacao,
     Vd, Vrd2, fywd_t, fyd_l, A90_m, Asw_T_m, Asl_calc, rho_w, rho_l, Asw_min_m, Asl_min, Asl, Asl_por_m,
-    Asl_hor, Asl_lat, A90_min_ramo, thetaDeg: thetaRad * 180 / Math.PI, compat: Vd <= 0.7 * Vrd2 };
+    Asl_hor, Asl_lat, faixaLat, faixaHor, soCantos, Asl_canto, A90_min_ramo, thetaDeg: thetaRad * 180 / Math.PI, compat: Vd <= 0.7 * Vrd2 };
 }
 
 function memorialTorcao(t, c) {
@@ -1844,6 +1849,9 @@ function memorialTorcao(t, c) {
     Mínima (17.5.1.2): ρsl = ${fmtBR(t.rho_l * 100, 4)} % → Asl,mín = ρsl·he·ue = ${fmtBR(t.Asl_min, 2)} cm²<br>
     <strong>Asl = ${fmtBR(t.Asl, 2)} cm²</strong> (total) = ${fmtBR(t.Asl_por_m, 2)} cm²/m de perímetro (forma do TQS); Asl,mín = ${fmtBR(t.rho_l * t.he * 100, 2)} cm²/m →
     face inferior ou superior (bw − he): ${fmtBR(t.Asl_hor, 2)} cm² · cada face lateral (h − he): ${fmtBR(t.Asl_lat, 2)} cm²<br>
+    ${t.soCantos
+      ? `Arranjo concentrado só nos cantos possível (18.3.4): h − 2·c1 = ${fmtBR(t.faixaLat, 1)} cm e bw − 2·c1 = ${fmtBR(t.faixaHor, 1)} cm ≤ 35 cm → <strong>4 barras de canto com ≥ Asl/4 = ${fmtBR(t.Asl_canto, 2)} cm² cada</strong> (cantos inferiores somados ao As de flexão).<br>`
+      : `Arranjo só nos cantos não permitido: ${t.faixaLat > 35 ? `h − 2·c1 = ${fmtBR(t.faixaLat, 1)} cm` : `bw − 2·c1 = ${fmtBR(t.faixaHor, 1)} cm`} &gt; 35 cm → barras intermediárias (18.3.4).<br>`}
     Na zona tracionada pela flexão, somar à armadura de flexão (17.7.1.2). Pelo menos uma barra em cada vértice; barras espaçadas no máximo 350 mm (18.3.4).<br>
     Estribos de torção fechados, com ganchos a 45° (18.3.4). ${!t.compat ? '<br><span style="color: var(--ambar);">Torção de compatibilidade: para desprezá-la, Vsd ≤ 0,7·VRd2 — não atendido (17.5.1.2).</span>' : ''}`;
 }
@@ -1898,16 +1906,20 @@ function desenharTorcao() {
   const sel = document.getElementById('bitola');
   const aBit = parseFloat(sel.value);
   const lblBit = sel.options[sel.selectedIndex].text.split('(')[0].trim();
-  const AsInf = c.As_adotada + t.Asl_hor;
+  const soC = t.soCantos;
+  const AslInf = soC ? 2 * t.Asl_canto : t.Asl_hor;   // parcela de torção na face inferior
+  const AsInf = c.As_adotada + AslInf;
   const nInf = Math.max(Math.ceil(AsInf / aBit - 1e-9), 2);
   // Barras laterais intermediárias: espaçamento ≤ 35 cm (18.3.4)
-  const faixaLat = h - 2 * c1;
+  const faixaLat = h - 2 * c1, faixaHor = bw - 2 * c1;
   const nLat = Math.max(Math.ceil(faixaLat / 35 - 1e-9) - 1, 0);
+  const nHor = Math.max(Math.ceil(faixaHor / 35 - 1e-9) - 1, 0);   // face superior (vigas largas)
   const r = 5;
   let bars = '';
   const bar = (cx, cy, cor, rr = r) => `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${rr}" fill="${cor}"/>`;
   // cantos superiores (torção)
   bars += bar(X(c1), Y(c1), COR_TOR) + bar(X(bw - c1), Y(c1), COR_TOR);
+  for (let i = 1; i <= nHor; i++) bars += bar(X(c1 + faixaHor * i / (nHor + 1)), Y(c1), COR_TOR, 4.5);
   // laterais intermediárias (torção)
   for (let i = 1; i <= nLat; i++) {
     const yy = c1 + faixaLat * i / (nLat + 1);
@@ -1921,14 +1933,31 @@ function desenharTorcao() {
     bars += bar(X(xx), Y(h - c1), COR_FLEX, 5.5);
   }
   const xr = x0 + W;                               // borda direita do corte
-  const lx = xr + 46;                              // coluna de rótulos
+  const lx = Math.max(xr + 46, 300);               // coluna de rótulos
   const yLat = nLat ? Y(c1 + faixaLat / (nLat + 1)) : Y(h / 2);
+  // Rótulos empilhados em ordem fixa (não dependem da altura da viga → não se sobrepõem)
+  const itens = [
+    [X(bw - c1) + 5, Y(c1), 'Cantos superiores (porta-estribos)',
+      soC ? `Asl,tor ≥ Asl/4 = ${fmtBR(t.Asl_canto, 2)} cm² por canto (só nos cantos, 18.3.4)`
+          : `Asl,tor = ${fmtBR(t.Asl_hor, 2)} cm² na face superior${nHor ? ` · ${nHor} intermediária(s)` : ''} · 1 barra por vértice`],
+    [X(bw - est), Y(est) + Math.min(40, H / 3), `Estribo fechado (V + T): Asw/s = ${fmtBR(cis.Asw_per_m_final, 2)} cm²/m`,
+      `= ${fmtBR(cis.Asw_per_m_calc, 2)} (cortante) + ${fmtBR(t.Asw_T_m, 2)} (2·A90/s) · ganchos a 45°`],
+    [X(bw - c1) + 4.5, yLat, soC ? 'Faces laterais: sem barras intermediárias' : `Faces laterais: Asl,tor = ${fmtBR(t.Asl_lat, 2)} cm² por face`,
+      soC ? `h − 2·c1 = ${fmtBR(faixaLat, 1)} ≤ 35 cm · parcela lateral concentrada nos cantos`
+          : `${nLat} barra(s) intermediária(s) por face · s ≤ 35 cm (18.3.4)`],
+    [X(bw - he / 2), Y(he / 2 + (h - he) * 0.6), `Linha média da parede: he = ${fmtBR(he, 2)} cm`,
+      `Ae = ${fmtBR(t.Ae, 0)} cm² · ue = ${fmtBR(t.ue, 1)} cm (17.5.1.4.1)`],
+    [X(bw - c1) + 5.5, Y(h - c1), `Face inferior (tracionada): As = ${fmtBR(c.As_adotada, 2)} + ${fmtBR(AslInf, 2)} = ${fmtBR(AsInf, 2)} cm²`,
+      `${soC ? '2 cantos × Asl/4 · ' : ''}≈ ${nInf} ${lblBit} (bitola do painel)${nDes < nInf ? ' · desenho simplificado' : ''} · 17.7.1.2`]
+  ];
+  const passo = 52, yIni = y0 + 10;
   const lbl = (x1, y1, ty, txt, sub) => `
     <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${lx - 6}" y2="${ty - 4}" stroke="#9AA0A6" stroke-width="0.7" stroke-dasharray="3 2"/>
     <circle cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="1.8" fill="#5F6368"/>
     <text x="${lx}" y="${ty}" font-size="12.5" font-weight="600" fill="#1F2328">${txt}</text>
-    ${sub ? `<text x="${lx}" y="${ty + 15}" font-size="11.5" fill="#5F6368">${sub}</text>` : ''}`;
-  const Hsvg = Math.max(y0 + H + 70, 420);
+    <text x="${lx}" y="${ty + 15}" font-size="11.5" fill="#5F6368">${sub}</text>`;
+  const rotulos = itens.map((it, i) => lbl(it[0], it[1], yIni + i * passo, it[2], it[3])).join('');
+  const Hsvg = Math.max(y0 + H, yIni + (itens.length - 1) * passo + 22) + 46;
   const svg = `
   <svg viewBox="0 0 760 ${Hsvg}" role="img" aria-label="Corte esquemático da viga com as armaduras de torção">
     <rect x="${x0}" y="${y0}" width="${W.toFixed(1)}" height="${H.toFixed(1)}" fill="#F1F3F4" stroke="#1F2328" stroke-width="1.4"/>
@@ -1936,12 +1965,8 @@ function desenharTorcao() {
     <rect x="${X(est).toFixed(1)}" y="${Y(est).toFixed(1)}" width="${((bw - 2 * est) * k).toFixed(1)}" height="${((h - 2 * est) * k).toFixed(1)}" rx="5" fill="none" stroke="#1F2328" stroke-width="2.2"/>
     <path d="M${(X(bw - est) - 16).toFixed(1)} ${Y(est).toFixed(1)} L${(X(bw - est) - 2).toFixed(1)} ${(Y(est) + 14).toFixed(1)} L${(X(bw - est) - 10).toFixed(1)} ${(Y(est) + 22).toFixed(1)}" fill="none" stroke="#1F2328" stroke-width="2.2" stroke-linecap="round"/>
     ${bars}
-    ${lbl(X(bw - c1) + 5, Y(c1), y0 + 10, 'Cantos superiores (porta-estribos)', `Asl,tor = ${fmtBR(t.Asl_hor, 2)} cm² na face superior · 1 barra por vértice`)}
-    ${lbl(X(bw - est), Y(est) + 40, y0 + 62, `Estribo fechado (V + T): Asw/s = ${fmtBR(cis.Asw_per_m_final, 2)} cm²/m`, `= ${fmtBR(cis.Asw_per_m_calc, 2)} (cortante) + ${fmtBR(t.Asw_T_m, 2)} (2·A90/s) · ganchos a 45°`)}
-    ${lbl(X(bw - c1) + 4.5, yLat, y0 + 114, `Faces laterais: Asl,tor = ${fmtBR(t.Asl_lat, 2)} cm² por face`, `${nLat} barra(s) intermediária(s) por face · s ≤ 35 cm (18.3.4)`)}
-    ${lbl(X(bw - he / 2), Y(h * 0.62), y0 + 166, `Linha média da parede: he = ${fmtBR(he, 2)} cm`, `Ae = ${fmtBR(t.Ae, 0)} cm² · ue = ${fmtBR(t.ue, 1)} cm (17.5.1.4.1)`)}
-    ${lbl(X(bw - c1) + 5.5, Y(h - c1), Math.min(y0 + H - 8, Hsvg - 74), `Face inferior (tracionada): As = ${fmtBR(c.As_adotada, 2)} + ${fmtBR(t.Asl_hor, 2)} = ${fmtBR(AsInf, 2)} cm²`, `≈ ${nInf} ${lblBit} (bitola do painel)${nDes < nInf ? ' · desenho simplificado' : ''} · 17.7.1.2`)}
-    <g transform="translate(${x0}, ${Hsvg - 22})" font-size="11.5" fill="#5F6368">
+    ${rotulos}
+    <g transform="translate(${x0}, ${Hsvg - 16})" font-size="11.5" fill="#5F6368">
       <circle cx="5" cy="-4" r="5" fill="${COR_TOR}"/><text x="16" y="0">Torção (Asl)</text>
       <circle cx="120" cy="-4" r="5.5" fill="${COR_FLEX}"/><text x="131" y="0">Flexão + parcela de torção</text>
       <line x1="300" y1="-4" x2="326" y2="-4" stroke="${COR_TOR}" stroke-dasharray="5 4"/><text x="332" y="0">Linha média da seção vazada equivalente</text>
@@ -1952,6 +1977,7 @@ function desenharTorcao() {
     <ul class="esq-lista">
       <li><b>Estribo:</b> um único estribo fechado no contorno resiste ao cortante e à torção (17.7.2.3): ${T(cis.Asw_per_m_final)} cm²/m (2 ramos). Ganchos a 45° (18.3.4). Em estribos com mais de 2 ramos, só o externo conta para a torção.</li>
       <li><b>Asl de torção:</b> ${T(t.Asl)} cm² = ${T(t.Asl_por_m)} cm²/m de perímetro, distribuída com ΔAsl/Δu constante (17.5.1.6): 2 × ${T(t.Asl_hor)} (inferior e superior) + 2 × ${T(t.Asl_lat)} (laterais) = ${T(2 * t.Asl_hor + 2 * t.Asl_lat)} cm².</li>
+      ${soC ? `<li><b>Só nos cantos (18.3.4):</b> como h − 2·c1 = ${T(faixaLat)} cm e bw − 2·c1 = ${T(faixaHor)} cm são ≤ 35 cm, a Asl pode ser concentrada nas 4 barras de canto, cada uma com ≥ Asl/4 = ${T(t.Asl_canto)} cm² (ΔAsl/Δu constante: cada canto cobre ue/4). Nos cantos inferiores, somar ao As de flexão: face inferior = ${T(c.As_adotada)} + 2 × ${T(t.Asl_canto)} = ${T(AsInf)} cm². O painel mostra a distribuição contínua (${T(t.Asl_hor)} cm² na face inferior).</li>` : ''}
       <li><b>Face tracionada:</b> a parcela de torção é somada ao As de flexão (17.7.1.2). Na face comprimida ela pode ser reduzida (17.7.1.3); usualmente as barras de canto já atendem.</li>
       <li><b>Detalhamento:</b> pelo menos uma barra em cada vértice do estribo; barras longitudinais espaçadas no máximo 35 cm; todas ancoradas nos apoios (18.3.4).</li>
     </ul>
