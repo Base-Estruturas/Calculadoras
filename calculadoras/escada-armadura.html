@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escada — Armadura e flecha · NBR 6118:2023</title>
+<style>
+  /* ===== Padrão de interface BASE (mesmo da extensão pyRevit) ===== */
+  :root {
+    --preto: #000000; --corpo: #F1F3F4; --cartao: #FFFFFF; --borda: #E3E5E8; --borda-campo: #C4C7CC;
+    --texto: #1F2328; --texto-2: #5F6368; --texto-3: #9AA0A6; --azul: #1A56DB;
+    --verde: #1B5E20; --verde-bg: #E8F5E9; --vermelho: #C62828; --vermelho-bg: #FDECEA;
+    --ambar: #8A5300; --ambar-bg: #FFF4E5;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+         font-size: 13px; color: var(--texto); background: var(--corpo); line-height: 1.4; }
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .hdr { background: var(--preto); height: 76px; flex: 0 0 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+  .hdr img { height: 64px; width: auto; }
+  .hdr-tool { color: var(--texto-3); text-align: right; font-size: 13px; line-height: 1.35; }
+  .hdr-tool strong { display: block; color: var(--texto-3); font-size: 15px; font-weight: 600; }
+
+  .corpo { flex: 1; display: grid; grid-template-columns: minmax(260px, 0.95fr) minmax(290px, 1fr) minmax(360px, 1.45fr); gap: 12px; padding: 12px; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+  .card { background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 12px 14px; }
+  .card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; min-height: 22px; gap: 8px; }
+  .rot { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-2); font-weight: 600; }
+  .card > .rot { display: block; margin-bottom: 8px; }
+
+  .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 8px; }
+  .f label { display: block; font-size: 12px; color: var(--texto-2); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .f label .un { color: var(--texto-3); }
+  .f input, .f select { width: 100%; height: 28px; padding: 0 6px; border: 1px solid var(--borda-campo); border-radius: 6px;
+    font: inherit; font-size: 13px; color: var(--texto); background: #fff; }
+  .f input:focus, .f select:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.14); }
+  .linha-info { margin-top: 7px; padding: 5px 9px; background: var(--corpo); border-radius: 6px; font-size: 12px; color: var(--texto-2); }
+  .linha-info strong { color: var(--texto); font-weight: 600; }
+
+  .res-topo { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .res-num { display: flex; align-items: baseline; gap: 6px; }
+  .res-num .lbl { font-size: 13px; color: var(--texto-2); font-weight: 600; }
+  .res-num .val { font-size: 26px; font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
+  .res-num .un { font-size: 12.5px; color: var(--texto-2); }
+  .res-sub { margin-top: 2px; font-size: 12.5px; color: var(--texto-2); }
+  .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px 10px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--borda); }
+  .kv.k4 { grid-template-columns: repeat(4, 1fr); }
+  .kv.top0 { margin-top: 0; padding-top: 0; border-top: none; }
+  .kv div { font-size: 11.5px; color: var(--texto-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kv b { display: block; font-size: 13.5px; color: var(--texto); font-weight: 600; }
+  .barra { height: 5px; background: var(--corpo); border-radius: 3px; overflow: hidden; margin-top: 3px; }
+  .barra > span { display: block; height: 100%; background: var(--verde); }
+  .barra.fail > span { background: var(--vermelho); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .pill.ok { background: var(--verde-bg); color: var(--verde); }
+  .pill.fail { background: var(--vermelho-bg); color: var(--vermelho); }
+  .pill.warn { background: var(--ambar-bg); color: var(--ambar); }
+
+  .alertas:empty { display: none; }
+  .alertas { margin-top: 7px; display: flex; flex-direction: column; gap: 4px; }
+  .alert { padding: 5px 9px; border-radius: 6px; font-size: 11.5px; line-height: 1.35; border-left: 3px solid; }
+  .alert-warning { background: var(--ambar-bg); color: var(--ambar); border-color: #E8A33D; }
+  .alert-danger { background: var(--vermelho-bg); color: var(--vermelho); border-color: var(--vermelho); }
+  .alert-info { background: #EEF3FD; color: #1E3A8A; border-color: #9DB5EE; }
+
+  /* Abas do desenho */
+  .seg { display: flex; border: 1px solid var(--borda-campo); border-radius: 6px; overflow: hidden; }
+  .seg input { display: none; }
+  .seg label { padding: 3px 10px; cursor: pointer; font-size: 12px; color: var(--texto-2); user-select: none; white-space: nowrap; }
+  .seg label + input + label { border-left: 1px solid var(--borda-campo); }
+  .seg input:checked + label { background: var(--texto); color: #fff; font-weight: 600; }
+  .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 425px); min-height: 190px; }
+  .desenho svg text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
+  .leg { margin-top: 4px; font-size: 11px; color: var(--texto-2); line-height: 1.45; }
+  .leg b { color: var(--texto); font-weight: 600; }
+
+  /* Rodapé */
+  .rodape { flex: 0 0 auto; background: #fff; border-top: 1px solid var(--borda); padding: 10px 16px; display: flex; justify-content: center; gap: 10px; position: relative; }
+  .credito { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--texto-3); }
+  .btn { height: 34px; padding: 0 18px; border-radius: 6px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--borda-campo); background: #fff; color: var(--texto); }
+  .btn:hover { background: var(--corpo); }
+  .btn-pri { background: var(--azul); border-color: var(--azul); color: #fff; }
+  .btn-pri:hover { background: #1749B8; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Memorial (janela sobreposta) */
+  .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  .modal.aberto { display: flex; }
+  .modal-box { background: var(--corpo); border-radius: 8px; width: min(900px, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-hd { background: var(--preto); color: var(--texto-3); padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-hd strong { color: #fff; font-size: 15px; font-weight: 600; }
+  .modal-hd button { background: none; border: none; color: var(--texto-3); font-size: 20px; cursor: pointer; line-height: 1; }
+  .modal-body { padding: 14px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+  .modal-body .card { font-size: 13px; line-height: 1.65; }
+  .modal-ft { padding: 10px; display: flex; justify-content: center; gap: 10px; background: #fff; border-top: 1px solid var(--borda); }
+  .mm h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-2); font-weight: 600; margin: 0 0 6px; }
+  .mm .fml { font-family: Consolas, "Courier New", monospace; font-size: 12px; color: var(--texto); background: var(--corpo); border-radius: 6px; padding: 5px 8px; margin: 3px 0 5px; }
+  .mm .adot { color: var(--ambar); font-weight: 600; }
+  .mm table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 4px 0 6px; }
+  .mm th, .mm td { text-align: right; padding: 3px 8px; border-bottom: 1px solid var(--borda); }
+  .mm th { color: var(--texto-2); font-weight: 600; }
+  .mm th:first-child, .mm td:first-child { text-align: left; }
+  .mm tr.sel td { font-weight: 600; background: #EEF3FD; }
+  .mm .ok { color: var(--verde); font-weight: 600; } .mm .nok { color: var(--vermelho); font-weight: 600; }
+
+  @media (max-width: 1080px) { .corpo { grid-template-columns: 1fr 1fr; } .col-des { grid-column: 1 / -1; } .desenho svg { max-height: none; } }
+  @media (max-width: 680px) { .corpo { grid-template-columns: 1fr; } .hdr { height: 60px; flex-basis: 60px; } .hdr img { height: 48px; } .credito { display: none; } .kv, .kv.k4 { grid-template-columns: 1fr 1fr; } }
+  @media (max-height: 760px) {
+    .hdr { height: 60px; flex-basis: 60px; } .hdr img { height: 48px; }
+    .corpo { gap: 10px; padding: 10px 10px 6px; } .col { gap: 10px; } .card { padding: 9px 12px; }
+    .card-hd { margin-bottom: 5px; } .card > .rot { margin-bottom: 5px; }
+    .res-num .val { font-size: 23px; } .kv { margin-top: 6px; padding-top: 6px; gap: 3px 10px; }
+    .rodape { padding: 8px 16px; } .btn { height: 32px; }
+  }
+
+  /* ===== Memória em PDF (impressão) ===== */
+  #print-area { display: none; }
+  @media print {
+    @page { size: A4; margin: 16mm 14mm; }
+    body { background: #fff; }
+    .app, .modal { display: none !important; }
+    #print-area { display: block !important; color: #000; font-family: "Times New Roman", Georgia, serif; font-size: 10.5pt; }
+    #print-area h1 { font-size: 16pt; text-align: center; margin: 0 0 4px; }
+    #print-area .sub { text-align: center; font-size: 10.5pt; color: #444; margin: 0 0 14px; }
+    #print-area .mm h3 { font-size: 12pt; color: #000; text-transform: none; letter-spacing: 0; border-bottom: 1px solid #999; padding-bottom: 3px; margin: 14px 0 6px; }
+    #print-area .mm .fml { background: #f4f4f4; border-left: 3px solid #333; border-radius: 0; font-size: 9.5pt; }
+    #print-area .mm table { font-size: 10pt; } #print-area .mm th, #print-area .mm td { border: 1px solid #999; }
+    #print-area .bloco { page-break-inside: avoid; }
+    #print-area svg { width: 100%; height: auto; }
+    #print-area .adot { color: #000; text-decoration: underline; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="hdr">
+    <img src="../assets/logo-horizontal.png" alt="BASE Estruturas">
+    <div class="hdr-tool"><strong>Escada — Armadura e flecha</strong>Lance biapoiado com patamares · NBR 6118:2023</div>
+  </header>
+
+  <main class="corpo">
+    <!-- ===== Coluna 1: dados ===== -->
+    <section class="col">
+      <div class="card">
+        <span class="rot">Geometria (projeção horizontal)</span>
+        <div class="g3">
+          <div class="f"><label for="A" title="A — patamar inferior (pode ser 0)">A <span class="un">(m)</span></label><input type="number" id="A" value="0.46" step="0.01" min="0"></div>
+          <div class="f"><label for="B" title="B — projeção horizontal do lance">B <span class="un">(m)</span></label><input type="number" id="B" value="1.68" step="0.01" min="0"></div>
+          <div class="f"><label for="C" title="C — patamar superior (pode ser 0)">C <span class="un">(m)</span></label><input type="number" id="C" value="1.54" step="0.01" min="0"></div>
+          <div class="f"><label for="h" title="Espessura da laje, medida perpendicular ao lance">h <span class="un">(cm)</span></label><input type="number" id="h" value="10" step="0.5" min="0"></div>
+          <div class="f"><label for="e">e — espelho <span class="un">(cm)</span></label><input type="number" id="e" value="18" step="0.5" min="0"></div>
+          <div class="f"><label for="p">p — piso <span class="un">(cm)</span></label><input type="number" id="p" value="28" step="0.5" min="0"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="rot" title="por m² em projeção horizontal">Cargas características <span style="text-transform:none">(tf/m²)</span></span>
+        <div class="g3">
+          <div class="f"><label for="gL" title="Revestimento e demais permanentes no lance (por m² em projeção horizontal)">g lance</label><input type="number" id="gL" value="0.10" step="0.01" min="0"></div>
+          <div class="f"><label for="gP" title="Revestimento e demais permanentes nos patamares">g patamar</label><input type="number" id="gP" value="0.10" step="0.01" min="0"></div>
+          <div class="f"><label for="q" title="Carga variável (NBR 6120:2019)">q variável</label><input type="number" id="q" value="0.30" step="0.05" min="0"></div>
+          <div class="f"><label for="gA" title="Permanente adicional distribuída no patamar A (ex.: reação de outro lance espalhada)">g extra A</label><input type="number" id="gA" value="0" step="0.01" min="0"></div>
+          <div class="f"><label for="gC" title="Permanente adicional distribuída no patamar C">g extra C</label><input type="number" id="gC" value="0" step="0.01" min="0"></div>
+          <div class="f"><label for="gamaDeg" title="Peso específico do enchimento dos degraus (NBR 6120:2019: concreto simples 2,4; armado 2,5)">γ deg. <span class="un">(tf/m³)</span></label><input type="number" id="gamaDeg" value="2.4" step="0.1" min="0"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="rot">Materiais, armação e flecha</span>
+        <div class="g3">
+          <div class="f"><label for="fck">fck <span class="un">(MPa)</span></label>
+            <select id="fck"><option>20</option><option>25</option><option>30</option><option>35</option><option selected>40</option><option>45</option><option>50</option><option>55</option><option>60</option><option>65</option><option>70</option><option>75</option><option>80</option><option>85</option><option>90</option></select></div>
+          <div class="f"><label for="aco">Aço</label>
+            <select id="aco"><option value="500" selected>CA-50</option><option value="600">CA-60</option></select></div>
+          <div class="f"><label for="c" title="Cobrimento nominal (Tabela 7.2)">c <span class="un">(cm)</span></label><input type="number" id="c" value="2.0" step="0.5" min="0"></div>
+          <div class="f"><label for="gf" title="γf aplicado a g e q (combinação normal, 11.7.1)">γf</label><input type="number" id="gf" value="1.4" step="0.05" min="1"></div>
+          <div class="f"><label for="phiP">Ø principal</label>
+            <select id="phiP"><option value="5">Ø 5</option><option value="6.3">Ø 6,3</option><option value="8">Ø 8</option><option value="10" selected>Ø 10</option><option value="12.5">Ø 12,5</option><option value="16">Ø 16</option><option value="20">Ø 20</option></select></div>
+          <div class="f"><label for="phiD">Ø distrib.</label>
+            <select id="phiD"><option value="5" selected>Ø 5</option><option value="6.3">Ø 6,3</option><option value="8">Ø 8</option><option value="10">Ø 10</option></select></div>
+          <div class="f"><label for="psi2" title="Tabela 11.2: 0,3 residencial; 0,4 comercial; 0,6 bibliotecas e garagens">ψ2 (Tab. 11.2)</label>
+            <select id="psi2"><option value="0.3" selected title="residencial">0,3</option><option value="0.4" title="comercial, escritórios">0,4</option><option value="0.6" title="bibliotecas, garagens, oficinas">0,6</option></select></div>
+          <div class="f"><label for="aE" title="Agregado graúdo (8.2.8)">αE — agregado</label>
+            <select id="aE"><option value="1.2">basalto</option><option value="1.0" selected>granito</option><option value="0.9">calcário</option><option value="0.7">arenito</option></select></div>
+          <div class="f"><label for="t0" title="Idade de aplicação da carga de longa duração (17.3.2.1.2)">t0 <span class="un">(meses)</span></label>
+            <select id="t0"><option value="0.5">0,5</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="6">6</option></select></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Coluna 2: resultados ===== -->
+    <section class="col">
+      <div class="card">
+        <div class="card-hd"><span class="rot">Esforços por metro de largura</span><span class="pill warn" id="pill-geo" style="display:none"></span></div>
+        <div class="kv k4 top0" id="esf-kv"></div>
+        <div class="linha-info" id="geo-info">—</div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><span class="rot">Armadura principal (inferior)</span><span id="flex-st"></span></div>
+        <div id="flex-res"></div>
+        <div class="kv" id="flex-kv"></div>
+        <div class="alertas" id="flex-al"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><span class="rot">Distribuição · Borda · Cortante</span><span id="cis-st"></span></div>
+        <div class="kv top0" id="cis-kv"></div>
+        <div class="alertas" id="cis-al"></div>
+      </div>
+
+    </section>
+
+    <!-- ===== Coluna 3: desenho ===== -->
+    <section class="col col-des">
+      <div class="card desenho">
+        <div class="card-hd"><span class="rot" id="des-tit">Desenho</span>
+          <div class="seg">
+            <input type="radio" name="aba" id="aba-geo" value="geo" checked><label for="aba-geo">Geometria</label>
+            <input type="radio" name="aba" id="aba-deg" value="deg"><label for="aba-deg">Degrau</label>
+            <input type="radio" name="aba" id="aba-esf" value="esf"><label for="aba-esf">Esforços</label>
+            <input type="radio" name="aba" id="aba-arm" value="arm"><label for="aba-arm">Armação</label>
+          </div>
+        </div>
+        <div id="svg-box"></div>
+        <div class="leg" id="leg"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="rot">Flecha — biapoiada</span><span id="fl-st"></span></div>
+        <div class="kv k4 top0" id="fl-kv"></div>
+        <div class="alertas" id="fl-al"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <button type="button" class="btn" id="btn-memo">Ver memorial</button>
+    <button type="button" class="btn btn-pri" id="btn-pdf">Gerar memória (PDF)</button>
+    <span class="credito">BASE Estruturas · 1 tf = 10 kN</span>
+  </footer>
+</div>
+
+<div class="modal" id="modal-memo" role="dialog" aria-modal="true" aria-labelledby="memo-tit">
+  <div class="modal-box">
+    <div class="modal-hd"><span><strong id="memo-tit">Memorial de cálculo</strong> &nbsp;Escada — armadura e flecha</span><button type="button" id="btn-memo-x" aria-label="Fechar">×</button></div>
+    <div class="modal-body" id="memo-body"></div>
+    <div class="modal-ft">
+      <button type="button" class="btn" id="btn-memo-fechar">Fechar</button>
+      <button type="button" class="btn btn-pri" id="btn-pdf2">Gerar memória (PDF)</button>
+    </div>
+  </div>
+</div>
+
+<div id="print-area"></div>
+
+<script>
+/* ==================== MOTOR DE CÁLCULO (sem DOM) ==================== */
+/* Unidades internas: tf, m (cargas e esforços); cm e kN só na verificação de seção. 1 tf = 10 kN. */
+const G = 10;
+const RHO_MIN = {20: 0.150, 25: 0.150, 30: 0.150, 35: 0.164, 40: 0.179, 45: 0.194, 50: 0.208, 55: 0.211, 60: 0.219, 65: 0.226, 70: 0.233, 75: 0.239, 80: 0.245, 85: 0.251, 90: 0.256}; // Tabela 17.3, %
+const BITOLAS = [5, 6.3, 8, 10, 12.5, 16, 20];
+const areaBarra = phi => Math.PI * Math.pow(phi / 10, 2) / 4; // cm²
+
+// Carregamento em trechos uniformes [x0, x1] (m) com w (tf/m² · 1 m = tf/m)
+function trechos(A, B, C, w1, w2, w3) {
+  const s = [];
+  if (A > 0) s.push({ x0: 0, x1: A, w: w1 });
+  if (B > 0) s.push({ x0: A, x1: A + B, w: w2 });
+  if (C > 0) s.push({ x0: A + B, x1: A + B + C, w: w3 });
+  return s;
+}
+function reacoes(seg, L) {
+  let W = 0, Mo = 0;
+  seg.forEach(t => { const P = t.w * (t.x1 - t.x0); W += P; Mo += P * (t.x0 + t.x1) / 2; });
+  const RB = Mo / L; return { RA: W - RB, RB, W };
+}
+function momento(seg, RA, x) {
+  let M = RA * x;
+  seg.forEach(t => { if (x > t.x0) { const xe = Math.min(x, t.x1); M -= t.w * (xe - t.x0) * (x - (t.x0 + xe) / 2); } });
+  return M;
+}
+function cortante(seg, RA, x) {
+  let V = RA;
+  seg.forEach(t => { if (x > t.x0) V -= t.w * (Math.min(x, t.x1) - t.x0); });
+  return V;
+}
+function momentoMax(seg, RA) {
+  // posição de V = 0
+  let acum = 0;
+  for (const t of seg) {
+    const P = t.w * (t.x1 - t.x0);
+    if (RA - acum - P <= 0) { const x = t.w > 0 ? t.x0 + (RA - acum) / t.w : t.x0; return { x, M: momento(seg, RA, x), trecho: t }; }
+    acum += P;
+  }
+  const t = seg[seg.length - 1]; return { x: t.x1, M: 0, trecho: t };
+}
+function trechoNome(x, A, B) { return x <= A + 1e-9 ? 'A — patamar inferior' : (x <= A + B + 1e-9 ? 'B — lance' : 'C — patamar superior'); }
+
+function fctmMPa(fck) { return fck <= 50 ? 0.3 * Math.pow(fck, 2 / 3) : 2.12 * Math.log(1 + 0.1 * (fck + 8)); } // 8.2.5 (mesma fórmula da calculadora de viga)
+function eciMPa(fck, aE) { return fck <= 50 ? aE * 5600 * Math.sqrt(fck) : 21500 * aE * Math.pow(fck / 10 + 1.25, 1 / 3); } // 8.2.8
+function xi(t) { return t > 70 ? 2 : 0.68 * Math.pow(0.996, t) * Math.pow(t, 0.32); } // Tabela 17.2 / 17.3.2.1.2
+
+function calcularEscada(I) {
+  const r = { I, ok: true, erros: [] };
+  const { A, B, C, h, e, p, gL, gP, q, gA, gC, gamaDeg, fck, aco, c, gf, phiP, phiD, psi2, aE, t0 } = I;
+  const L = A + B + C; r.L = L;
+  if (!(L > 0) || !(B > 0) || !(h > 0) || !(e > 0) || !(p > 0)) { r.ok = false; r.erros.push('Informe B, h, e e p maiores que zero.'); return r; }
+  const gc = 2.5; // tf/m³, concreto armado (NBR 6120:2019)
+  // ---- Geometria
+  const alfa = Math.atan(e / p), cosA = Math.cos(alfa), tgA = e / p;
+  Object.assign(r, { alfa, alfaGr: alfa * 180 / Math.PI, cosA, tgA, R: B * tgA, blondel: 2 * e + p, hv: h / cosA, hm: h / cosA + e / 2 });
+  // ---- Cargas (tf/m², projeção horizontal)
+  r.ppL = gc * h / 100 / cosA + gamaDeg * e / 100 / 2;
+  r.ppP = gc * h / 100;
+  r.g1 = r.ppP + gP + gA; r.g2 = r.ppL + gL; r.g3 = r.ppP + gP + gC;
+  const segG = trechos(A, B, C, r.g1, r.g2, r.g3), segQ = trechos(A, B, C, q, q, q);
+  const segK = trechos(A, B, C, r.g1 + q, r.g2 + q, r.g3 + q);
+  const segQP = trechos(A, B, C, r.g1 + psi2 * q, r.g2 + psi2 * q, r.g3 + psi2 * q);
+  r.segK = segK; r.segQP = segQP;
+  const RG = reacoes(segG, L), RQ = reacoes(segQ, L), RK = reacoes(segK, L), RQP = reacoes(segQP, L);
+  Object.assign(r, { RA: RK.RA, RB: RK.RB, RAg: RG.RA, RBg: RG.RB, RAq: RQ.RA, RBq: RQ.RB });
+  const mk = momentoMax(segK, RK.RA);
+  r.xM = mk.x; r.Mk = mk.M; r.trechoM = trechoNome(mk.x, A, B);
+  r.MkG = momento(segG, RG.RA, mk.x); r.MkQ = momento(segQ, RQ.RA, mk.x);
+  r.Md = gf * r.Mk;
+  // ---- Flexão (b = 100 cm), 17.2.2 e 8.2.10.1
+  const b = 100, gcon = 1.4, gs = 1.15;
+  r.d = h - c - phiP / 20;
+  const fcd = fck / gcon, fyd = aco / gs;            // MPa
+  const lambda = fck <= 50 ? 0.8 : 0.8 - (fck - 50) / 400;
+  const alfaC = fck <= 50 ? 0.85 : 0.85 * (1 - (fck - 50) / 200);
+  const etaC = fck <= 40 ? 1 : Math.pow(40 / fck, 1 / 3);
+  const sigcd = alfaC * etaC * fcd;                  // MPa
+  const xdLim = fck <= 50 ? 0.45 : 0.35;             // 14.6.4.3 / 14.7.4
+  Object.assign(r, { b, fcd, fyd, lambda, alfaC, etaC, sigcd, xdLim, gcon, gs });
+  const MdkNcm = r.Md * G * 100, sig = sigcd / 10, fy = fyd / 10, d = r.d;
+  const arg = 1 - 2 * MdkNcm / (sig * b * d * d);
+  if (d <= 0) { r.ok = false; r.erros.push('d ≤ 0: revisar h, c e bitola.'); return r; }
+  if (arg < 0) { r.flexImpossivel = true; r.x = NaN; r.As = NaN; }
+  else {
+    const y = d * (1 - Math.sqrt(arg)); r.x = y / lambda; r.z = d - y / 2; r.As = MdkNcm / (fy * r.z);
+  }
+  r.xd = r.x / d;
+  r.rhoMin = RHO_MIN[fck] || 0.256;
+  r.AsMin = r.rhoMin / 100 * b * h;
+  r.AsMax = 0.04 * b * h;
+  r.AsNec = Math.max(r.As || 0, r.AsMin);
+  r.sMax = Math.min(2 * h, 20);                      // 20.1
+  r.phiMax = h * 10 / 8;                             // 20.1: Ø ≤ h/8 (mm)
+  r.tabela = BITOLAS.map(f => {
+    const a = areaBarra(f), sc = 100 * a / r.AsNec;
+    const s = Math.min(Math.floor(sc), r.sMax);
+    return { phi: f, a, sCalc: sc, s, AsEf: 100 * a / s, okPhi: f <= r.phiMax + 1e-9 };
+  });
+  r.princ = r.tabela.find(t => t.phi === phiP);
+  r.AsEf = r.princ.AsEf;
+  r.utilFlex = (r.As || 0) / r.AsEf;
+  // ---- Distribuição (Tabela 19.1 e 20.1)
+  r.AsDist = Math.max(0.2 * r.AsNec, 0.9, 0.5 * r.AsMin);
+  r.sMaxD = 33;
+  const aD = areaBarra(phiD);
+  r.sD = Math.min(Math.floor(100 * aD / r.AsDist), r.sMaxD); r.AsDistEf = 100 * aD / r.sD;
+  // ---- Armadura de borda (negativa) nos apoios — Tabela 19.1 e 19.3.3.2
+  r.AsBorda = 0.67 * r.rhoMin / 100 * b * h;
+  r.lBorda = 0.15 * L;
+  // ---- Cortante (19.4.1), lajes sem armadura transversal
+  const fctm = fctmMPa(fck), fctkInf = 0.7 * fctm, fctd = fctkInf / gcon;
+  r.fctm = fctm; r.fctd = fctd; r.tauRd = 0.25 * fctd;
+  r.kV = Math.max(1, 1.6 - d / 100);
+  r.rho1 = Math.min(r.AsEf / (b * d), 0.02);
+  r.VRd1 = r.tauRd / 10 * r.kV * (1.2 + 40 * r.rho1) * b * d / G; // tf/m
+  r.Vsd = gf * Math.max(r.RA, r.RB);
+  r.utilV = r.Vsd / r.VRd1;
+  // ---- Ancoragem básica (9.4.2.4) para o cruzamento no canto côncavo
+  const eta1 = aco === 600 ? 1.4 : 2.25;
+  r.eta1 = eta1; r.fbd = eta1 * 1 * 1 * fctd;
+  r.lb = Math.max(phiP / 10 / 4 * fyd / r.fbd, 25 * phiP / 10);
+  // ---- Flecha (17.3.2.1.1 e 17.3.2.1.2) — combinação quase permanente
+  r.Eci = eciMPa(fck, aE); r.alfaI = Math.min(1, 0.8 + 0.2 * fck / 80); r.Ecs = r.alfaI * r.Eci;
+  r.Es = 210000; r.n = r.Es / r.Ecs;
+  r.Ic = b * h * h * h / 12;
+  r.Mr = 1.5 * (fctm / 10) * r.Ic / (h / 2) / G / 100;   // tf·m/m
+  const mqp = momentoMax(segQP, RQP.RA);
+  r.Ma = mqp.M; r.xMa = mqp.x;
+  const nA = r.n * r.AsEf;
+  r.x2 = (-nA + Math.sqrt(nA * nA + 2 * b * nA * d)) / b;
+  r.I2 = b * Math.pow(r.x2, 3) / 3 + nA * Math.pow(d - r.x2, 2);
+  if (r.Ma <= r.Mr) { r.Ieq = r.Ic; r.fissurada = false; }
+  else { const k3 = Math.pow(r.Mr / r.Ma, 3); r.Ieq = Math.min(r.Ic, k3 * r.Ic + (1 - k3) * r.I2); r.fissurada = true; }
+  const EI = r.Ecs / 10 * r.Ieq;                           // kN·cm²
+  const elastica = (seg, RA) => {                         // deslocamento (cm, + para baixo) por dupla integração
+    const N = 800, Lc = L * 100, dx = Lc / N; const w = [0]; let th = 0, wv = 0;
+    let kPrev = momento(seg, RA, 0) * G * 100 / EI;
+    for (let i = 1; i <= N; i++) {
+      const k = momento(seg, RA, i * dx / 100) * G * 100 / EI;
+      const thN = th + (kPrev + k) / 2 * dx; wv += (th + thN) / 2 * dx; th = thN; kPrev = k; w.push(wv);
+    }
+    const wL = w[N]; const v = w.map((wi, i) => (wL * i / N) - wi);
+    let max = 0, imax = 0; v.forEach((vi, i) => { if (vi > max) { max = vi; imax = i; } });
+    return { v, max, xmax: imax * dx / 100 };
+  };
+  const elQP = elastica(segQP, RQP.RA);
+  r.v = elQP.v; r.a0 = elQP.max; r.xa0 = elQP.xmax;
+  const segPsiQ = trechos(A, B, C, psi2 * q, psi2 * q, psi2 * q);
+  r.aQpsi = elastica(segPsiQ, reacoes(segPsiQ, L).RA).max;   // vibração: ψ2·q (adotado)
+  r.aQ = elastica(segQ, RQ.RA).max;                           // informativo: q integral
+  r.xiT0 = xi(t0); r.alfaF = (2 - r.xiT0) / (1 + 50 * 0);     // ρ' = 0
+  r.aT = r.a0 * (1 + r.alfaF);
+  r.aLim = L * 100 / 250; r.aLimQ = L * 100 / 350;
+  r.utilFl = r.aT / r.aLim; r.utilQ = r.aQpsi / r.aLimQ;
+  // ---- Situação geral
+  r.flexOk = !r.flexImpossivel && r.xd <= xdLim + 1e-9 && r.AsEf <= r.AsMax;
+  return r;
+}
+/* ==================== FIM DO MOTOR ==================== */
+
+/* ==================== INTERFACE ==================== */
+const IDS = ['A', 'B', 'C', 'h', 'e', 'p', 'gL', 'gP', 'q', 'gA', 'gC', 'gamaDeg', 'fck', 'aco', 'c', 'gf', 'phiP', 'phiD', 'psi2', 'aE', 't0'];
+let R = null;
+const $ = id => document.getElementById(id);
+function fmt(v, n = 2) { return (v === undefined || v === null || !isFinite(v)) ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: n, maximumFractionDigits: n }); }
+function fphi(f) { return fmt(f, f % 1 ? 1 : 0); }
+function pill(t, x) { return `<span class="pill ${t}">${x}</span>`; }
+function barra(u) { const p = Math.min(u, 1) * 100; return `<div class="barra ${u > 1 ? 'fail' : ''}"><span style="width:${p}%"></span></div>`; }
+function lerDados() {
+  const o = {}; IDS.forEach(id => { o[id] = parseFloat($(id).value); if (!isFinite(o[id])) o[id] = 0; }); return o;
+}
+
+function atualizar() {
+  R = calcularEscada(lerDados());
+  const r = R;
+  if (!r.ok) {
+    ['esf-kv', 'flex-res', 'flex-kv', 'cis-kv', 'fl-kv', 'cis-al', 'fl-al'].forEach(id => $(id).innerHTML = '');
+    $('flex-al').innerHTML = r.erros.map(e => `<div class="alert alert-danger">${e}</div>`).join('');
+    $('flex-st').innerHTML = pill('fail', 'Dados'); $('btn-pdf').disabled = true; desenhar(); return;
+  }
+  $('btn-pdf').disabled = false;
+  const I = r.I;
+  // Geometria
+  const bl = r.blondel;
+  $('geo-info').innerHTML = `L = <strong>${fmt(r.L)} m</strong> · α = <strong>${fmt(r.alfaGr, 1)}°</strong> · M<sub>máx</sub> em x = <strong>${fmt(r.xM)} m</strong> · 2e + p = <strong ${bl >= 63 && bl <= 65 ? '' : 'style="color:var(--ambar)" title="fora de 63 a 65 cm (NBR 9050)"'}>${fmt(bl, 0)} cm</strong>`;
+
+  // Esforços
+  $('esf-kv').innerHTML = `
+    <div>R<sub>A,k</sub> (tf/m)<b>${fmt(r.RA)}</b></div>
+    <div>R<sub>B,k</sub> (tf/m)<b>${fmt(r.RB)}</b></div>
+    <div title="em x = ${fmt(r.xM)} m">M<sub>k</sub> (tf·m/m)<b>${fmt(r.Mk)}</b></div>
+    <div>M<sub>d</sub> (tf·m/m)<b>${fmt(r.Md)}</b></div>`;
+
+  // Flexão
+  const fa = [];
+  if (r.flexImpossivel) {
+    $('flex-st').innerHTML = pill('fail', 'Seção insuficiente');
+    $('flex-res').innerHTML = `<div class="res-sub">Md excede a capacidade da seção de concreto. Aumentar h ou fck.</div>`;
+    $('flex-kv').innerHTML = '';
+  } else {
+    const xdOk = r.xd <= r.xdLim + 1e-9;
+    $('flex-st').innerHTML = !xdOk ? pill('fail', `x/d > ${fmt(r.xdLim)}`) : (r.AsEf > r.AsMax ? pill('fail', 'As > 4%') : pill('ok', 'OK'));
+    $('flex-res').innerHTML = `
+      <div class="res-topo">
+        <div class="res-num"><span class="val">Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}</span><span class="un">cm</span></div>
+        <div class="res-num"><span class="lbl">A<sub>s,ef</sub></span><span class="val" style="font-size:18px">${fmt(r.AsEf)}</span><span class="un">cm²/m</span></div>
+      </div>`;
+    $('flex-kv').innerHTML = `
+      <div>A<sub>s,calc</sub><b>${fmt(r.As)} cm²/m</b></div>
+      <div>A<sub>s,mín</sub> (${fmt(r.rhoMin, 3)}%)<b>${fmt(r.AsMin)} cm²/m</b></div>
+      <div>Taxa A<sub>s</sub>/A<sub>s,ef</sub><b>${fmt(r.utilFlex * 100, 0)} %</b>${barra(r.utilFlex)}</div>
+      <div>d<b>${fmt(r.d)} cm</b></div>
+      <div>x/d (lim ${fmt(r.xdLim)})<b>${fmt(r.xd, 3)}</b></div>
+      <div>s<sub>máx</sub> (20.1)<b>${fmt(r.sMax, 0)} cm</b></div>`;
+    if (!xdOk) fa.push(`<div class="alert alert-danger">x/d = ${fmt(r.xd, 3)} &gt; ${fmt(r.xdLim)} (14.6.4.3 e 14.7.4): aumentar h. Armadura dupla não é usual em escada.</div>`);
+    if ((r.As || 0) < r.AsMin) fa.push(`<div class="alert alert-info">A<sub>s,calc</sub> &lt; A<sub>s,mín</sub>: governa a mínima (Tabela 19.1 → ρ<sub>mín</sub> da Tabela 17.3).</div>`);
+    if (r.princ.sCalc > r.sMax) fa.push(`<div class="alert alert-info">Espaçamento limitado por s<sub>máx</sub> = ${fmt(r.sMax, 0)} cm (20.1).</div>`);
+  }
+  if (I.phiP > r.phiMax + 1e-9) fa.push(`<div class="alert alert-danger">Ø ${fphi(I.phiP)} &gt; h/8 = ${fmt(r.phiMax, 1)} mm (20.1): reduzir a bitola.</div>`);
+  if (r.princ.s < 7) fa.push(`<div class="alert alert-warning">s = ${fmt(r.princ.s, 0)} cm: espaçamento pequeno para concretagem (recomendação prática, não normativa). Aumentar a bitola.</div>`);
+  if (I.h < 8) fa.push(`<div class="alert alert-warning">h = ${fmt(I.h, 1)} cm &lt; 8 cm (13.2.4.1, lajes de piso).</div>`);
+  $('flex-al').innerHTML = fa.join('');
+
+  // Distribuição, borda e cortante
+  const vOk = r.utilV <= 1;
+  $('cis-st').innerHTML = vOk ? pill('ok', 'V OK') : pill('fail', 'V > VRd1');
+  $('cis-kv').innerHTML = `
+    <div>Distribuição<b>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)}</b></div>
+    <div>A<sub>s,dist</sub> nec./ef.<b>${fmt(r.AsDist)} / ${fmt(r.AsDistEf)}</b></div>
+    <div>Borda (apoios)<b>${fmt(r.AsBorda)} cm²/m</b></div>
+    <div>V<sub>Sd</sub><b>${fmt(r.Vsd)} tf/m</b></div>
+    <div>V<sub>Rd1</sub><b>${fmt(r.VRd1)} tf/m</b></div>
+    <div>Taxa V<sub>Sd</sub>/V<sub>Rd1</sub><b>${fmt(r.utilV * 100, 0)} %</b>${barra(r.utilV)}</div>`;
+  const ca = [];
+  if (!vOk) ca.push(`<div class="alert alert-danger">V<sub>Sd</sub> &gt; V<sub>Rd1</sub> (19.4.1): aumentar h ou a armadura que chega ao apoio.</div>`);
+  $('cis-al').innerHTML = ca.join('');
+
+  // Flecha
+  const fOk = r.utilFl <= 1, qOk = r.utilQ <= 1;
+  $('fl-st').innerHTML = fOk && qOk ? pill('ok', 'OK') : pill('fail', 'Não atende');
+  $('fl-kv').innerHTML = `
+    <div title="combinação quase permanente g + ψ2·q">a<sub>0</sub> imediata<b>${fmt(r.a0, 2)} cm</b></div>
+    <div title="a0·(1 + αf)">a<sub>t</sub> (≤ L/250 = ${fmt(r.aLim, 2)})<b>${fmt(r.aT, 2)} cm</b></div>
+    <div>Taxa a<sub>t</sub><b>${fmt(r.utilFl * 100, 0)} %</b>${barra(r.utilFl)}</div>
+    <div>M<sub>a</sub> / M<sub>r</sub> (tf·m/m)<b>${fmt(r.Ma)} / ${fmt(r.Mr)}</b></div>
+    <div>I<sub>eq</sub> / I<sub>c</sub><b>${fmt(r.Ieq / r.Ic * 100, 0)} %</b></div>
+    <div>α<sub>f</sub> (t<sub>0</sub> = ${fmt(r.I.t0, 1)})<b>${fmt(r.alfaF, 2)}</b></div>
+    <div title="vibração: parcela ψ2·q">a<sub>q</sub> (≤ L/350 = ${fmt(r.aLimQ, 2)})<b>${fmt(r.aQpsi, 2)} cm</b></div>
+    <div>Taxa a<sub>q</sub><b>${fmt(r.utilQ * 100, 0)} %</b>${barra(r.utilQ)}</div>`;
+  const fl = [];
+  if (!fOk) fl.push(`<div class="alert alert-danger">a<sub>t</sub> &gt; L/250 (Tabela 13.3): aumentar h ou prever contraflecha.</div>`);
+  if (!qOk) fl.push(`<div class="alert alert-danger">Flecha da variável &gt; L/350 (Tabela 13.3, vibração).</div>`);
+  $('fl-al').innerHTML = fl.join('');
+
+  desenhar();
+}
+
+/* ==================== DESENHOS ==================== */
+const COR = { conc: '#F1F3F4', linha: '#1F2328', cota: '#5F6368', azul: '#1A56DB', azulEsc: '#0F3B9E', verm: '#C62828', verde: '#1B5E20', ambar: '#B26A00', carga: '#DDE6FB' };
+function aba() { return document.querySelector('input[name="aba"]:checked').value; }
+
+// Contorno da escada em coordenadas do mundo (m, y para cima). t = espessura desenhada (m).
+function perfil(A, B, C, tgA, cosA, t, nDeg) {
+  const L = A + B + C, R = B * tgA, n = Math.max(1, nDeg);
+  const pw = B / n, ew = R / n;
+  const top = [[0, 0]];
+  if (A > 0) top.push([A, 0]);
+  for (let i = 0; i < n; i++) { top.push([A + i * pw, (i + 1) * ew]); top.push([A + (i + 1) * pw, (i + 1) * ew]); }
+  if (C > 0) top.push([L, R]);
+  const tv = t / cosA, off = (tv - t) / tgA;
+  const bot = [];
+  // de trás para frente (direita → esquerda)
+  if (C > 0) { bot.push([L, R - t]); bot.push([Math.min(A + B + off, L), R - t]); } else bot.push([L, R - tv]);
+  if (A > 0) { bot.push([Math.min(A + off, A + B), -t]); bot.push([0, -t]); } else bot.push([0, -tv]);
+  return { top, bot, R, tv, off, pw, ew, n, L };
+}
+function polyPts(arr, X, Y) { return arr.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(' '); }
+const tick = (x, y) => `<line x1="${x - 4}" y1="${y + 4}" x2="${x + 4}" y2="${y - 4}" stroke="${COR.cota}" stroke-width="1.1"/>`;
+function cotaH(xa, xb, y, txt, cor = COR.cota) {
+  return `<line x1="${xa}" y1="${y}" x2="${xb}" y2="${y}" stroke="${cor}" stroke-width="1"/>${tick(xa, y)}${tick(xb, y)}
+  <text x="${(xa + xb) / 2}" y="${y - 6}" text-anchor="middle" font-size="12" font-weight="600" fill="${cor}">${txt}</text>`;
+}
+function cotaV(x, ya, yb, txt, lado = 1) {
+  const tk = y => `<line x1="${x - 4}" y1="${y + 4}" x2="${x + 4}" y2="${y - 4}" stroke="${COR.cota}" stroke-width="1.1"/>`;
+  return `<line x1="${x}" y1="${ya}" x2="${x}" y2="${yb}" stroke="${COR.cota}" stroke-width="1"/>${tk(ya)}${tk(yb)}
+  <text x="${x + 7 * lado}" y="${(ya + yb) / 2 + 4}" text-anchor="${lado > 0 ? 'start' : 'end'}" font-size="12" font-weight="600" fill="${COR.cota}">${txt}</text>`;
+}
+const ext = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#9AA0A6" stroke-width="0.7" stroke-dasharray="3 2"/>`;
+function apoio(x, y, rolo) {
+  let s = `<path d="M ${x} ${y} l -9 15 h 18 Z" fill="#fff" stroke="${COR.linha}" stroke-width="1.3"/>`;
+  if (rolo) s += `<line x1="${x - 13}" y1="${y + 20}" x2="${x + 13}" y2="${y + 20}" stroke="${COR.linha}" stroke-width="1.3"/>`;
+  else s += `<g stroke="${COR.linha}" stroke-width="1">${[-12, -6, 0, 6].map(d => `<line x1="${x + d}" y1="${y + 21}" x2="${x + d + 5}" y2="${y + 15}"/>`).join('')}</g>`;
+  return s;
+}
+function svgWrap(VW, VH, s, aria) { return `<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="${aria}">${s}</svg>`; }
+
+function desenhoGeometria(r) {
+  const I = r.I, VW = 540, mxE = 24, mxD = 80;
+  const P0 = perfil(I.A, I.B, I.C, r.tgA, r.cosA, I.h / 100, Math.round(I.B * 100 / I.p));
+  const k = Math.min((VW - mxE - mxD) / r.L, 115 / Math.max(P0.R, 0.01));
+  const ox = mxE + (VW - mxE - mxD - r.L * k) / 2, yTopo = 94 + P0.R * k;  // y da cota 0 (patamar A)
+  const X = x => ox + x * k, Y = y => yTopo - y * k;
+  let s = '';
+  // Cargas características g + q (projeção horizontal) sobre a escada
+  const ws = [r.g1 + I.q, r.g2 + I.q, r.g3 + I.q], segs = [[0, I.A], [I.A, I.A + I.B], [I.A + I.B, r.L]];
+  const wMax = Math.max(...ws), yBase = Y(P0.R) - 20, hMax = 34;
+  segs.forEach(([a, b], i) => {
+    if (b - a <= 1e-9) return;
+    const hh = hMax * ws[i] / wMax;
+    s += `<rect x="${X(a)}" y="${yBase - hh}" width="${X(b) - X(a)}" height="${hh}" fill="${COR.carga}" stroke="${COR.azul}" stroke-width="1"/>`;
+    const nArr = Math.max(2, Math.round((X(b) - X(a)) / 22));
+    for (let j = 0; j <= nArr; j++) { const xx = X(a) + (X(b) - X(a)) * j / nArr; s += `<line x1="${xx}" y1="${yBase - hh}" x2="${xx}" y2="${yBase}" stroke="${COR.azul}" stroke-width="0.8"/><path d="M ${xx - 3} ${yBase - 5} L ${xx} ${yBase} L ${xx + 3} ${yBase - 5}" fill="none" stroke="${COR.azul}" stroke-width="0.8"/>`; }
+    const estreito = (X(b) - X(a)) < 105;
+    s += `<text x="${(X(a) + X(b)) / 2}" y="${yBase - hMax - 6 - (estreito && i !== 1 ? 14 : 0)}" text-anchor="middle" font-size="11.5" font-weight="600" fill="${COR.azulEsc}">${estreito ? '' : `q${i + 1} = `}${fmt(ws[i])}${estreito ? '' : ' tf/m²'}</text>`;
+  });
+  // Concreto
+  s += `<polygon points="${polyPts(P0.top.concat(P0.bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.4" stroke-linejoin="round"/>`;
+  // Apoios
+  const yApA = Y(I.A > 0 ? -I.h / 100 : -P0.tv), yApC = Y(I.C > 0 ? P0.R - I.h / 100 : P0.R - P0.tv);
+  s += apoio(X(0), yApA, false) + apoio(X(r.L), yApC, true);
+  // Cotas horizontais
+  const yC = yApA + 42;
+  s += ext(X(0), yApA + 22, X(0), yC + 22) + ext(X(r.L), yApC + 22, X(r.L), yC + 22);
+  if (I.A > 0) s += ext(X(I.A), Y(0), X(I.A), yC + 4);
+  if (I.C > 0) s += ext(X(I.A + I.B), Y(P0.R), X(I.A + I.B), yC + 4);
+  if (I.A > 0) s += cotaH(X(0), X(I.A), yC, `A = ${fmt(I.A)}`);
+  s += cotaH(X(I.A), X(I.A + I.B), yC, `B = ${fmt(I.B)}`);
+  if (I.C > 0) s += cotaH(X(I.A + I.B), X(r.L), yC, `C = ${fmt(I.C)}`);
+  s += cotaH(X(0), X(r.L), yC + 26, `L = ${fmt(r.L)} m (vão de cálculo)`, COR.linha);
+  // Cota vertical do desnível
+  s += ext(X(I.A + I.B), Y(P0.R), X(r.L) + 26, Y(P0.R)) + ext(X(I.A), Y(0), X(r.L) + 26, Y(0));
+  s += cotaV(X(r.L) + 22, Y(P0.R), Y(0), `${fmt(P0.R)} m`);
+  // ângulo α
+  const ax = X(I.A + P0.off) + 4, ay = Y(-I.h / 100);
+  const rA = 34;
+  s += `<path d="M ${ax + rA} ${ay} A ${rA} ${rA} 0 0 0 ${ax + rA * Math.cos(r.alfa)} ${ay - rA * Math.sin(r.alfa)}" fill="none" stroke="${COR.cota}" stroke-width="1"/>`;
+  s += `<line x1="${ax}" y1="${ay}" x2="${ax + rA + 12}" y2="${ay}" stroke="#9AA0A6" stroke-width="0.7" stroke-dasharray="3 2"/>`;
+  s += `<text x="${ax + rA + 4}" y="${ay - 7}" font-size="12" font-weight="600" fill="${COR.cota}">α = ${fmt(r.alfaGr, 1)}°</text>`;
+  // rótulos dos trechos
+  if (I.A > 0 && I.A * k > 70) s += `<text x="${X(I.A / 2)}" y="${Y(0) - 8}" text-anchor="middle" font-size="11" fill="${COR.cota}">patamar A</text>`;
+  if (I.C > 0) s += `<text x="${X(I.A + I.B + I.C / 2)}" y="${Y(P0.R) + 26 + I.h / 100 * k}" text-anchor="middle" font-size="11" fill="${COR.cota}">patamar C</text>`;
+  { const xs = I.A + I.B * 0.5, tx = X(xs) + 6, ty = Y((xs - I.A) * r.tgA - P0.tv) + 14;
+    s += `<text x="${tx}" y="${ty}" font-size="11" fill="${COR.cota}" transform="rotate(${-r.alfaGr} ${tx} ${ty})">lance · h = ${fmt(I.h, 1)} cm</text>`; }
+  const VH = yC + 44;
+  return {
+    svg: svgWrap(VW, VH, s, 'Elevação da escada com patamares, cargas e cotas'),
+    leg: `A = patamar inferior · B = lance (projeção horizontal) · C = patamar superior (A ou C podem ser 0). q<sub>i</sub> = g + q característicos. Em escala.`
+  };
+}
+
+function desenhoDegrau(r) {
+  const I = r.I, VW = 540, VH = 262;
+  const e = I.e, p = I.p, h = I.h, tv = r.hv, tg = e / p;
+  // dois degraus completos; trecho de laje de x = −p/2 a x = 2p + p/2 (cm), canto interno do 1º degrau em (0,0)
+  const x0 = -p / 2, x1 = 2.5 * p;
+  const yMin = x0 * tg - tv, yMax = 2 * e;
+  const k = Math.min((VW - 200) / (x1 - x0), (VH - 64) / (yMax - yMin));
+  const ox = 110 - x0 * k, oy = 44 + yMax * k;
+  const X = x => ox + x * k, Y = y => oy - y * k;
+  const top = [[x0, x0 * tg], [0, 0], [0, e], [p, e], [p, 2 * e], [2 * p, 2 * e], [x1, x1 * tg]];
+  const bot = [[x1, x1 * tg - tv], [x0, x0 * tg - tv]];
+  let s = `<polygon points="${polyPts(top.concat(bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.4" stroke-linejoin="round"/>`;
+  // as extremidades são cortes: traço fino
+  s += `<line x1="${X(x0)}" y1="${Y(x0 * tg)}" x2="${X(x0)}" y2="${Y(x0 * tg - tv)}" stroke="${COR.conc}" stroke-width="2.5"/><line x1="${X(x0)}" y1="${Y(x0 * tg)}" x2="${X(x0)}" y2="${Y(x0 * tg - tv)}" stroke="${COR.linha}" stroke-width="0.8" stroke-dasharray="4 3"/>`;
+  s += `<line x1="${X(x1)}" y1="${Y(x1 * tg)}" x2="${X(x1)}" y2="${Y(x1 * tg - tv)}" stroke="${COR.conc}" stroke-width="2.5"/><line x1="${X(x1)}" y1="${Y(x1 * tg)}" x2="${X(x1)}" y2="${Y(x1 * tg - tv)}" stroke="${COR.linha}" stroke-width="0.8" stroke-dasharray="4 3"/>`;
+  // face superior da laje (linha dos cantos internos) e linha de espessura média (e/2 acima)
+  s += `<line x1="${X(x0)}" y1="${Y(x0 * tg)}" x2="${X(x1)}" y2="${Y(x1 * tg)}" stroke="${COR.cota}" stroke-width="0.9" stroke-dasharray="5 3"/>`;
+  s += `<line x1="${X(x0)}" y1="${Y(x0 * tg + e / 2)}" x2="${X(2 * p)}" y2="${Y(2 * p * tg + e / 2)}" stroke="${COR.ambar}" stroke-width="1.2" stroke-dasharray="2 3"/>`;
+  // cotas e, p
+  s += ext(X(2 * p), Y(2 * e), X(2 * p) + 26, Y(2 * e)) + ext(X(p), Y(e), X(2 * p) + 26, Y(e));
+  s += cotaV(X(2 * p) + 22, Y(2 * e), Y(e), `e = ${fmt(e, 1)}`);
+  s += ext(X(p), Y(2 * e), X(p), Y(2 * e) - 24) + ext(X(2 * p), Y(2 * e), X(2 * p), Y(2 * e) - 24);
+  s += cotaH(X(p), X(2 * p), Y(2 * e) - 18, `p = ${fmt(p, 1)}`);
+  // h perpendicular
+  const xm = 1.5 * p, ym = xm * tg, nx = Math.sin(r.alfa), ny = -Math.cos(r.alfa);
+  const xa = xm + nx * h, ya = ym + ny * h;
+  s += `<line x1="${X(xm)}" y1="${Y(ym)}" x2="${X(xa)}" y2="${Y(ya)}" stroke="${COR.azul}" stroke-width="2"/>`;
+  s += `<circle cx="${X(xm)}" cy="${Y(ym)}" r="2.6" fill="${COR.azul}"/><circle cx="${X(xa)}" cy="${Y(ya)}" r="2.6" fill="${COR.azul}"/>`;
+  s += `<text x="${X(xa) + 8}" y="${Y(ya) + 12}" font-size="12.5" font-weight="600" fill="${COR.azulEsc}">h = ${fmt(h, 1)}</text>`;
+  // h/cos α vertical
+  const xv = x0 + p * 0.06;
+  s += `<line x1="${X(xv)}" y1="${Y(xv * tg)}" x2="${X(xv)}" y2="${Y(xv * tg - tv)}" stroke="${COR.verm}" stroke-width="2"/>`;
+  s += `<text x="${X(x0) - 8}" y="${Y(xv * tg - tv / 2) + 4}" text-anchor="end" font-size="12.5" font-weight="600" fill="${COR.verm}">h/cos α = ${fmt(tv, 1)}</text>`;
+  // α na face inferior
+  const bx = X(x0 + p * 0.15), by = Y((x0 + p * 0.15) * tg - tv), rA = 44;
+  s += `<line x1="${bx}" y1="${by}" x2="${bx + rA + 14}" y2="${by}" stroke="#9AA0A6" stroke-width="0.7" stroke-dasharray="3 2"/>`;
+  s += `<path d="M ${bx + rA} ${by} A ${rA} ${rA} 0 0 0 ${bx + rA * Math.cos(r.alfa)} ${by - rA * Math.sin(r.alfa)}" fill="none" stroke="${COR.cota}" stroke-width="1"/>`;
+  s += `<text x="${bx + rA + 6}" y="${by - 6}" font-size="12.5" font-weight="600" fill="${COR.cota}">α = ${fmt(r.alfaGr, 1)}°</text>`;
+  return {
+    svg: svgWrap(VW, VH, s, 'Detalhe do degrau com espelho, piso, espessura e inclinação'),
+    leg: `Cotas em cm, em escala. pp lance (por m² em projeção) = 2,5·<b style="color:${COR.verm}">h/cos α</b> + γ<sub>deg</sub>·e/2 = 2,5·${fmt(h / 100, 3)}/${fmt(r.cosA, 3)} + ${fmt(I.gamaDeg, 1)}·${fmt(e / 200, 3)} = <b>${fmt(r.ppL, 3)} tf/m²</b>. <b style="color:${COR.azul}">h</b> ⊥ ao lance; <span style="color:${COR.ambar}">pontilhado</span> = espessura média h<sub>m</sub> = ${fmt(r.hm, 1)} cm.`
+  };
+}
+
+function desenhoEsforcos(r) {
+  const I = r.I, VW = 540, mx = 46, L = r.L;
+  const k = (VW - 2 * mx) / L, X = x => mx + x * k;
+  let s = '';
+  // Viga em projeção horizontal + cargas
+  const yV = 74, ws = [r.g1 + I.q, r.g2 + I.q, r.g3 + I.q], segs = [[0, I.A], [I.A, I.A + I.B], [I.A + I.B, L]];
+  const wMax = Math.max(...ws);
+  segs.forEach(([a, b], i) => {
+    if (b - a <= 1e-9) return;
+    const hh = 32 * ws[i] / wMax;
+    s += `<rect x="${X(a)}" y="${yV - 6 - hh}" width="${X(b) - X(a)}" height="${hh}" fill="${COR.carga}" stroke="${COR.azul}" stroke-width="1"/>`;
+    s += `<text x="${(X(a) + X(b)) / 2}" y="${yV - 12 - hh}" text-anchor="middle" font-size="11.5" font-weight="600" fill="${COR.azulEsc}">${fmt(ws[i])}</text>`;
+  });
+  s += `<text x="${mx - 6}" y="${yV - 20}" text-anchor="end" font-size="11" fill="${COR.cota}">g+q</text><text x="${mx - 6}" y="${yV - 8}" text-anchor="end" font-size="11" fill="${COR.cota}">tf/m</text>`;
+  s += `<line x1="${X(0)}" y1="${yV}" x2="${X(L)}" y2="${yV}" stroke="${COR.linha}" stroke-width="3"/>`;
+  s += apoio(X(0), yV + 2, false) + apoio(X(L), yV + 2, true);
+  s += `<text x="${X(0)}" y="${yV + 38}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.linha}">R<tspan baseline-shift="sub" font-size="9">A</tspan> = ${fmt(r.RA)}</text>`;
+  s += `<text x="${X(L)}" y="${yV + 38}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.linha}">R<tspan baseline-shift="sub" font-size="9">B</tspan> = ${fmt(r.RB)}</text>`;
+  [I.A, I.A + I.B].forEach(x => { if (x > 1e-9 && x < L - 1e-9) s += `<line x1="${X(x)}" y1="${yV - 50}" x2="${X(x)}" y2="${yV + 6}" stroke="#9AA0A6" stroke-width="0.7" stroke-dasharray="3 2"/>`; });
+  // Diagrama de momento (característico)
+  const y0 = 128, hM = 64, N = 120;
+  let d = `M ${X(0)} ${y0}`; for (let i = 0; i <= N; i++) { const x = L * i / N; d += ` L ${X(x)} ${y0 + hM * momento(r.segK, r.RA, x) / r.Mk}`; } d += ` L ${X(L)} ${y0} Z`;
+  s += `<line x1="${X(0)}" y1="${y0}" x2="${X(L)}" y2="${y0}" stroke="${COR.linha}" stroke-width="1"/>`;
+  s += `<path d="${d}" fill="rgba(26,86,219,0.10)" stroke="${COR.azul}" stroke-width="1.6"/>`;
+  s += `<line x1="${X(r.xM)}" y1="${y0}" x2="${X(r.xM)}" y2="${y0 + hM}" stroke="${COR.azulEsc}" stroke-width="1" stroke-dasharray="3 2"/>`;
+  s += `<text x="${X(r.xM)}" y="${y0 + hM + 16}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.azulEsc}">M<tspan baseline-shift="sub" font-size="9">k,máx</tspan> = ${fmt(r.Mk)} tf·m/m · M<tspan baseline-shift="sub" font-size="9">d</tspan> = ${fmt(r.Md)}</text>`;
+  s += `<text x="${X(r.xM)}" y="${y0 + hM + 32}" text-anchor="middle" font-size="11" fill="${COR.cota}">x = ${fmt(r.xM)} m · trecho ${r.trechoM}</text>`;
+  s += `<text x="${mx - 6}" y="${y0 + 30}" text-anchor="end" font-size="11" fill="${COR.cota}">M<tspan baseline-shift="sub" font-size="8">k</tspan></text>`;
+  // Elástica (quase permanente)
+  const y1 = y0 + hM + 50, hF = 30, NN = r.v.length - 1;
+  let de = `M ${X(0)} ${y1}`; r.v.forEach((v, i) => { if (i % 8 === 0 || i === NN) de += ` L ${X(L * i / NN)} ${y1 + hF * v / r.a0}`; });
+  s += `<line x1="${X(0)}" y1="${y1}" x2="${X(L)}" y2="${y1}" stroke="${COR.linha}" stroke-width="1"/>`;
+  s += `<path d="${de}" fill="none" stroke="${COR.verm}" stroke-width="1.6" stroke-dasharray="6 3"/>`;
+  s += `<line x1="${X(r.xa0)}" y1="${y1}" x2="${X(r.xa0)}" y2="${y1 + hF}" stroke="${COR.verm}" stroke-width="1"/>`;
+  s += `<text x="${X(r.xa0)}" y="${y1 + hF + 16}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.verm}">a<tspan baseline-shift="sub" font-size="9">0</tspan> = ${fmt(r.a0, 3)} cm · a<tspan baseline-shift="sub" font-size="9">t</tspan> = ${fmt(r.aT, 3)} cm</text>`;
+  s += `<text x="${mx - 6}" y="${y1 + 18}" text-anchor="end" font-size="11" fill="${COR.cota}">a</text>`;
+  const VH = y1 + hF + 24;
+  return {
+    svg: svgWrap(VW, VH, s, 'Modelo biapoiado, diagrama de momento fletor e linha elástica'),
+    leg: `Modelo de viga biapoiada em projeção horizontal, faixa de 1 m. Cargas e momento <b>característicos</b> (M<sub>d</sub> = γ<sub>f</sub>·M<sub>k</sub>). Elástica (sem escala vertical) na combinação <b>quase permanente</b> g + ψ<sub>2</sub>q, com (EI)<sub>eq</sub> constante.`
+  };
+}
+
+function desenhoArmacao(r) {
+  const I = r.I, VW = 540, mxE = 28, mxD = 28;
+  const nDeg = Math.round(I.B * 100 / I.p);
+  const P1 = perfil(I.A, I.B, I.C, r.tgA, r.cosA, 1, nDeg);
+  const k = Math.min((VW - mxE - mxD) / r.L, 150 / Math.max(P1.R, 0.01));
+  const tDes = Math.max(I.h / 100, 34 / k);                  // espessura exagerada p/ leitura (≥ 40 px)
+  const P = perfil(I.A, I.B, I.C, r.tgA, r.cosA, tDes, nDeg);
+  const ox = mxE + (VW - mxE - mxD - r.L * k) / 2, yTopo = 34 + P.R * k;
+  const X = x => ox + x * k, Y = y => yTopo - y * k;
+  const cv = tDes * 0.2;                                      // cobrimento desenhado
+  const tg = r.tgA, cs = r.cosA, A = I.A, B = I.B, C = I.C, L = r.L, R = P.R;
+  let s = `<polygon points="${polyPts(P.top.concat(P.bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.3" stroke-linejoin="round"/>`;
+  const yL = x => (x - A) * tg - P.tv + cv / cs;              // armadura inferior do lance
+  const ySupL = x => (x - A) * tg - cv / cs;                  // armadura superior do lance
+  const gancho = 10;
+  // N1 — inferior do patamar A + lance; dobra no canto convexo; reta além do canto côncavo até o topo do patamar C
+  const yA = -tDes + cv;
+  const xDobra = A > 0 ? A + (P.tv - cv / cs - tDes + cv) / tg : 0;
+  const xFim1 = Math.min(A + (R - cv + P.tv - cv / cs) / tg, L - cv);
+  let n1 = A > 0 ? `M ${X(cv)} ${Y(yA) - gancho} L ${X(cv)} ${Y(yA)} L ${X(xDobra)} ${Y(yA)}` : `M ${X(cv)} ${Y(yL(cv)) - gancho} L ${X(cv)} ${Y(yL(cv))}`;
+  n1 += ` L ${X(xFim1)} ${Y(yL(xFim1))}`;
+  if (C <= 0) n1 += ` L ${X(xFim1)} ${Y(yL(xFim1)) - gancho}`;
+  s += `<path d="${n1}" fill="none" stroke="${COR.azul}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // N2 — inferior do patamar C, reta para dentro do lance até a face superior
+  const yC2 = R - tDes + cv;
+  if (C > 0) {
+    const xFim2 = Math.max(A + (yC2 + cv / cs) / tg, A);
+    s += `<path d="M ${X(L - cv)} ${Y(yC2) - gancho} L ${X(L - cv)} ${Y(yC2)} L ${X(xFim2)} ${Y(yC2)}" fill="none" stroke="${COR.verde}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  // N3 — distribuição (pontos sobre N1 e N2)
+  const nPts = Math.max(8, Math.round(L / 0.18));
+  for (let i = 1; i < nPts; i++) {
+    const x = L * i / nPts; let y = null;
+    if (A > 0 && x < xDobra) y = yA; else if (x <= A + B) y = yL(x); else if (C > 0) y = yC2;
+    if (y !== null) s += `<circle cx="${X(x)}" cy="${Y(y) - 4}" r="2.3" fill="${COR.ambar}"/>`;
+  }
+  // N4 — borda nos apoios (superior), até 0,15 L. No canto inferior a face superior é côncava: N4 segue reta.
+  const l4 = 0.15 * L;
+  let n4e, yN4e, xN4e;
+  if (A > 0) {
+    xN4e = Math.min(l4, A + (P.tv - cv / cs - cv) / tg - 0.02); yN4e = -cv;
+    n4e = `M ${X(cv)} ${Y(-cv) + gancho} L ${X(cv)} ${Y(-cv)} L ${X(xN4e)} ${Y(-cv)}`;
+  } else {
+    xN4e = l4; yN4e = ySupL(l4);
+    n4e = `M ${X(cv)} ${Y(ySupL(cv)) + gancho} L ${X(cv)} ${Y(ySupL(cv))} L ${X(l4)} ${Y(ySupL(l4))}`;
+  }
+  let n4d, xN4d = L - l4, yN4d;
+  if (C > 0) {
+    n4d = `M ${X(L - cv)} ${Y(R - cv) + gancho} L ${X(L - cv)} ${Y(R - cv)}`;
+    if (L - l4 >= A + B) { n4d += ` L ${X(L - l4)} ${Y(R - cv)}`; yN4d = R - cv; }
+    else { n4d += ` L ${X(A + B)} ${Y(R - cv)} L ${X(L - l4)} ${Y(ySupL(L - l4))}`; yN4d = ySupL(L - l4); }  // canto convexo: pode dobrar
+  } else {
+    yN4d = ySupL(L - l4);
+    n4d = `M ${X(L - cv)} ${Y(ySupL(L - cv)) + gancho} L ${X(L - cv)} ${Y(ySupL(L - cv))} L ${X(L - l4)} ${Y(yN4d)}`;
+  }
+  s += `<path d="${n4e}" fill="none" stroke="${COR.verm}" stroke-width="2" stroke-linejoin="round"/><path d="${n4d}" fill="none" stroke="${COR.verm}" stroke-width="2" stroke-linejoin="round"/>`;
+  // Marcadores dos cantos
+  const marca = (cx, cy, n, cor) => `<circle cx="${cx}" cy="${cy}" r="20" fill="none" stroke="${cor}" stroke-width="1.2" stroke-dasharray="4 3"/>
+    <circle cx="${cx + 20}" cy="${cy + 18}" r="9" fill="${cor}"/><text x="${cx + 20}" y="${cy + 22}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${n}</text>`;
+  if (A > 0) s += marca(X(A + P.off), Y(-tDes), 1, COR.verde);
+  if (C > 0) s += marca(X(A + B + P.off), Y(R - tDes), 2, COR.verm);
+  // Rótulos curtos
+  const xl1 = A + B * 0.42, lx = X(xl1) + 8, ly = Y(yL(xl1)) + 24;
+  s += `<text x="${lx}" y="${ly}" font-size="12" font-weight="600" fill="${COR.azulEsc}" transform="rotate(${-r.alfaGr} ${lx} ${ly})">N1 · Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}</text>`;
+  if (C > 0) s += `<text x="${X(A + B + C * 0.6)}" y="${Y(R - tDes) + 18}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.verde}">N2 · Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}</text>`;
+  s += A > 0 ? `<text x="${X(cv) + 2}" y="${Y(0) - 8}" font-size="11.5" font-weight="600" fill="${COR.verm}">N4</text>`
+             : `<text x="${X(xN4e) + 6}" y="${Y(yN4e) + 4}" font-size="11.5" font-weight="600" fill="${COR.verm}">N4</text>`;
+  s += C > 0 ? `<text x="${X(L - cv) - 2}" y="${Y(R) - 8}" text-anchor="end" font-size="11.5" font-weight="600" fill="${COR.verm}">N4</text>`
+             : `<text x="${X(xN4d) - 6}" y="${Y(yN4d) + 4}" text-anchor="end" font-size="11.5" font-weight="600" fill="${COR.verm}">N4</text>`;
+  s += apoio(X(0), Y(A > 0 ? -tDes : -P.tv), false) + apoio(X(L), Y(C > 0 ? R - tDes : R - P.tv), true);
+  const VH = Y(-P.tv) + 34;
+  return {
+    svg: svgWrap(VW, VH, s, 'Esquema de armação da escada'),
+    leg: `Sem escala na espessura. <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distribuição Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
+      ${A > 0 ? `<b style="color:${COR.verde}">①</b> canto convexo: pode dobrar.` : ''}${C > 0 ? ` <b style="color:${COR.verm}">②</b> canto côncavo: <b>não dobrar</b> (empuxo ao vazio) — cruzar N1/N2 e ancorar ≥ ℓb = ${fmt(r.lb, 0)} cm além do cruzamento.` : ''}`
+  };
+}
+
+function desenhar() {
+  const box = $('svg-box'), leg = $('leg');
+  if (!R || !R.ok) { box.innerHTML = ''; leg.innerHTML = ''; return; }
+  const a = aba();
+  const tit = { geo: 'Elevação — geometria e cargas', deg: 'Detalhe do degrau', esf: 'Esforços e elástica', arm: 'Esquema de armação' }[a];
+  const d = a === 'geo' ? desenhoGeometria(R) : a === 'deg' ? desenhoDegrau(R) : a === 'esf' ? desenhoEsforcos(R) : desenhoArmacao(R);
+  box.innerHTML = d.svg; leg.innerHTML = d.leg;
+}
+
+/* ==================== MEMORIAL ==================== */
+function memorialHTML(r) {
+  const I = r.I, ok = b => b ? '<span class="ok">atende</span>' : '<span class="nok">não atende</span>';
+  const tab = r.tabela.map(t => `<tr class="${t.phi === I.phiP ? 'sel' : ''}"><td>Ø ${fphi(t.phi)}</td><td>${fmt(t.a, 3)}</td><td>${fmt(t.sCalc, 1)}</td><td>${fmt(t.s, 0)}</td><td>${fmt(t.AsEf)}</td><td>${t.okPhi ? '✓' : '<span class="nok">Ø &gt; h/8</span>'}</td></tr>`).join('');
+  return `
+  <div class="card mm bloco"><h3>1. Dados</h3>
+    Geometria: A = ${fmt(I.A)} m · B = ${fmt(I.B)} m · C = ${fmt(I.C)} m → L = ${fmt(r.L)} m (projeção horizontal) · h = ${fmt(I.h, 1)} cm · e = ${fmt(I.e, 1)} cm · p = ${fmt(I.p, 1)} cm<br>
+    Materiais: concreto C${I.fck} (γc = 1,4) · ${I.aco === 600 ? 'CA-60' : 'CA-50'} (γs = 1,15) · c = ${fmt(I.c, 1)} cm · γf = ${fmt(I.gf)} (g e q) · faixa b = 100 cm<br>
+    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · extra A = ${fmt(I.gA)} · extra C = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ · γ<sub>degraus</sub> = ${fmt(I.gamaDeg, 1)} tf/m³<br>
+    Conversões: 1 tf = 10 kN; 1 MPa = 10 kgf/cm² = 0,1 kN/cm².
+  </div>
+  <div class="card mm bloco"><h3>2. Cargas por m² em projeção horizontal</h3>
+    <div class="fml">tg α = e/p = ${fmt(r.tgA, 4)} → α = ${fmt(r.alfaGr, 2)}° · cos α = ${fmt(r.cosA, 4)}</div>
+    <div class="fml">pp lance = 2,5·h/cos α + γdeg·e/2 = 2,5·${fmt(I.h / 100, 3)}/${fmt(r.cosA, 4)} + ${fmt(I.gamaDeg, 1)}·${fmt(I.e / 200, 3)} = ${fmt(r.ppL, 3)} tf/m²</div>
+    <div class="fml">pp patamar = 2,5·h = ${fmt(r.ppP, 3)} tf/m²</div>
+    <table><tr><th>Trecho</th><th>g (tf/m²)</th><th>q (tf/m²)</th><th>g + q (tf/m²)</th><th>g + ψ2q (tf/m²)</th></tr>
+      ${I.A > 0 ? `<tr><td>A — patamar inferior</td><td>${fmt(r.g1, 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.g1 + I.q, 3)}</td><td>${fmt(r.g1 + I.psi2 * I.q, 3)}</td></tr>` : ''}
+      <tr><td>B — lance</td><td>${fmt(r.g2, 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.g2 + I.q, 3)}</td><td>${fmt(r.g2 + I.psi2 * I.q, 3)}</td></tr>
+      ${I.C > 0 ? `<tr><td>C — patamar superior</td><td>${fmt(r.g3, 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.g3 + I.q, 3)}</td><td>${fmt(r.g3 + I.psi2 * I.q, 3)}</td></tr>` : ''}
+    </table>
+  </div>
+  <div class="card mm bloco"><h3>3. Esforços (viga biapoiada, faixa de 1 m)</h3>
+    <div class="fml">R<sub>B</sub> = Σ(qᵢ·ℓᵢ·x̄ᵢ)/L ; R<sub>A</sub> = Σ(qᵢ·ℓᵢ) − R<sub>B</sub></div>
+    Característico (g + q): R<sub>A,k</sub> = ${fmt(r.RA, 3)} tf/m (g ${fmt(r.RAg, 3)} + q ${fmt(r.RAq, 3)}) · R<sub>B,k</sub> = ${fmt(r.RB, 3)} tf/m (g ${fmt(r.RBg, 3)} + q ${fmt(r.RBq, 3)})<br>
+    M<sub>máx</sub> em V = 0: x = ${fmt(r.xM, 3)} m (trecho ${r.trechoM}) → <strong>M<sub>k</sub> = ${fmt(r.Mk, 3)} tf·m/m</strong> (g ${fmt(r.MkG, 3)} + q ${fmt(r.MkQ, 3)})<br>
+    <div class="fml">M<sub>d</sub> = γf·M<sub>k</sub> = ${fmt(I.gf)}·${fmt(r.Mk, 3)} = ${fmt(r.Md, 3)} tf·m/m = ${fmt(r.Md * 1000, 1)} kN·cm/m</div>
+  </div>
+  <div class="card mm bloco"><h3>4. Flexão — armadura principal (17.2.2, 8.2.10.1)</h3>
+    fcd = ${fmt(r.fcd, 2)} MPa · fyd = ${fmt(r.fyd, 1)} MPa · λ = ${fmt(r.lambda, 3)} · αc = ${fmt(r.alfaC, 3)} · ηc = ${fmt(r.etaC, 3)} · σcd = αc·ηc·fcd = ${fmt(r.sigcd, 2)} MPa<br>
+    <div class="fml">d = h − c − Ø/2 = ${fmt(I.h, 1)} − ${fmt(I.c, 1)} − ${fmt(I.phiP / 20, 2)} = ${fmt(r.d, 2)} cm</div>
+    ${r.flexImpossivel ? '<span class="nok">Md excede a capacidade da seção (raiz negativa). Aumentar h ou fck.</span>' : `
+    <div class="fml">λx = d·[1 − √(1 − 2·Md/(σcd·b·d²))] → x = ${fmt(r.x, 3)} cm · x/d = ${fmt(r.xd, 3)} ≤ ${fmt(r.xdLim)} (14.6.4.3 / 14.7.4): ${ok(r.xd <= r.xdLim + 1e-9)}</div>
+    <div class="fml">As = Md/[fyd·(d − λx/2)] = ${fmt(r.Md * 1000, 1)}/[${fmt(r.fyd / 10, 3)}·${fmt(r.z, 3)}] = ${fmt(r.As, 3)} cm²/m</div>`}
+    <div class="fml">As,mín = ρmín·b·h = ${fmt(r.rhoMin, 3)}%·100·${fmt(I.h, 1)} = ${fmt(r.AsMin, 3)} cm²/m (Tabela 19.1 → Tabela 17.3, C${I.fck})</div>
+    As,nec = máx(As; As,mín) = <strong>${fmt(r.AsNec, 3)} cm²/m</strong> · As,máx = 4%·b·h = ${fmt(r.AsMax, 1)} cm²/m (17.3.5.2.4)<br>
+    Espaçamento: s ≤ mín(2h; 20 cm) = ${fmt(r.sMax, 0)} cm (20.1) · Ø ≤ h/8 = ${fmt(r.phiMax, 1)} mm (20.1)
+    <table><tr><th>Bitola</th><th>Aφ (cm²)</th><th>s calc (cm)</th><th>s adot (cm)</th><th>As,ef (cm²/m)</th><th>Ø ≤ h/8</th></tr>${tab}</table>
+    Adotado: <strong>Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} cm → As,ef = ${fmt(r.AsEf, 2)} cm²/m</strong> · taxa As,calc/As,ef = ${fmt(r.utilFlex * 100, 0)} %
+  </div>
+  <div class="card mm bloco"><h3>5. Distribuição, borda e cortante</h3>
+    <div class="fml">As,dist ≥ máx(0,2·As,nec; 0,9 cm²/m; 0,5·As,mín) = máx(${fmt(0.2 * r.AsNec, 3)}; 0,90; ${fmt(0.5 * r.AsMin, 3)}) = ${fmt(r.AsDist, 3)} cm²/m (Tabela 19.1 e 20.1)</div>
+    Adotado: <strong>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} cm</strong> (s ≤ 33 cm) → ${fmt(r.AsDistEf, 2)} cm²/m<br>
+    <div class="fml">Borda sem continuidade (apoios): As ≥ 0,67·ρmín·b·h = ${fmt(r.AsBorda, 3)} cm²/m, estendida 0,15·L = ${fmt(r.lBorda, 2)} m a partir do apoio (Tabela 19.1 e 19.3.3.2)</div>
+    fctm = ${fmt(r.fctm, 3)} MPa · fctd = 0,7·fctm/γc = ${fmt(r.fctd, 3)} MPa · τRd = 0,25·fctd = ${fmt(r.tauRd, 4)} MPa<br>
+    k = 1,6 − d(m) = ${fmt(r.kV, 3)} ≥ 1 <span class="adot">(ADOTADO — CONFIRMAR: toda a armadura inferior chega ao apoio)</span> · ρ1 = As,ef/(b·d) = ${fmt(r.rho1 * 100, 3)} % ≤ 2 %<br>
+    <div class="fml">VRd1 = τRd·k·(1,2 + 40ρ1)·b·d = ${fmt(r.VRd1, 3)} tf/m (19.4.1, σcp = 0)</div>
+    <div class="fml">VSd = γf·máx(R<sub>A</sub>; R<sub>B</sub>) = ${fmt(r.Vsd, 3)} tf/m → taxa ${fmt(r.utilV * 100, 0)} %: ${ok(r.utilV <= 1)}</div>
+    <span class="nota">VSd tomado como a reação (a favor da segurança; no lance o cortante normal à laje é V·cos α).</span><br>
+    Ancoragem básica do cruzamento N1/N2: fbd = η1·η2·η3·fctd = ${fmt(r.eta1, 2)}·1·1·${fmt(r.fctd, 3)} = ${fmt(r.fbd, 3)} MPa → ℓb = (Ø/4)·fyd/fbd ≥ 25Ø = <strong>${fmt(r.lb, 1)} cm</strong> (9.3.2.1 e 9.4.2.4, boa aderência)
+  </div>
+  <div class="card mm bloco"><h3>6. Flecha — biapoiada (17.3.2.1, 13.3)</h3>
+    Combinação quase permanente: g + ψ2·q, ψ2 = ${fmt(I.psi2, 1)} (Tabela 11.2) → M<sub>a</sub> = ${fmt(r.Ma, 3)} tf·m/m em x = ${fmt(r.xMa, 3)} m<br>
+    <div class="fml">Eci = ${I.fck <= 50 ? 'αE·5600·√fck' : '21500·αE·(fck/10 + 1,25)^(1/3)'} = ${fmt(r.Eci, 0)} MPa · αi = 0,8 + 0,2·fck/80 ≤ 1 = ${fmt(r.alfaI, 3)} · Ecs = ${fmt(r.Ecs, 0)} MPa (8.2.8) · n = Es/Ecs = ${fmt(r.n, 3)}</div>
+    <div class="fml">Ic = b·h³/12 = ${fmt(r.Ic, 0)} cm⁴ · Mr = α·fctm·Ic/yt = 1,5·${fmt(r.fctm, 3)}·Ic/${fmt(I.h / 2, 2)} = ${fmt(r.Mr, 3)} tf·m/m (17.3.1, α = 1,5)</div>
+    <div class="fml">Estádio II (sem A's): b·x²/2 + n·As·x − n·As·d = 0 → xII = ${fmt(r.x2, 3)} cm · III = b·x³/3 + n·As·(d − x)² = ${fmt(r.I2, 0)} cm⁴</div>
+    ${r.fissurada ? `<div class="fml">Ma &gt; Mr → Ieq = (Mr/Ma)³·Ic + [1 − (Mr/Ma)³]·III = ${fmt(r.Ieq, 0)} cm⁴ ≤ Ic</div>` : `<div class="fml">Ma ≤ Mr → seção não fissurada: Ieq = Ic = ${fmt(r.Ieq, 0)} cm⁴</div>`}
+    <div class="fml">a0 = ∬ M<sub>qp</sub>(x)/(Ecs·Ieq) dx² (dupla integração numérica, cargas por trecho) = <strong>${fmt(r.a0, 3)} cm</strong> em x = ${fmt(r.xa0, 2)} m</div>
+    Flecha diferida (17.3.2.1.2): ξ(t0 = ${fmt(I.t0, 1)} mês) = ${fmt(r.xiT0, 3)} · ξ(∞) = 2 · ρ' = 0 <span class="adot">(ADOTADO — CONFIRMAR)</span> → αf = Δξ/(1 + 50ρ') = ${fmt(r.alfaF, 3)}
+    <div class="fml">at = a0·(1 + αf) = ${fmt(r.aT, 3)} cm ≤ L/250 = ${fmt(r.aLim, 3)} cm → taxa ${fmt(r.utilFl * 100, 0)} %: ${ok(r.utilFl <= 1)} (Tabela 13.3, aceitabilidade visual)</div>
+    <div class="fml">Vibração: a(ψ2·q) = ${fmt(r.aQpsi, 3)} cm ≤ L/350 = ${fmt(r.aLimQ, 3)} cm → taxa ${fmt(r.utilQ * 100, 0)} %: ${ok(r.utilQ <= 1)}</div>
+    <span class="nota">Interpretação: a parcela da variável foi tomada com ψ2·q (combinação quase permanente, 11.8.3). Com q integral: a(q) = ${fmt(r.aQ, 3)} cm → taxa ${fmt(r.aQ / r.aLimQ * 100, 0)} % (${ok(r.aQ <= r.aLimQ)}). Rigidez (EI)eq constante no vão, sem a contribuição dos degraus (a favor da segurança).</span>
+  </div>`;
+}
+
+function abrirMemo() { if (!R || !R.ok) return; $('memo-body').innerHTML = memorialHTML(R); $('modal-memo').classList.add('aberto'); }
+function fecharMemo() { $('modal-memo').classList.remove('aberto'); }
+function gerarPDF() {
+  if (!R || !R.ok) return;
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const g = desenhoGeometria(R), a = desenhoArmacao(R), e = desenhoEsforcos(R);
+  $('print-area').innerHTML = `<h1>Memória de cálculo — Escada</h1><div class="sub">Lance biapoiado com patamares · NBR 6118:2023 · BASE Estruturas · ${hoje}</div>
+    <div class="bloco">${g.svg}</div>${memorialHTML(R)}<div class="bloco mm"><h3>7. Esforços e elástica</h3>${e.svg}</div><div class="bloco mm"><h3>8. Esquema de armação</h3>${a.svg}<p style="font-size:9.5pt">${a.leg}</p></div>`;
+  setTimeout(() => window.print(), 100);
+}
+
+IDS.forEach(id => { const el = $(id); el.addEventListener('input', atualizar); el.addEventListener('change', atualizar); });
+document.querySelectorAll('input[name="aba"]').forEach(el => el.addEventListener('change', desenhar));
+$('btn-memo').addEventListener('click', abrirMemo);
+$('btn-memo-x').addEventListener('click', fecharMemo);
+$('btn-memo-fechar').addEventListener('click', fecharMemo);
+$('modal-memo').addEventListener('click', ev => { if (ev.target.id === 'modal-memo') fecharMemo(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') fecharMemo(); });
+$('btn-pdf').addEventListener('click', gerarPDF);
+$('btn-pdf2').addEventListener('click', gerarPDF);
+atualizar();
+</script>
+</body>
+</html>

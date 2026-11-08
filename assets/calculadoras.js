@@ -70,6 +70,13 @@ const CALCULADORAS = [
   // },
 
   // ===== ESCADAS =====
+  {
+    categoria: 'Escadas',
+    id: 'escada-armadura',
+    nome: 'Escada — Armadura e flecha',
+    arquivo: 'escada-armadura.html',
+    descricao: 'Lance biapoiado com patamares: armadura principal, distribuição, cortante e flecha (NBR 6118:2023).'
+  },
   // {
   //   categoria: 'Escadas',
   //   id: 'escada-helicoidal',
