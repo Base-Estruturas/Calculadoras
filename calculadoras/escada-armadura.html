@@ -87,6 +87,7 @@
   .seg label { padding: 3px 10px; cursor: pointer; font-size: 12px; color: var(--texto-2); user-select: none; white-space: nowrap; }
   .seg label + input + label { border-left: 1px solid var(--borda-campo); }
   .seg input:checked + label { background: var(--texto); color: #fff; font-weight: 600; }
+  .seg-tipo label { padding: 2px 8px; font-size: 11.5px; }
   .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 425px); min-height: 190px; }
   .desenho svg text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
   .leg { margin-top: 4px; font-size: 11px; color: var(--texto-2); line-height: 1.45; }
@@ -154,19 +155,24 @@
 
   <header class="hdr">
     <img src="../assets/logo-horizontal.png" alt="BASE Estruturas">
-    <div class="hdr-tool"><strong>Escada — Armadura e flecha</strong>Lance biapoiado com patamares · NBR 6118:2023</div>
+    <div class="hdr-tool"><strong>Escada — Armadura e flecha</strong><span id="hdr-sub">Lance biapoiado com patamares</span> · NBR 6118:2023</div>
   </header>
 
   <main class="corpo">
     <!-- ===== Coluna 1: dados ===== -->
     <section class="col">
       <div class="card">
-        <span class="rot">Geometria (projeção horizontal)</span>
+        <div class="card-hd"><span class="rot" title="A, B e C em projeção horizontal">Geometria</span>
+          <div class="seg seg-tipo" title="Tipo de escada">
+            <input type="radio" name="tipo" id="tipo-conv" value="conv" checked><label for="tipo-conv">Convencional</label>
+            <input type="radio" name="tipo" id="tipo-pli" value="pli"><label for="tipo-pli">Plissada</label>
+          </div>
+        </div>
         <div class="g3">
           <div class="f"><label for="A" title="A — patamar inferior (pode ser 0)">A <span class="un">(m)</span></label><input type="number" id="A" value="0.46" step="0.01" min="0"></div>
           <div class="f"><label for="B" title="B — projeção horizontal do lance">B <span class="un">(m)</span></label><input type="number" id="B" value="1.68" step="0.01" min="0"></div>
           <div class="f"><label for="C" title="C — patamar superior (pode ser 0)">C <span class="un">(m)</span></label><input type="number" id="C" value="1.54" step="0.01" min="0"></div>
-          <div class="f"><label for="h" title="Espessura da laje, medida perpendicular ao lance">h <span class="un">(cm)</span></label><input type="number" id="h" value="12" step="0.5" min="0"></div>
+          <div class="f"><label for="h" id="lbl-h" title="Espessura da laje, medida perpendicular ao lance">h <span class="un">(cm)</span></label><input type="number" id="h" value="12" step="0.5" min="0"></div>
           <div class="f"><label for="e">e — espelho <span class="un">(cm)</span></label><input type="number" id="e" value="18" step="0.5" min="0"></div>
           <div class="f"><label for="p">p — piso <span class="un">(cm)</span></label><input type="number" id="p" value="28" step="0.5" min="0"></div>
         </div>
@@ -213,7 +219,7 @@
       </div>
 
       <div class="card">
-        <div class="card-hd"><span class="rot">Armadura principal (inferior)</span><span id="flex-st"></span></div>
+        <div class="card-hd"><span class="rot" id="flex-tit">Armadura principal (inferior)</span><span id="flex-st"></span></div>
         <div id="flex-res"></div>
         <div id="tab-p"></div>
         <div class="kv k4" id="flex-kv"></div>
@@ -221,7 +227,7 @@
       </div>
 
       <div class="card">
-        <div class="card-hd"><span class="rot">Distribuição · borda · cortante</span><span id="cis-st"></span></div>
+        <div class="card-hd"><span class="rot" id="cis-tit">Distribuição · borda · cortante</span><span id="cis-st"></span></div>
         <div id="tab-d"></div>
         <div class="kv k4" id="cis-kv"></div>
         <div class="alertas" id="cis-al"></div>
@@ -244,7 +250,7 @@
         <div class="leg" id="leg"></div>
       </div>
       <div class="card">
-        <div class="card-hd"><span class="rot">Flecha — biapoiada</span><span id="fl-st"></span></div>
+        <div class="card-hd"><span class="rot" id="fl-tit">Flecha — biapoiada</span><span id="fl-st"></span></div>
         <div class="kv k4 top0" id="fl-kv"></div>
         <div class="alertas" id="fl-al"></div>
       </div>
@@ -434,6 +440,201 @@ function calcularEscada(I) {
   r.flexOk = !r.flexImpossivel && r.xd <= xdLim + 1e-9 && r.AsEf <= r.AsMax;
   return r;
 }
+
+/* ==================== ESCADA PLISSADA — PÓRTICO PLANO ==================== */
+// Rigidez direta 2D (sem deformação por cortante). Unidades: tf, m. Barras com carga vertical distribuída w (tf/m de barra, + para baixo).
+function porticoResolver(nos, barras, apoios) {
+  const n = nos.length, ND = 3 * n;
+  const K = Array.from({ length: ND }, () => new Float64Array(ND)), F = new Float64Array(ND);
+  const dados = barras.map(b => {
+    const a = nos[b.i], c2 = nos[b.j], dx = c2.x - a.x, dy = c2.y - a.y, L = Math.hypot(dx, dy), c = dx / L, s = dy / L;
+    const ea = b.E * b.A / L, k = b.E * b.I / (L * L * L);
+    const kl = [[ea, 0, 0, -ea, 0, 0], [0, 12 * k, 6 * L * k, 0, -12 * k, 6 * L * k], [0, 6 * L * k, 4 * L * L * k, 0, -6 * L * k, 2 * L * L * k],
+                [-ea, 0, 0, ea, 0, 0], [0, -12 * k, -6 * L * k, 0, 12 * k, -6 * L * k], [0, 6 * L * k, 2 * L * L * k, 0, -6 * L * k, 4 * L * L * k]];
+    const qx = -b.w * s, qy = -b.w * c;                                   // carga em eixos locais
+    const fl = [qx * L / 2, qy * L / 2, qy * L * L / 12, qx * L / 2, qy * L / 2, -qy * L * L / 12];
+    const T = [[c, s, 0, 0, 0, 0], [-s, c, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, c, s, 0], [0, 0, 0, -s, c, 0], [0, 0, 0, 0, 0, 1]];
+    const g = [3 * b.i, 3 * b.i + 1, 3 * b.i + 2, 3 * b.j, 3 * b.j + 1, 3 * b.j + 2];
+    for (let p = 0; p < 6; p++) {
+      for (let q = 0; q < 6; q++) { let v = 0; for (let m = 0; m < 6; m++) for (let o = 0; o < 6; o++) v += T[m][p] * kl[m][o] * T[o][q]; K[g[p]][g[q]] += v; }
+      let f = 0; for (let m = 0; m < 6; m++) f += T[m][p] * fl[m]; F[g[p]] += f;
+    }
+    return { b, L, c, s, kl, fl, T, g, qx, qy };
+  });
+  const fix = new Set(); apoios.forEach(([no, gls]) => gls.forEach(d => fix.add(3 * no + d)));
+  const livre = []; for (let d = 0; d < ND; d++) if (!fix.has(d)) livre.push(d);
+  const m = livre.length, M = livre.map(p => livre.map(q => K[p][q])), rhs = livre.map(p => F[p]);
+  for (let col = 0; col < m; col++) {                                     // Gauss com pivotamento parcial
+    let piv = col; for (let r = col + 1; r < m; r++) if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+    [M[col], M[piv]] = [M[piv], M[col]]; [rhs[col], rhs[piv]] = [rhs[piv], rhs[col]];
+    for (let r = col + 1; r < m; r++) { const f = M[r][col] / M[col][col]; if (!f) continue; for (let q = col; q < m; q++) M[r][q] -= f * M[col][q]; rhs[r] -= f * rhs[col]; }
+  }
+  const x = new Float64Array(m);
+  for (let r = m - 1; r >= 0; r--) { let v = rhs[r]; for (let q = r + 1; q < m; q++) v -= M[r][q] * x[q]; x[r] = v / M[r][r]; }
+  const U = new Float64Array(ND); livre.forEach((d, i) => U[d] = x[i]);
+  // Reações = K·U − F nos graus restritos
+  const Rc = {}; fix.forEach(d => { let v = -F[d]; for (let q = 0; q < ND; q++) v += K[d][q] * U[q]; Rc[d] = v; });
+  // Esforços internos (N tração +, V, M positivo tracionando a face "inferior/interna" do zigue-zague)
+  const res = dados.map(D => {
+    const ul = []; for (let p = 0; p < 6; p++) { let v = 0; for (let q = 0; q < 6; q++) v += D.T[p][q] * U[D.g[q]]; ul.push(v); }
+    const f = []; for (let p = 0; p < 6; p++) { let v = -D.fl[p]; for (let q = 0; q < 6; q++) v += D.kl[p][q] * ul[q]; f.push(v); }
+    return { ...D, ul, f,
+      N: s => -f[0] - D.qx * s, V: s => f[1] + D.qy * s, M: s => -f[2] + f[1] * s + D.qy * s * s / 2 };
+  });
+  return { U, Rc, res };
+}
+
+// Geometria: nós nos cantos da face superior (pisos com p' = B/n e espelhos com e' = e·B/(n·p)); espessura constante t.
+function modeloPlissada(I) {
+  const { A, B, C } = I;
+  const n = Math.max(1, Math.round(B * 100 / I.p)), pw = B / n, ew = pw * I.e / I.p, R = n * ew, L = A + B + C;
+  const nos = [{ x: 0, y: 0 }], barras = [];
+  const lig = (x, y, tipo, k) => { nos.push({ x, y }); barras.push({ i: nos.length - 2, j: nos.length - 1, tipo, k }); };
+  if (A > 0) lig(A, 0, 'pA', 0);
+  for (let k = 0; k < n; k++) { lig(A + k * pw, (k + 1) * ew, 'esp', k + 1); lig(A + (k + 1) * pw, (k + 1) * ew, 'piso', k + 1); }
+  if (C > 0) lig(L, R, 'pC', 0);
+  return { nos, barras, n, pw, ew, R, L };
+}
+
+// Flexão composta normal, seção b × t (cm), armadura simples na face tracionada. Md em tf·m/m, Nd em tf/m (tração +).
+function flexComposta(Md, Nd, t, d, c) {
+  const b = 100, es = d - t / 2;                                  // excentricidade da armadura ao CG (cm)
+  const Msd = Md * G * 100 - Nd * G * es;                         // momento em relação à armadura tracionada (kN·cm/m)
+  const sig = c.sigcd / 10, fy = c.fyd / 10, Nk = Nd * G;
+  if (Msd <= 0) return { As: Math.max(Nk / fy, 0), Msd, peqExc: true, x: 0, xd: 0 };   // tração com pequena excentricidade (a favor da segurança)
+  const arg = 1 - 2 * Msd / (sig * b * d * d);
+  if (arg < 0) return { As: NaN, Msd, imposs: true };
+  const y = d * (1 - Math.sqrt(arg)), x = y / c.lambda;
+  return { As: Math.max(Msd / (fy * (d - y / 2)) + Nk / fy, 0), Msd, x, xd: x / d, z: d - y / 2 };
+}
+
+function calcularPlissada(I) {
+  const r = { I, ok: true, erros: [], plis: true };
+  const { A, B, C, h, e, p, gL, gP, q, gA, gC, fck, aco, c, gf, phiP, phiD, psi2, aE, t0 } = I;
+  const L = A + B + C; r.L = L;
+  if (!(L > 0) || !(B > 0) || !(h > 0) || !(e > 0) || !(p > 0)) { r.ok = false; r.erros.push('Informe B, h, e e p maiores que zero.'); return r; }
+  const gc = 2.5, t = h, tm = h / 100, b = 100;                   // tf/m³; espessura constante t = h
+  const mod = modeloPlissada(I);
+  Object.assign(r, mod, { nDeg: mod.n, t, alfa: Math.atan(e / p), tgA: e / p, cosA: Math.cos(Math.atan(e / p)), blondel: 2 * e + p });
+  r.alfaGr = r.alfa * 180 / Math.PI;
+  r.nDegCalc = B * 100 / p; r.pAj = Math.abs(r.nDegCalc - mod.n) > 0.02;
+  if (mod.pw * 100 < 2 * t || mod.ew * 100 < 0.5 * t) r.erros.push('aviso');
+  // ---- Cargas por barra (tf/m de barra, verticais)
+  r.ppPiso = gc * tm; r.ppEsp = gc * tm; r.ppPat = gc * tm;
+  r.ppProj = gc * tm * (mod.pw + mod.ew) / mod.pw;                // equivalente por m² de projeção horizontal no lance
+  const carga = (br, comb) => {
+    const gq = br.tipo === 'pA' ? [r.ppPat + gP + gA, q] : br.tipo === 'pC' ? [r.ppPat + gP + gC, q] : br.tipo === 'piso' ? [r.ppPiso + gL, q] : [r.ppEsp, 0];
+    return comb === 'g' ? gq[0] : comb === 'q' ? gq[1] : comb === 'k' ? gq[0] + gq[1] : comb === 'qp' ? gq[0] + psi2 * gq[1] : psi2 * gq[1];
+  };
+  r.carga = carga;
+  // ---- Materiais
+  const gcon = 1.4, gs = 1.15, fcd = fck / gcon, fyd = aco / gs;
+  const lambda = fck <= 50 ? 0.8 : 0.8 - (fck - 50) / 400, alfaC = fck <= 50 ? 0.85 : 0.85 * (1 - (fck - 50) / 200);
+  const etaC = fck <= 40 ? 1 : Math.pow(40 / fck, 1 / 3), sigcd = alfaC * etaC * fcd, xdLim = fck <= 50 ? 0.45 : 0.35;
+  Object.assign(r, { b, fcd, fyd, lambda, alfaC, etaC, sigcd, xdLim, gcon, gs });
+  r.Eci = eciMPa(fck, aE); r.alfaI = Math.min(1, 0.8 + 0.2 * fck / 80); r.Ecs = r.alfaI * r.Eci;
+  const Etf = r.Ecs * 100;                                        // MPa → tf/m²
+  // Apoios do Ftool: rolete no nó inicial (só v), pino no nó final (u, v)
+  const nf = mod.nos.length - 1, apoios = [[0, [1]], [nf, [0, 1]]];
+  r.apoioTxt = 'rolete no apoio inferior (x livre) e pino no superior';
+  const resolver = (comb, EIfat) => porticoResolver(mod.nos, mod.barras.map(br => ({ ...br, E: Etf, A: tm, I: tm * tm * tm / 12 * (EIfat || 1), w: carga(br, comb) })), apoios);
+  const sG = resolver('g'), sQ = resolver('q');
+  r.RAg = sG.Rc[1]; r.RBg = sG.Rc[3 * nf + 1]; r.RAq = sQ.Rc[1]; r.RBq = sQ.Rc[3 * nf + 1];
+  r.RA = r.RAg + r.RAq; r.RB = r.RBg + r.RBq; r.H = sG.Rc[3 * nf] + sQ.Rc[3 * nf];
+  // ---- Amostragem dos esforços característicos
+  r.d = t - c - phiP / 20;
+  if (r.d <= 0) { r.ok = false; r.erros.push('d ≤ 0: revisar h, c e bitola.'); return r; }
+  const cst = { sigcd, fyd, lambda };
+  const pts = [];
+  sG.res.forEach((Dg, ib) => {
+    const Dq = sQ.res[ib], br = mod.barras[ib], ns = 12, a = mod.nos[br.i];
+    for (let k = 0; k <= ns; k++) {
+      const s = Dg.L * k / ns;
+      const Mg = Dg.M(s), Mq = Dq.M(s), Ng = Dg.N(s), Nq = Dq.N(s), Vg = Dg.V(s), Vq = Dq.V(s);
+      pts.push({ ib, tipo: br.tipo, kd: br.k, s, x: a.x + Dg.c * s, y: a.y + Dg.s * s, Mk: Mg + Mq, Nk: Ng + Nq, Vk: Vg + Vq, MkG: Mg, MkQ: Mq });
+    }
+  });
+  r.pts = pts;
+  let pMax = pts[0]; pts.forEach(pt => { if (pt.Mk > pMax.Mk) pMax = pt; });
+  r.Mk = pMax.Mk; r.xM = pMax.x; r.MkG = pMax.MkG; r.MkQ = pMax.MkQ; r.Md = gf * r.Mk; r.pMax = pMax;
+  r.trechoM = pMax.tipo === 'esp' ? `espelho ${pMax.kd}` : pMax.tipo === 'piso' ? `piso ${pMax.kd}` : pMax.tipo === 'pA' ? 'patamar inferior' : 'patamar superior';
+  const esp = pts.filter(pt => pt.tipo === 'esp');
+  r.NespMin = esp.length ? Math.min(...esp.map(pt => pt.Nk)) : 0; r.NespMax = esp.length ? Math.max(...esp.map(pt => pt.Nk)) : 0;
+  r.NhorMax = Math.max(0, ...pts.filter(pt => pt.tipo !== 'esp').map(pt => Math.abs(pt.Nk)));
+  // ---- Flexão composta em todos os pontos (face inferior M > 0; face superior M < 0)
+  let gov = null, govS = null; r.flexImpossivel = false;
+  pts.forEach(pt => {
+    const Md = gf * pt.Mk, Nd = gf * pt.Nk;
+    const fc = flexComposta(Math.abs(Md), Nd, t, r.d, cst);
+    pt.fc = fc; pt.Md = Md; pt.Nd = Nd;
+    if (fc.imposs) r.flexImpossivel = true;
+    if (Md >= -1e-6) { if (!gov || fc.As > gov.fc.As) gov = pt; } else if (!govS || fc.As > govS.fc.As) govS = pt;
+  });
+  r.gov = gov; r.govS = govS;
+  r.govTxt = gov.tipo === 'esp' ? `espelho ${gov.kd}` : gov.tipo === 'piso' ? `piso ${gov.kd}` : gov.tipo === 'pA' ? 'patamar inferior' : 'patamar superior';
+  r.As = gov.fc.As; r.x = gov.fc.x; r.xd = gov.fc.xd; r.z = gov.fc.z;
+  r.xd = Math.max(...pts.map(pt => pt.fc.xd || 0));
+  r.AsSupCalc = govS ? govS.fc.As : 0;
+  r.rhoMin = RHO_MIN[fck] || 0.256; r.AsMin = r.rhoMin / 100 * b * t; r.AsMax = 0.04 * b * t;
+  r.AsNec = Math.max(r.As || 0, r.AsSupCalc || 0, r.AsMin);           // estribo fechado: mesma armadura nas duas faces
+  r.sMax = Math.min(2 * t, 20); r.phiMax = t * 10 / 8;
+  r.tabela = BITOLAS.map(f => { const a = areaBarra(f), sc = 100 * a / r.AsNec, s = Math.min(Math.floor(sc), r.sMax); return { phi: f, a, sCalc: sc, s, AsEf: 100 * a / s, okPhi: f <= r.phiMax + 1e-9 }; });
+  r.princ = r.tabela.find(tb => tb.phi === phiP) || r.tabela[3];
+  r.AsEf = r.princ.AsEf; r.utilFlex = Math.max(r.As || 0, r.AsSupCalc || 0) / r.AsEf;
+  r.AsBorda = r.AsEf;                                              // face superior = perna superior do estribo fechado
+  // ---- Distribuição (barras transversais nos cantos e ao longo dos pisos)
+  r.AsDist = Math.max(0.2 * r.AsNec, 0.9, 0.5 * r.AsMin); r.sMaxD = 33;
+  r.tabelaD = [5, 6.3, 8, 10].map(f => { const a = areaBarra(f), sc = 100 * a / r.AsDist, s = Math.min(Math.floor(sc), r.sMaxD); return { phi: f, a, sCalc: sc, s, AsEf: 100 * a / s }; });
+  r.dist = r.tabelaD.find(tb => tb.phi === phiD) || r.tabelaD[0]; r.sD = r.dist.s; r.AsDistEf = r.dist.AsEf;
+  r.lBorda = 0;
+  // ---- Cortante (19.4.1) em todos os pontos, com σcp = −Nd/Ac (compressão +)
+  const fctm = fctmMPa(fck), fctkInf = 0.7 * fctm, fctd = fctkInf / gcon;
+  r.fctm = fctm; r.fctd = fctd; r.tauRd = 0.25 * fctd; r.kV = Math.max(1, 1.6 - r.d / 100);
+  r.rho1 = Math.min(r.AsEf / (b * r.d), 0.02);
+  const vrd = Nd => { const scp = -Nd * G / (b * t) * 10; return { scp, V: (r.tauRd * r.kV * (1.2 + 40 * r.rho1) + 0.15 * scp) / 10 * b * r.d / G }; };
+  let vg = null; pts.forEach(pt => { const v = vrd(pt.Nd), u = Math.abs(gf * pt.Vk) / v.V; if (!vg || u > vg.u) vg = { pt, u, VRd1: v.V, scp: v.scp }; });
+  r.vGov = vg; r.Vsd = Math.abs(gf * vg.pt.Vk); r.VRd1 = vg.VRd1; r.utilV = vg.u;
+  r.VRd1_0 = vrd(0).V;
+  // ---- Ancoragem / transpasse no nó
+  const eta1 = aco === 600 ? 1.4 : 2.25; r.eta1 = eta1; r.fbd = eta1 * fctd;
+  r.lb = Math.max(phiP / 10 / 4 * fyd / r.fbd, 25 * phiP / 10);
+  // ---- Flecha: pórtico com Ecs e (EI)eq (Branson, 17.3.2.1.1)
+  r.Es = 210000; r.n = r.Es / r.Ecs; r.Ic = b * t * t * t / 12;
+  r.Mr = 1.5 * (fctm / 10) * r.Ic / (t / 2) / G / 100;
+  const sQP = resolver('qp');
+  let maQP = -Infinity, xMa = 0; sQP.res.forEach(D => { for (let k = 0; k <= 12; k++) { const s = D.L * k / 12, m = D.M(s); if (m > maQP) { maQP = m; xMa = mod.nos[D.b.i].x + D.c * s; } } });
+  r.Ma = maQP; r.xMa = xMa;
+  const nA = r.n * r.AsEf, d = r.d;
+  r.x2 = (-nA + Math.sqrt(nA * nA + 2 * b * nA * d)) / b; r.I2 = b * Math.pow(r.x2, 3) / 3 + nA * Math.pow(d - r.x2, 2);
+  if (r.Ma <= r.Mr) { r.Ieq = r.Ic; r.fissurada = false; } else { const k3 = Math.pow(r.Mr / r.Ma, 3); r.Ieq = Math.min(r.Ic, k3 * r.Ic + (1 - k3) * r.I2); r.fissurada = true; }
+  const fat = r.Ieq / r.Ic;
+  const flecha = comb => {                                         // máx. deslocamento vertical para baixo (cm), nós + interior das barras horizontais
+    const S = resolver(comb, fat), EI = Etf * tm * tm * tm / 12 * fat; const v = []; let max = 0, xmax = 0;
+    S.res.forEach(D => {
+      const a = mod.nos[D.b.i], ui = [S.U[D.g[0]], S.U[D.g[1]], S.U[D.g[2]]], uj = [S.U[D.g[3]], S.U[D.g[4]], S.U[D.g[5]]];
+      const ns = D.c > 0.5 ? 8 : 1;
+      for (let k = 0; k <= ns; k++) {
+        const s = D.L * k / ns, xi = s / D.L; let vy;
+        if (D.c > 0.5) {                                           // barra horizontal: Hermite + parcela da carga
+          const N1 = 1 - 3 * xi * xi + 2 * xi ** 3, N2 = D.L * (xi - 2 * xi * xi + xi ** 3), N3 = 3 * xi * xi - 2 * xi ** 3, N4 = D.L * (-xi * xi + xi ** 3);
+          vy = N1 * ui[1] + N2 * ui[2] + N3 * uj[1] + N4 * uj[2] - D.b.w * s * s * (D.L - s) ** 2 / (24 * EI);
+        } else vy = ui[1] + (uj[1] - ui[1]) * xi;
+        const x = a.x + D.c * s; v.push([x, -vy * 100]); if (-vy * 100 > max) { max = -vy * 100; xmax = x; }
+      }
+    });
+    return { v, max, xmax, dxRolo: S.U[0] * 100, S };
+  };
+  const fQP = flecha('qp'); r.v = fQP.v; r.a0 = fQP.max; r.xa0 = fQP.xmax; r.dxRolo = fQP.dxRolo;
+  r.aQpsi = flecha('psiq').max; r.aQ = flecha('q').max;
+  r.xiT0 = xi(t0); r.alfaF = 2 - r.xiT0; r.aT = r.a0 * (1 + r.alfaF);
+  r.aLim = L * 100 / 250; r.aLimQ = L * 100 / 350; r.utilFl = r.aT / r.aLim; r.utilQ = r.aQpsi / r.aLimQ;
+
+
+  r.flexOk = !r.flexImpossivel && r.xd <= xdLim + 1e-9 && r.AsEf <= r.AsMax;
+  r.erros = r.erros.filter(x => x !== 'aviso');
+  return r;
+}
+
 /* ==================== FIM DO MOTOR ==================== */
 
 /* ==================== INTERFACE ==================== */
@@ -461,8 +662,19 @@ document.addEventListener('click', ev => {
   $(el.dataset.campo).value = el.dataset.phi; atualizar();
 });
 
+function tipo() { return document.querySelector('input[name="tipo"]:checked').value; }
+function modoUI(pli) {
+  $('hdr-sub').textContent = pli ? 'Escada plissada — pórtico plano' : 'Lance biapoiado com patamares';
+  $('lbl-h').innerHTML = pli ? 't <span class="un">(cm)</span>' : 'h <span class="un">(cm)</span>';
+  $('lbl-h').title = pli ? 'Espessura constante de pisos, espelhos e patamares' : 'Espessura da laje, medida perpendicular ao lance';
+  $('gamaDeg').disabled = pli; $('gamaDeg').title = pli ? 'Não se aplica à plissada (sem enchimento)' : '';
+  $('flex-tit').textContent = pli ? 'Estribos fechados' : 'Armadura principal (inferior)';
+  $('cis-tit').textContent = pli ? 'Distribuição · cortante' : 'Distribuição · borda · cortante';
+  $('fl-tit').textContent = pli ? 'Flecha — pórtico plissado' : 'Flecha — biapoiada';
+}
 function atualizar() {
-  R = calcularEscada(lerDados());
+  const pli = tipo() === 'pli'; modoUI(pli);
+  R = pli ? calcularPlissada(lerDados()) : calcularEscada(lerDados());
   const r = R;
   if (!r.ok) {
     ['esf-kv', 'flex-res', 'tab-p', 'tab-d', 'flex-kv', 'cis-kv', 'fl-kv', 'cis-al', 'fl-al'].forEach(id => $(id).innerHTML = '');
@@ -473,7 +685,9 @@ function atualizar() {
   const I = r.I;
   // Geometria
   const bl = r.blondel;
-  $('geo-info').innerHTML = `L = <strong>${fmt(r.L)} m</strong> · d = <strong>${fmt(r.d, 1)} cm</strong> · 2e+p = <strong ${bl >= 63 && bl <= 65 ? '' : 'style="color:var(--ambar)" title="fora de 63 a 65 cm (NBR 9050)"'}>${fmt(bl, 0)} cm</strong>`;
+  $('geo-info').innerHTML = r.plis
+    ? `L = <strong>${fmt(r.L)} m</strong> · ${r.nDeg} degr. · <span title="Esforço normal característico nos espelhos: compressão (−) no inferior, tração (+) no superior">N<sub>k,esp</sub> <strong>${fmt(r.NespMin)} / +${fmt(r.NespMax)}</strong> tf/m</span>`
+    : `L = <strong>${fmt(r.L)} m</strong> · d = <strong>${fmt(r.d, 1)} cm</strong> · 2e+p = <strong ${bl >= 63 && bl <= 65 ? '' : 'style="color:var(--ambar)" title="fora de 63 a 65 cm (NBR 9050)"'}>${fmt(bl, 0)} cm</strong>`;
 
   // Esforços
   $('esf-kv').innerHTML = `
@@ -490,7 +704,8 @@ function atualizar() {
     $('flex-kv').innerHTML = '';
   } else {
     const xdOk = r.xd <= r.xdLim + 1e-9;
-    $('flex-st').innerHTML = !xdOk ? pill('fail', `x/d > ${fmt(r.xdLim)}`) : (r.AsEf > r.AsMax ? pill('fail', 'As > 4%') : pill('ok', 'OK'));
+    $('flex-st').innerHTML = (r.plis ? `<span style="font-size:11.5px;color:var(--texto-2);margin-right:6px" title="Flexão composta (M + N) verificada em todas as barras; estribo fechado = mesma armadura nas duas faces. Md = ${fmt(r.gov.Md)} tf·m/m; Nd = ${fmt(r.gov.Nd)} tf/m">governa: ${r.govTxt}</span>` : '')
+      + (!xdOk ? pill('fail', `x/d > ${fmt(r.xdLim)}`) : (r.AsEf > r.AsMax ? pill('fail', 'As > 4%') : pill('ok', 'OK')));
     $('flex-res').innerHTML = '';
     $('flex-kv').innerHTML = `
       <div>A<sub>s,calc</sub><b>${fmt(r.As)} <small>cm²/m</small></b></div>
@@ -499,7 +714,9 @@ function atualizar() {
       <div title="As,calc / As,ef">Taxa A<sub>s</sub><b>${fmt(r.utilFlex * 100, 0)} %</b>${barra(r.utilFlex)}</div>`;
     if (!xdOk) fa.push(`<div class="alert alert-danger">x/d = ${fmt(r.xd, 3)} &gt; ${fmt(r.xdLim)} (14.6.4.3 e 14.7.4): aumentar h. Armadura dupla não é usual em escada.</div>`);
     if ((r.As || 0) < r.AsMin) fa.push(`<div class="alert alert-info">A<sub>s,calc</sub> &lt; A<sub>s,mín</sub>: governa a mínima (Tabela 19.1 → ρ<sub>mín</sub> da Tabela 17.3).</div>`);
+    if (r.plis && r.gov.fc.peqExc) fa.push(`<div class="alert alert-warning">Tração com pequena excentricidade no ${r.govTxt}: A<sub>s</sub> = N<sub>d</sub>/f<sub>yd</sub> (simplificação a favor da segurança).</div>`);
   }
+  if (r.plis && r.pAj) fa.push(`<div class="alert alert-warning">B/p = ${fmt(r.nDegCalc, 2)} não é inteiro: adotados ${r.nDeg} degraus com p' = ${fmt(r.pw * 100, 1)} cm e e' = ${fmt(r.ew * 100, 1)} cm.</div>`);
   if (I.phiP > r.phiMax + 1e-9) fa.push(`<div class="alert alert-danger">Ø ${fphi(I.phiP)} &gt; h/8 = ${fmt(r.phiMax, 1)} mm (20.1): reduzir a bitola.</div>`);
   if (r.princ.s < 7) fa.push(`<div class="alert alert-warning">s = ${fmt(r.princ.s, 0)} cm: espaçamento pequeno para concretagem (recomendação prática, não normativa). Aumentar a bitola.</div>`);
   $('tab-p').innerHTML = r.flexImpossivel ? '' : tabelaBitolas(r.tabela, I.phiP, 'phiP', 'Principal', t => !t.okPhi ? 'Ø > h/8' : null, `Espaçamentos em cm. × = Ø > h/8 (20.1); âmbar = s < 7 cm. s adot. = mín(s calc.; s,máx = ${fmt(r.sMax, 0)} cm), arredondado para baixo. Clique para escolher.`)
@@ -513,7 +730,7 @@ function atualizar() {
   $('tab-d').innerHTML = tabelaBitolas(r.tabelaD, I.phiD, 'phiD', 'Distribuição', () => null, 'Espaçamentos em cm. s adot. = mín(s calc.; 33 cm), arredondado para baixo. Clique para escolher.')
     + `<div class="res-adot"><span>Adotado: <strong>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)}</strong></span><span>nec. ${fmt(r.AsDist)} · ef. <strong>${fmt(r.AsDistEf)}</strong> cm²/m</span></div>`;
   $('cis-kv').innerHTML = `
-    <div title="armadura negativa de borda nos apoios, até 0,15·L">Borda<b>${fmt(r.AsBorda)} <small>cm²/m</small></b></div>
+    ${r.plis ? `<div title="perna superior do estribo fechado (mesma armadura da face inferior)">Face sup.<b>${fmt(r.AsBorda)} <small>cm²/m</small></b></div>` : `<div title="armadura negativa de borda nos apoios, até 0,15·L">Borda<b>${fmt(r.AsBorda)} <small>cm²/m</small></b></div>`}
     <div>V<sub>Sd</sub><b>${fmt(r.Vsd)} <small>tf/m</small></b></div>
     <div>V<sub>Rd1</sub><b>${fmt(r.VRd1)} <small>tf/m</small></b></div>
     <div>Taxa V<b>${fmt(r.utilV * 100, 0)} %</b>${barra(r.utilV)}</div>`;
@@ -808,12 +1025,242 @@ function desenhoArmacao(r) {
   };
 }
 
+
+/* ==================== DESENHOS — PLISSADA ==================== */
+function perfilP(r) {
+  const I = r.I, A = I.A, C = I.C, t = r.t / 100, { nDeg: n, pw, ew, R, L } = r;
+  const top = [[0, 0]];
+  if (A > 0) top.push([A, 0]);
+  for (let i = 0; i < n; i++) { top.push([A + i * pw, (i + 1) * ew]); top.push([A + (i + 1) * pw, (i + 1) * ew]); }
+  if (C > 0) top.push([L, R]);
+  const bot = A > 0 ? [[0, -t], [A + t, -t]] : [[0, -t], [t, -t]];
+  for (let i = 0; i < n; i++) {
+    const xr = A + i * pw + t;
+    if (i > 0) bot.push([xr, i * ew - t]);
+    bot.push([xr, (i + 1) * ew - t]);
+  }
+  if (C > 0) bot.push([L, R - t]); else bot.push([A + I.B, R - t]);
+  return { top, bot: bot.reverse(), R, t };
+}
+
+function desenhoGeometriaP(r) {
+  const I = r.I, VW = 540, mxE = 24, mxD = 80, P0 = perfilP(r), t = P0.t;
+  const k = Math.min((VW - mxE - mxD) / r.L, 125 / Math.max(P0.R, 0.01));
+  const ox = mxE + (VW - mxE - mxD - r.L * k) / 2, yTopo = 94 + P0.R * k;
+  const X = x => ox + x * k, Y = y => yTopo - y * k;
+  let s = '';
+  const ws = [r.carga({ tipo: 'pA' }, 'k'), r.carga({ tipo: 'piso' }, 'k'), r.carga({ tipo: 'pC' }, 'k')], segs = [[0, I.A], [I.A, I.A + I.B], [I.A + I.B, r.L]];
+  const wMax = Math.max(...ws), yBase = Y(P0.R) - 20, hMax = 34;
+  segs.forEach(([a, b], i) => {
+    if (b - a <= 1e-9) return;
+    const hh = hMax * ws[i] / wMax;
+    s += `<rect x="${X(a)}" y="${yBase - hh}" width="${X(b) - X(a)}" height="${hh}" fill="${COR.carga}" stroke="${COR.azul}" stroke-width="1"/>`;
+    const nArr = Math.max(2, Math.round((X(b) - X(a)) / 22));
+    for (let j = 0; j <= nArr; j++) { const xx = X(a) + (X(b) - X(a)) * j / nArr; s += `<line x1="${xx}" y1="${yBase - hh}" x2="${xx}" y2="${yBase}" stroke="${COR.azul}" stroke-width="0.8"/><path d="M ${xx - 3} ${yBase - 5} L ${xx} ${yBase} L ${xx + 3} ${yBase - 5}" fill="none" stroke="${COR.azul}" stroke-width="0.8"/>`; }
+    const estreito = (X(b) - X(a)) < 105;
+    s += `<text x="${(X(a) + X(b)) / 2}" y="${yBase - hMax - 6 - (estreito && i !== 1 ? 14 : 0)}" text-anchor="middle" font-size="11.5" font-weight="600" fill="${COR.azulEsc}">${estreito ? '' : (i === 1 ? 'pisos: ' : `q${i + 1} = `)}${fmt(ws[i])}${estreito ? '' : ' tf/m'}</text>`;
+  });
+  s += `<polygon points="${polyPts(P0.top.concat(P0.bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.3" stroke-linejoin="round"/>`;
+  // modelo (nós nos cantos)
+  s += `<polyline points="${polyPts(r.nos.map(nd => [nd.x, nd.y]), X, Y)}" fill="none" stroke="${COR.azul}" stroke-width="0.9" stroke-dasharray="4 3"/>`;
+  r.nos.forEach(nd => s += `<circle cx="${X(nd.x)}" cy="${Y(nd.y)}" r="1.8" fill="${COR.azul}"/>`);
+  s += apoio(X(0), Y(-t), true) + apoio(X(r.L), Y(P0.R - t), false);
+  const yC = Y(-t) + 42;
+  s += ext(X(0), Y(-t) + 22, X(0), yC + 22) + ext(X(r.L), Y(P0.R - t) + 22, X(r.L), yC + 22);
+  if (I.A > 0) s += ext(X(I.A), Y(0), X(I.A), yC + 4);
+  if (I.C > 0) s += ext(X(I.A + I.B), Y(P0.R), X(I.A + I.B), yC + 4);
+  if (I.A > 0) s += cotaH(X(0), X(I.A), yC, `A = ${fmt(I.A)}`);
+  s += cotaH(X(I.A), X(I.A + I.B), yC, `B = ${fmt(I.B)}`);
+  if (I.C > 0) s += cotaH(X(I.A + I.B), X(r.L), yC, `C = ${fmt(I.C)}`);
+  s += cotaH(X(0), X(r.L), yC + 26, `L = ${fmt(r.L)} m (vão de cálculo)`, COR.linha);
+  s += ext(X(I.A + I.B), Y(P0.R), X(r.L) + 26, Y(P0.R)) + ext(X(I.A), Y(0), X(r.L) + 26, Y(0));
+  s += cotaV(X(r.L) + 22, Y(P0.R), Y(0), `${fmt(P0.R)} m`);
+  { const xs = I.A + I.B * 0.3, tx = X(xs) + 14, ty = Y((xs - I.A) * r.tgA - t) + 30;
+    s += `<text x="${tx}" y="${ty}" font-size="11" fill="${COR.cota}" transform="rotate(${-r.alfaGr} ${tx} ${ty})">plissada · ${r.nDeg} degraus · t = ${fmt(r.t, 1)} cm</text>`; }
+  return {
+    svg: svgWrap(VW, yC + 44, s, 'Elevação da escada plissada com cargas e cotas'),
+    leg: `g + q por m de piso/patamar (tf/m); espelhos: pp ${fmt(r.ppEsp, 2)} tf/m na altura. <span style="color:${COR.azul}">Tracejado</span> = pórtico (nós nos cantos); rolete embaixo, pino em cima.`
+  };
+}
+
+function desenhoDegrauP(r) {
+  const I = r.I, VW = 540, VH = 262, e = r.ew * 100, p = r.pw * 100, t = r.t;
+  const x0 = -0.5 * p, x1 = 1.75 * p;
+  const top = [[x0, 0], [0, 0], [0, e], [p, e], [p, 2 * e], [x1, 2 * e]];
+  const bot = [[x1, 2 * e - t], [p + t, 2 * e - t], [p + t, e - t], [t, e - t], [t, -t], [x0, -t]];
+  const k = Math.min((VW - 190) / (x1 - x0), (VH - 70) / (2 * e + t));
+  const ox = 95 - x0 * k, oy = 46 + 2 * e * k, X = x => ox + x * k, Y = y => oy - y * k;
+  let s = `<polygon points="${polyPts(top.concat(bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.4" stroke-linejoin="round"/>`;
+  [[x0, 0, -t], [x1, 2 * e, 2 * e - t]].forEach(([x, ya, yb]) => s += `<line x1="${X(x)}" y1="${Y(ya)}" x2="${X(x)}" y2="${Y(yb)}" stroke="${COR.conc}" stroke-width="2.5"/><line x1="${X(x)}" y1="${Y(ya)}" x2="${X(x)}" y2="${Y(yb)}" stroke="${COR.linha}" stroke-width="0.8" stroke-dasharray="4 3"/>`);
+  // eixo do modelo
+  const ax = [[x0, -t / 2], [t / 2, -t / 2], [t / 2, e - t / 2], [p + t / 2, e - t / 2], [p + t / 2, 2 * e - t / 2], [x1, 2 * e - t / 2]];
+  s += `<polyline points="${polyPts(ax, X, Y)}" fill="none" stroke="${COR.ambar}" stroke-width="1.2" stroke-dasharray="5 3"/>`;
+  ax.slice(1, 5).forEach(([x, y]) => s += `<circle cx="${X(x)}" cy="${Y(y)}" r="3" fill="${COR.ambar}"/>`);
+  // cotas
+  s += ext(X(p), Y(2 * e), X(p), Y(2 * e) - 24) + ext(X(0), Y(e), X(0), Y(2 * e) - 24);
+  s += cotaH(X(0), X(p), Y(2 * e) - 18, `p = ${fmt(p, 1)}`);
+  s += ext(X(p), Y(e), X(x1) + 22, Y(e)) + ext(X(x1), Y(2 * e), X(x1) + 22, Y(2 * e));
+  s += cotaV(X(x1) + 18, Y(2 * e), Y(e), `e = ${fmt(e, 1)}`);
+  s += `<line x1="${X(p * 0.55)}" y1="${Y(e)}" x2="${X(p * 0.55)}" y2="${Y(e - t)}" stroke="${COR.azul}" stroke-width="2"/><text x="${X(p * 0.55) + 6}" y="${Y(e - t * 0.3) + 4}" font-size="12.5" font-weight="600" fill="${COR.azulEsc}">t = ${fmt(t, 1)}</text>`;
+  s += `<line x1="${X(p)}" y1="${Y(1.5 * e)}" x2="${X(p + t)}" y2="${Y(1.5 * e)}" stroke="${COR.azul}" stroke-width="2"/><text x="${X(p) - 6}" y="${Y(1.5 * e) + 4}" text-anchor="end" font-size="12.5" font-weight="600" fill="${COR.azulEsc}">t = ${fmt(t, 1)}</text>`;
+  return {
+    svg: svgWrap(VW, VH, s, 'Detalhe do degrau da escada plissada'),
+    leg: `Cotas em cm, em escala. Espessura constante t no piso e no espelho. pp por m de barra = 2,5·t = ${fmt(r.ppPiso, 3)} tf/m; equivalente por m² de projeção = 2,5·t·(p + e)/p = <b>${fmt(r.ppProj, 3)} tf/m²</b>. <span style="color:${COR.ambar}">Tracejado</span> = eixo do pórtico com os nós.`
+  };
+}
+
+function desenhoEsforcosP(r) {
+  const VW = 540, mx = 40, L = r.L, R = r.R;
+  const k = Math.min((VW - 2 * mx) / L, 165 / Math.max(R, 0.01));
+  const ox = mx + (VW - 2 * mx - L * k) / 2, yTopo = 22 + R * k, X = x => ox + x * k, Y = y => yTopo - y * k;
+  let s = '';
+  const Mmax = Math.max(...r.pts.map(pt => Math.abs(pt.Mk))) || 1, kM = 34 / Mmax;
+  // diagrama de M no lado tracionado (como no Ftool)
+  const porB = {}; r.pts.forEach(pt => (porB[pt.ib] = porB[pt.ib] || []).push(pt));
+  Object.values(porB).forEach(arr => {
+    const br = r.barras[arr[0].ib], a = r.nos[br.i], b2 = r.nos[br.j], Lb = Math.hypot(b2.x - a.x, b2.y - a.y), c = (b2.x - a.x) / Lb, sn = (b2.y - a.y) / Lb;
+    const base = arr.map(pt => [X(pt.x), Y(pt.y)]), off = arr.map(pt => [X(pt.x) + sn * pt.Mk * kM, Y(pt.y) + c * pt.Mk * kM]);
+    s += `<polygon points="${base.concat(off.reverse()).map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="rgba(26,86,219,0.13)" stroke="${COR.azul}" stroke-width="0.9"/>`;
+  });
+  // barras: espelhos coloridos pelo esforço normal
+  r.barras.forEach((br, ib) => {
+    const a = r.nos[br.i], b2 = r.nos[br.j];
+    let cor = COR.linha, w = 1.6;
+    if (br.tipo === 'esp') { const N = porB[ib][0].Nk; cor = N < 0 ? COR.azulEsc : COR.verm; w = 2.6; }
+    s += `<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b2.x)}" y2="${Y(b2.y)}" stroke="${cor}" stroke-width="${w}"/>`;
+  });
+  s += apoio(X(0), Y(0) + 2, true) + apoio(X(L), Y(R) + 2, false);
+  const pm = r.pMax;
+  s += `<line x1="${X(pm.x)}" y1="${Y(pm.y)}" x2="${X(pm.x) + 70}" y2="${Y(pm.y) + 44}" stroke="${COR.azulEsc}" stroke-width="0.8"/>`;
+  s += `<text x="${X(pm.x) + 73}" y="${Y(pm.y) + 50}" font-size="12" font-weight="600" fill="${COR.azulEsc}">M<tspan baseline-shift="sub" font-size="9">k,máx</tspan> = ${fmt(r.Mk)} tf·m/m</text><text x="${X(pm.x) + 73}" y="${Y(pm.y) + 64}" font-size="11" fill="${COR.cota}">${r.trechoM} · x = ${fmt(r.xM)} m</text>`;
+  const esp = r.barras.map((br, ib) => ({ br, ib })).filter(o => o.br.tipo === 'esp');
+  if (esp.length) {
+    const e1 = esp[0], e2 = esp[esp.length - 1], n1 = r.nos[e1.br.i], n2 = r.nos[e2.br.j];
+    s += `<text x="${X(n1.x) - 8}" y="${Y(n1.y) + 4}" text-anchor="end" font-size="11.5" font-weight="600" fill="${COR.azulEsc}">N<tspan baseline-shift="sub" font-size="8">k</tspan> = ${fmt(porB[e1.ib][0].Nk)}</text>`;
+    s += `<text x="${X(n2.x) - 8}" y="${Y(n2.y) + 4}" text-anchor="end" font-size="11.5" font-weight="600" fill="${COR.verm}">N<tspan baseline-shift="sub" font-size="8">k</tspan> = +${fmt(porB[e2.ib][0].Nk)}</text>`;
+  }
+  // elástica (quase permanente)
+  const y1 = Y(0) + 40, hF = 24, v = r.v.slice().sort((a, b) => a[0] - b[0]);
+  let de = ''; v.forEach(([x, a], i) => de += `${i ? 'L' : 'M'} ${X(x).toFixed(1)} ${(y1 + hF * a / r.a0).toFixed(1)} `);
+  s += `<line x1="${X(0)}" y1="${y1}" x2="${X(L)}" y2="${y1}" stroke="${COR.linha}" stroke-width="1"/>`;
+  s += `<path d="${de}" fill="none" stroke="${COR.verm}" stroke-width="1.6" stroke-dasharray="6 3"/>`;
+  s += `<line x1="${X(r.xa0)}" y1="${y1}" x2="${X(r.xa0)}" y2="${y1 + hF}" stroke="${COR.verm}" stroke-width="1"/>`;
+  s += `<text x="${X(r.xa0)}" y="${y1 + hF + 16}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.verm}">a<tspan baseline-shift="sub" font-size="9">0</tspan> = ${fmt(r.a0, 3)} cm · a<tspan baseline-shift="sub" font-size="9">t</tspan> = ${fmt(r.aT, 3)} cm</text>`;
+  s += `<text x="${mx - 6}" y="${y1 + 18}" text-anchor="end" font-size="11" fill="${COR.cota}">a</text>`;
+  return {
+    svg: svgWrap(VW, y1 + hF + 24, s, 'Pórtico plissado: momento fletor, esforço normal nos espelhos e elástica'),
+    leg: `Pórtico, faixa de 1 m, g + q <b>característicos</b>; M do lado tracionado. Espelhos em <b style="color:${COR.azulEsc}">compressão</b> / <b style="color:${COR.verm}">tração</b>; pisos com N = 0 (rolete). Elástica sem escala, quase permanente.`
+  };
+}
+
+function desenhoArmacaoP(r) {
+  const I = r.I, VW = 540, VH = 280, e = r.ew * 100, p = r.pw * 100, t = r.t, c = I.c;
+  const xL = -0.5 * p, xR = 1.75 * p;
+  const top = [[xL, 0], [0, 0], [0, e], [p, e], [p, 2 * e], [xR, 2 * e]];
+  const bot = [[xR, 2 * e - t], [p + t, 2 * e - t], [p + t, e - t], [t, e - t], [t, -t], [xL, -t]];
+  const k = Math.min((VW - 120) / (xR - xL), (VH - 60) / (2 * e + t));
+  const ox = 40 - xL * k, oy = 28 + 2 * e * k, X = x => ox + x * k, Y = y => oy - y * k;
+  const cid = 'clipP' + Math.round(Math.random() * 1e6);
+  let s = `<defs><clipPath id="${cid}"><rect x="${X(xL)}" y="0" width="${X(xR) - X(xL)}" height="${VH}"/></clipPath></defs>`;
+  s += `<polygon points="${polyPts(top.concat(bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.3" stroke-linejoin="round"/>`;
+  [[xL, 0, -t], [xR, 2 * e, 2 * e - t]].forEach(([x, ya, yb]) => s += `<line x1="${X(x)}" y1="${Y(ya)}" x2="${X(x)}" y2="${Y(yb)}" stroke="${COR.conc}" stroke-width="2.5"/><line x1="${X(x)}" y1="${Y(ya)}" x2="${X(x)}" y2="${Y(yb)}" stroke="${COR.linha}" stroke-width="0.8" stroke-dasharray="4 3"/>`);
+  const ret = (x0, y0, x1, y1, cor) => `<rect x="${X(x0)}" y="${Y(y1)}" width="${X(x1) - X(x0)}" height="${Y(y0) - Y(y1)}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round" rx="2"/>`;
+  let g = '';
+  // N1 — estribos dos pisos (k = 0, 1, 2)
+  [0, 1, 2].forEach(kk => g += ret((kk - 1) * p + c, kk * e - t + c, kk * p + t - c, kk * e - c, COR.azul));
+  // N2 — estribos dos espelhos (k = 1, 2)
+  [1, 2].forEach(kk => g += ret((kk - 1) * p + c, (kk - 1) * e - t + c, (kk - 1) * p + t - c, kk * e - c, COR.verde));
+  // N3 — distribuição: cantos dos estribos e ao longo dos pisos
+  const rp = Math.max(2.3, I.phiD / 20 * k), dot = (x, y) => `<circle cx="${X(x)}" cy="${Y(y)}" r="${rp}" fill="${COR.ambar}"/>`, cd = c + I.phiP / 10 + I.phiD / 20;
+  [0, 1, 2].forEach(kk => {
+    const xa = (kk - 1) * p + cd, xb = kk * p + t - cd, ya = kk * e - t + cd, yb = kk * e - cd;
+    const nInt = Math.max(0, Math.floor((xb - xa) / r.sD - 1e-9));
+    for (let i = 0; i <= nInt; i++) { const x = i === nInt ? xb : xa + i * (xb - xa) / Math.max(nInt, 1); g += dot(x, ya) + dot(x, yb); }
+  });
+  [1, 2].forEach(kk => { const x0 = (kk - 1) * p + cd, x1 = (kk - 1) * p + t - cd; [(kk - 1) * e - t + cd, kk * e - cd, ((kk - 1) * e - t + kk * e) / 2].forEach(y => g += dot(x0, y) + dot(x1, y)); });
+  s += `<g clip-path="url(#${cid})">${g}</g>`;
+  // marcadores
+  const marca = (x, y, txt, cor, anc = 'start') => `<text x="${x}" y="${y}" text-anchor="${anc}" font-size="12" font-weight="600" fill="${cor}">${txt}</text>`;
+  s += marca(X(p * 0.45), Y(e) - 8, `N1 · Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}`, COR.azulEsc, 'middle');
+  s += marca(X(p + t) + 8, Y(1.45 * e), `N2 · Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}`, COR.verde);
+  s += marca(X(xL) + 4, Y(-t) + 18, `N3 · Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)}`, COR.ambar);
+  return {
+    svg: svgWrap(VW, VH, s, 'Esquema de armação da escada plissada com estribos fechados'),
+    leg: `Em escala. <b style="color:${COR.azul}">N1</b> estribo do piso ≈ ${fmt(p + t - 2 * c, 0)} × ${fmt(t - 2 * c, 0)} e <b style="color:${COR.verde}">N2</b> estribo do espelho ≈ ${fmt(t - 2 * c, 0)} × ${fmt(e + t - 2 * c, 0)} cm, fechados, Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} → ${fmt(r.AsEf)} cm²/m por face, transpassados no nó. <b style="color:${COR.ambar}">N3</b> Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} nos cantos e pisos. Dobras: detalhe padrão BASE.`
+  };
+}
+
+/* ==================== MEMORIAL — PLISSADA ==================== */
+function memorialHTMLP(r) {
+  const I = r.I, ok = b => b ? '<span class="ok">atende</span>' : '<span class="nok">não atende</span>';
+  const tab = r.tabela.map(t => `<tr class="${t.phi === I.phiP ? 'sel' : ''}"><td>Ø ${fphi(t.phi)}</td><td>${fmt(t.a, 3)}</td><td>${fmt(t.sCalc, 1)}</td><td>${fmt(t.s, 0)}</td><td>${fmt(t.AsEf)}</td><td>${t.okPhi ? '✓' : '<span class="nok">Ø &gt; t/8</span>'}</td></tr>`).join('');
+  // tabela por espelho: M, N e As no nó inferior (crítico)
+  const esp = []; const vistos = new Set();
+  r.pts.forEach(pt => { if (pt.tipo === 'esp' && !vistos.has(pt.kd)) { vistos.add(pt.kd); esp.push(pt); } });
+  const pis = r.barras.map((br, ib) => ({ br, ib })).filter(o => o.br.tipo !== 'esp').map(o => { let m = null; r.pts.forEach(pt => { if (pt.ib === o.ib && (!m || pt.Mk > m.Mk)) m = pt; }); return m; });
+  const linha = pt => `<tr class="${pt === r.gov ? 'sel' : ''}"><td>${pt.tipo === 'esp' ? 'espelho ' + pt.kd : pt.tipo === 'piso' ? 'piso ' + pt.kd : pt.tipo === 'pA' ? 'patamar A' : 'patamar C'}</td><td>${fmt(pt.x, 2)}</td><td>${fmt(pt.Mk, 3)}</td><td>${fmt(pt.Nk, 3)}</td><td>${fmt(pt.Md, 3)}</td><td>${fmt(pt.Nd, 3)}</td><td>${pt.fc.imposs ? '<span class="nok">—</span>' : fmt(pt.fc.As, 2)}</td></tr>`;
+  const sel = esp.length > 8 ? esp.filter((pt, i) => i < 3 || i >= esp.length - 3 || Math.abs(pt.x - r.xM) < r.pw * 1.01) : esp;
+  return `
+  <div class="card mm bloco"><h3>1. Dados</h3>
+    Tipo: <strong>escada plissada</strong> (laje em zigue-zague de espessura constante) · A = ${fmt(I.A)} m · B = ${fmt(I.B)} m · C = ${fmt(I.C)} m → L = ${fmt(r.L)} m (projeção horizontal)<br>
+    t = ${fmt(I.h, 1)} cm (pisos, espelhos e patamares) · e = ${fmt(I.e, 1)} cm · p = ${fmt(I.p, 1)} cm → n = ${r.nDeg} degraus${r.pAj ? ` (B/p = ${fmt(r.nDegCalc, 2)}; adotados p' = ${fmt(r.pw * 100, 2)} cm e e' = ${fmt(r.ew * 100, 2)} cm)` : ''}<br>
+    Materiais: concreto C${I.fck} (γc = 1,4) · ${I.aco === 600 ? 'CA-60' : 'CA-50'} (γs = 1,15) · c = ${fmt(I.c, 1)} cm · γf = ${fmt(I.gf)} (g e q) · faixa b = 100 cm<br>
+    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · extra A = ${fmt(I.gA)} · extra C = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ (sem enchimento de degraus)<br>
+    Conversões: 1 tf = 10 kN; 1 MPa = 10 kgf/cm² = 0,1 kN/cm².
+  </div>
+  <div class="card mm bloco"><h3>2. Modelo e cargas</h3>
+    Pórtico plano (método da rigidez, barras de Euler-Bernoulli com EA e EI), nós nos cantos dos degraus; ${r.apoioTxt} — mesmo esquema do modelo de referência no Ftool.
+    <div class="fml">pp piso = pp espelho = pp patamar = 2,5·t = 2,5·${fmt(I.h / 100, 3)} = ${fmt(r.ppPiso, 3)} tf/m por m de barra (equivalente no lance: 2,5·t·(p + e)/p = ${fmt(r.ppProj, 3)} tf/m²)</div>
+    <table><tr><th>Barra</th><th>g (tf/m)</th><th>q (tf/m)</th><th>g + q (tf/m)</th><th>Direção</th></tr>
+      ${I.A > 0 ? `<tr><td>Patamar A</td><td>${fmt(r.carga({ tipo: 'pA' }, 'g'), 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.carga({ tipo: 'pA' }, 'k'), 3)}</td><td>vertical, por m</td></tr>` : ''}
+      <tr><td>Pisos (${r.nDeg}× ${fmt(r.pw * 100, 1)} cm)</td><td>${fmt(r.carga({ tipo: 'piso' }, 'g'), 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.carga({ tipo: 'piso' }, 'k'), 3)}</td><td>vertical, por m</td></tr>
+      <tr><td>Espelhos (${r.nDeg}× ${fmt(r.ew * 100, 1)} cm)</td><td>${fmt(r.carga({ tipo: 'esp' }, 'g'), 3)}</td><td>0</td><td>${fmt(r.carga({ tipo: 'esp' }, 'k'), 3)}</td><td>axial (ao longo da altura)</td></tr>
+      ${I.C > 0 ? `<tr><td>Patamar C</td><td>${fmt(r.carga({ tipo: 'pC' }, 'g'), 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.carga({ tipo: 'pC' }, 'k'), 3)}</td><td>vertical, por m</td></tr>` : ''}
+    </table>
+  </div>
+  <div class="card mm bloco"><h3>3. Esforços (característicos, faixa de 1 m)</h3>
+    Reações: R<sub>A,k</sub> = ${fmt(r.RA, 3)} tf/m (g ${fmt(r.RAg, 3)} + q ${fmt(r.RAq, 3)}) · R<sub>B,k</sub> = ${fmt(r.RB, 3)} tf/m (g ${fmt(r.RBg, 3)} + q ${fmt(r.RBq, 3)}) · H = ${fmt(Math.abs(r.H), 3)} tf/m (rolete)<br>
+    <strong>M<sub>k,máx</sub> = ${fmt(r.Mk, 3)} tf·m/m</strong> no ${r.trechoM} (x = ${fmt(r.xM, 3)} m) · M<sub>d</sub> = γf·M<sub>k</sub> = ${fmt(r.Md, 3)} tf·m/m<br>
+    Esforço normal: pisos N = ${fmt(r.NhorMax, 3)} tf/m (sem empuxo horizontal) · espelhos de ${fmt(r.NespMin, 3)} (compressão, base) a +${fmt(r.NespMax, 3)} tf/m (tração, topo). Nos espelhos, N equivale ao cortante de viga e M é constante ao longo da altura.
+  </div>
+  <div class="card mm bloco"><h3>4. Flexão composta — estribos fechados (17.2.2, 8.2.10.1)</h3>
+    fcd = ${fmt(r.fcd, 2)} MPa · fyd = ${fmt(r.fyd, 1)} MPa · λ = ${fmt(r.lambda, 3)} · αc = ${fmt(r.alfaC, 3)} · ηc = ${fmt(r.etaC, 3)} · σcd = ${fmt(r.sigcd, 2)} MPa
+    <div class="fml">d = t − c − Ø/2 = ${fmt(I.h, 1)} − ${fmt(I.c, 1)} − ${fmt(I.phiP / 20, 2)} = ${fmt(r.d, 2)} cm · e<sub>s</sub> = d − t/2 = ${fmt(r.d - r.t / 2, 2)} cm</div>
+    <div class="fml">M<sub>sd,s</sub> = M<sub>d</sub> − N<sub>d</sub>·e<sub>s</sub> (N<sub>d</sub> tração +) → λx = d·[1 − √(1 − 2·M<sub>sd,s</sub>/(σcd·b·d²))] → A<sub>s</sub> = M<sub>sd,s</sub>/[fyd·(d − λx/2)] + N<sub>d</sub>/fyd</div>
+    Verificado em 13 pontos por barra. Espelhos (nó inferior) e pisos/patamares (máximo de cada barra):
+    <table><tr><th>Barra</th><th>x (m)</th><th>M<sub>k</sub></th><th>N<sub>k</sub></th><th>M<sub>d</sub></th><th>N<sub>d</sub></th><th>A<sub>s</sub> (cm²/m)</th></tr>
+      ${sel.map(linha).join('')}${pis.filter(pt => Math.abs(pt.x - r.xM) < r.pw * 1.6 || pt.tipo !== 'piso').map(linha).join('')}</table>
+    ${r.flexImpossivel ? '<span class="nok">Md excede a capacidade da seção em algum ponto. Aumentar t ou fck.</span><br>' : ''}
+    Governa: <strong>${r.govTxt}</strong> → A<sub>s,calc</sub> = ${fmt(r.As, 3)} cm²/m · x/d máx = ${fmt(r.xd, 3)} ≤ ${fmt(r.xdLim)} (14.6.4.3 / 14.7.4): ${ok(r.xd <= r.xdLim + 1e-9)}${r.govS ? ` · face superior (M &lt; 0): ${fmt(r.AsSupCalc, 3)} cm²/m` : ' · sem momento negativo (M ≥ 0 em todo o pórtico)'}
+    <div class="fml">As,mín = ρmín·b·t = ${fmt(r.rhoMin, 3)}%·100·${fmt(I.h, 1)} = ${fmt(r.AsMin, 3)} cm²/m (Tabela 19.1 → Tabela 17.3, C${I.fck}) → As,nec = ${fmt(r.AsNec, 3)} cm²/m</div>
+    Espaçamento: s ≤ mín(2t; 20 cm) = ${fmt(r.sMax, 0)} cm (20.1) · Ø ≤ t/8 = ${fmt(r.phiMax, 1)} mm (20.1)
+    <table><tr><th>Bitola</th><th>Aφ (cm²)</th><th>s calc (cm)</th><th>s adot (cm)</th><th>As,ef (cm²/m)</th><th>Ø ≤ t/8</th></tr>${tab}</table>
+    Adotado: <strong>estribos fechados Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} cm</strong> em cada piso (N1) e em cada espelho (N2), transpassados nos nós → As,ef = ${fmt(r.AsEf, 2)} cm²/m <strong>em cada face</strong> · taxa ${fmt(r.utilFlex * 100, 0)} %
+  </div>
+  <div class="card mm bloco"><h3>5. Distribuição e cortante</h3>
+    <div class="fml">As,dist ≥ máx(0,2·As,nec; 0,9 cm²/m; 0,5·As,mín) = ${fmt(r.AsDist, 3)} cm²/m (Tabela 19.1 e 20.1) → Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} = ${fmt(r.AsDistEf, 2)} cm²/m, nos cantos dos estribos e ao longo dos pisos</div>
+    fctd = ${fmt(r.fctd, 3)} MPa · τRd = 0,25·fctd = ${fmt(r.tauRd, 4)} MPa · k = ${fmt(r.kV, 3)} · ρ1 = ${fmt(r.rho1 * 100, 3)} %
+    <div class="fml">VRd1 = [τRd·k·(1,2 + 40ρ1) + 0,15·σcp]·b·d, σcp = −N<sub>d</sub>/A<sub>c</sub> (19.4.1) → crítico no ${r.vGov.pt.tipo === 'esp' ? 'espelho ' + r.vGov.pt.kd : r.vGov.pt.tipo === 'piso' ? 'piso ' + r.vGov.pt.kd : r.vGov.pt.tipo === 'pA' ? 'patamar A' : 'patamar C'}: V<sub>Sd</sub> = ${fmt(r.Vsd, 3)} tf/m · σcp = ${fmt(r.vGov.scp, 3)} MPa · V<sub>Rd1</sub> = ${fmt(r.VRd1, 3)} tf/m → taxa ${fmt(r.utilV * 100, 0)} %: ${ok(r.utilV <= 1)}</div>
+    Transpasse dos estribos no nó: ℓb = (Ø/4)·fyd/fbd ≥ 25Ø = <strong>${fmt(r.lb, 1)} cm</strong> (9.4.2.4, fbd = ${fmt(r.fbd, 3)} MPa, boa aderência) — conferir no detalhe; estribo fechado com ganchos conforme 9.4.6.
+  </div>
+  <div class="card mm bloco"><h3>6. Flecha — pórtico (17.3.2.1, 13.3)</h3>
+    Combinação quase permanente g + ψ2·q, ψ2 = ${fmt(I.psi2, 1)} → M<sub>a</sub> = ${fmt(r.Ma, 3)} tf·m/m (x = ${fmt(r.xMa, 2)} m)
+    <div class="fml">Ecs = αi·Eci = ${fmt(r.alfaI, 3)}·${fmt(r.Eci, 0)} = ${fmt(r.Ecs, 0)} MPa (8.2.8) · Ic = b·t³/12 = ${fmt(r.Ic, 0)} cm⁴ · Mr = 1,5·fctm·Ic/(t/2) = ${fmt(r.Mr, 3)} tf·m/m</div>
+    <div class="fml">xII = ${fmt(r.x2, 3)} cm · III = ${fmt(r.I2, 0)} cm⁴ → ${r.fissurada ? `Ieq = (Mr/Ma)³·Ic + [1 − (Mr/Ma)³]·III = ${fmt(r.Ieq, 0)} cm⁴ (${fmt(r.Ieq / r.Ic * 100, 0)} % de Ic)` : `Ma ≤ Mr → Ieq = Ic`}, aplicado a todas as barras</div>
+    <div class="fml">a0 = deslocamento vertical máximo do pórtico (E = Ecs, I = Ieq) = <strong>${fmt(r.a0, 3)} cm</strong> em x = ${fmt(r.xa0, 2)} m · deslocamento horizontal no rolete = ${fmt(Math.abs(r.dxRolo), 3)} cm</div>
+    ξ(t0 = ${fmt(I.t0, 1)}) = ${fmt(r.xiT0, 3)} → αf = 2 − ξ(t0) = ${fmt(r.alfaF, 3)} (ρ' = 0)
+    <div class="fml">at = a0·(1 + αf) = ${fmt(r.aT, 3)} cm ≤ L/250 = ${fmt(r.aLim, 3)} cm → taxa ${fmt(r.utilFl * 100, 0)} %: ${ok(r.utilFl <= 1)}</div>
+    <div class="fml">Vibração: a(ψ2·q) = ${fmt(r.aQpsi, 3)} cm ≤ L/350 = ${fmt(r.aLimQ, 3)} cm → taxa ${fmt(r.utilQ * 100, 0)} %: ${ok(r.utilQ <= 1)} · com q integral: ${fmt(r.aQ, 3)} cm</div>
+    <span class="nota">Os espelhos giram sob momento constante, por isso a plissada é mais flexível que uma laje reta de mesmo vão. Validação do solver: modelo de referência no Ftool (17 degraus 29 × 18, t = 16, E = 25000 MPa, 0,8 tf/m) → M = 2,47 tf·m, N = −2,10/+1,76 tf, flecha 11,69 mm (Ftool: 11,695 mm, com 1 tf = 9,80665 kN).</span>
+  </div>`;
+}
+
 function desenhar() {
   const box = $('svg-box'), leg = $('leg');
   if (!R || !R.ok) { box.innerHTML = ''; leg.innerHTML = ''; return; }
   const a = aba();
   const tit = { geo: 'Elevação — geometria e cargas', deg: 'Detalhe do degrau', esf: 'Esforços e elástica', arm: 'Esquema de armação' }[a];
-  const d = a === 'geo' ? desenhoGeometria(R) : a === 'deg' ? desenhoDegrau(R) : a === 'esf' ? desenhoEsforcos(R) : desenhoArmacao(R);
+  const P = R.plis, d = a === 'geo' ? (P ? desenhoGeometriaP(R) : desenhoGeometria(R)) : a === 'deg' ? (P ? desenhoDegrauP(R) : desenhoDegrau(R)) : a === 'esf' ? (P ? desenhoEsforcosP(R) : desenhoEsforcos(R)) : (P ? desenhoArmacaoP(R) : desenhoArmacao(R));
   box.innerHTML = d.svg; leg.innerHTML = d.leg;
 }
 
@@ -883,19 +1330,20 @@ function memorialHTML(r) {
   </div>`;
 }
 
-function abrirMemo() { if (!R || !R.ok) return; $('memo-body').innerHTML = memorialHTML(R); $('modal-memo').classList.add('aberto'); }
+function abrirMemo() { if (!R || !R.ok) return; $('memo-body').innerHTML = R.plis ? memorialHTMLP(R) : memorialHTML(R); $('modal-memo').classList.add('aberto'); }
 function fecharMemo() { $('modal-memo').classList.remove('aberto'); }
 function gerarPDF() {
   if (!R || !R.ok) return;
   const hoje = new Date().toLocaleDateString('pt-BR');
-  const g = desenhoGeometria(R), a = desenhoArmacao(R), e = desenhoEsforcos(R);
-  $('print-area').innerHTML = `<h1>Memória de cálculo — Escada</h1><div class="sub">Lance biapoiado com patamares · NBR 6118:2023 · BASE Estruturas · ${hoje}</div>
-    <div class="bloco">${g.svg}</div>${memorialHTML(R)}<div class="bloco mm"><h3>7. Esforços e elástica</h3>${e.svg}</div><div class="bloco mm"><h3>8. Esquema de armação</h3>${a.svg}<p style="font-size:9.5pt">${a.leg}</p></div>`;
+  const P = R.plis, g = P ? desenhoGeometriaP(R) : desenhoGeometria(R), a = P ? desenhoArmacaoP(R) : desenhoArmacao(R), e = P ? desenhoEsforcosP(R) : desenhoEsforcos(R);
+  $('print-area').innerHTML = `<h1>Memória de cálculo — Escada${P ? ' plissada' : ''}</h1><div class="sub">${P ? 'Escada plissada — pórtico plano' : 'Lance biapoiado com patamares'} · NBR 6118:2023 · BASE Estruturas · ${hoje}</div>
+    <div class="bloco">${g.svg}</div>${P ? memorialHTMLP(R) : memorialHTML(R)}<div class="bloco mm"><h3>7. ${P ? 'Pórtico: momento, normal e elástica' : 'Esforços e elástica'}</h3>${e.svg}</div><div class="bloco mm"><h3>8. Esquema de armação</h3>${a.svg}<p style="font-size:9.5pt">${a.leg}</p></div>`;
   setTimeout(() => window.print(), 100);
 }
 
 IDS.forEach(id => { const el = $(id); el.addEventListener('input', atualizar); el.addEventListener('change', atualizar); });
 document.querySelectorAll('input[name="aba"]').forEach(el => el.addEventListener('change', desenhar));
+document.querySelectorAll('input[name="tipo"]').forEach(el => el.addEventListener('change', atualizar));
 $('btn-memo').addEventListener('click', abrirMemo);
 $('btn-memo-x').addEventListener('click', fecharMemo);
 $('btn-memo-fechar').addEventListener('click', fecharMemo);
