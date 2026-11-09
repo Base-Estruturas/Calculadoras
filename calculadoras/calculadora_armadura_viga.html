@@ -1751,7 +1751,7 @@ function calcularPele() {
   if (sp > sMaxP + 1e-9) avisos.push(`<div class="alert alert-danger" title="Espaçamento máximo da armadura de pele: mín(d/3 = ${fmtBR(d / 3, 1)}; 20) cm — 17.3.5.2.3 e 18.3.5">s ≈ ${fmtBR(sp, 1)} &gt; ${d / 3 < 20 ? `d/3 = ${fmtBR(sMaxP, 1)}` : '20'} cm${sugestoes.length ? ' · atendem: ' + sugestoes.join(', ') : ' · aumentar n de barras'}</div>`);
   // 15Ø (NOTA de 17.3.3.2): só para h ≥ 1,20 m — abaixo disso a pele conforme 17.3.5.2.3 basta (17.3.3.2)
   const verif15 = h >= 120;
-  if (verif15 && sp > s15) avisos.push(`<div class="alert alert-warning" title="Recomendação da NOTA de 17.3.3.2 para a armadura de pele na zona tracionada">Espaçamento s ≈ ${fmtBR(sp, 1)} cm &gt; 15·Ø = ${fmtBR(s15, 1)} cm — recomendação da NOTA 17.3.3.2 (h ≥ 1,20 m)</div>`);
+  if (verif15 && sp > s15) avisos.push(`<div class="alert alert-warning" title="Recomendação da NOTA de 17.3.3.2 para a armadura de pele na zona tracionada">Espaçamento s ≈ ${fmtBR(sp, 1)} cm não atende s ≤ 15·Ø = ${fmtBR(s15, 1)} cm — recomendação da NOTA 17.3.3.2 (h ≥ 1,20 m)</div>`);
   al.innerHTML = avisos.join('');
   memo.innerHTML = `
     <p class="section-title" style="margin-top: 0;">Armadura de pele — NBR 6118:2023, item 17.3.5.2.3</p>
