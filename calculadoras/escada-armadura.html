@@ -742,13 +742,22 @@ function desenhoArmacao(r) {
   const xFim1 = Math.min(A + (R - cv + P.tv - cv / cs) / tg, L - cv);
   let n1 = A > 0 ? `M ${X(cv)} ${Y(yA) - gancho} L ${X(cv)} ${Y(yA)} L ${X(xDobra)} ${Y(yA)}` : `M ${X(cv)} ${Y(yL(cv)) - gancho} L ${X(cv)} ${Y(yL(cv))}`;
   n1 += ` L ${X(xFim1)} ${Y(yL(xFim1))}`;
+  const lbm = r.lb / 100, yC2 = R - tDes + cv;
   if (C <= 0) n1 += ` L ${X(xFim1)} ${Y(yL(xFim1)) - gancho}`;
+  else {
+    // padrão BASE: N1 segue pela face superior do patamar C (≥ ℓb) e desce até o nível de N2
+    const xH = Math.min(xFim1 + lbm, L - cv - 0.03);
+    n1 += ` L ${X(xH)} ${Y(R - cv)} L ${X(xH)} ${Y(yC2)}`;
+  }
   s += `<path d="${n1}" fill="none" stroke="${COR.azul}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
   // N2 — inferior do patamar C, reta para dentro do lance até a face superior
-  const yC2 = R - tDes + cv;
   if (C > 0) {
     const xFim2 = Math.max(A + (yC2 + cv / cs) / tg, A);
-    s += `<path d="M ${X(L - cv)} ${Y(yC2) - gancho} L ${X(L - cv)} ${Y(yC2)} L ${X(xFim2)} ${Y(yC2)}" fill="none" stroke="${COR.verde}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // padrão BASE: N2 segue paralela à face superior do lance (≥ ℓb) e desce até o nível de N1
+    const x2b = Math.max(xFim2 - lbm * cs, A + 0.03);
+    const gap = (P.tv - 2 * cv / cs) * cs, nx = Math.sin(r.alfa), ny = -Math.cos(r.alfa);
+    const yb = ySupL(x2b), xe = x2b + nx * gap, ye = yb + ny * gap;
+    s += `<path d="M ${X(L - cv)} ${Y(yC2) - gancho} L ${X(L - cv)} ${Y(yC2)} L ${X(xFim2)} ${Y(yC2)} L ${X(x2b)} ${Y(yb)} L ${X(xe)} ${Y(ye)}" fill="none" stroke="${COR.verde}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
   }
   // N3 — distribuição (pontos sobre N1 e N2)
   const nPts = Math.max(8, Math.round(L / 0.18));
@@ -795,7 +804,7 @@ function desenhoArmacao(r) {
   return {
     svg: svgWrap(VW, VH, s, 'Esquema de armação da escada'),
     leg: `Sem escala na espessura. <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distribuição Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
-      ${A > 0 ? `<b style="color:${COR.verde}">①</b> canto convexo: pode dobrar.` : ''}${C > 0 ? ` <b style="color:${COR.verm}">②</b> canto côncavo: <b>não dobrar</b> (empuxo ao vazio) — cruzar N1/N2 e ancorar ≥ ℓb = ${fmt(r.lb, 0)} cm além do cruzamento.` : ''}`
+      ${A > 0 ? `<b style="color:${COR.verde}">①</b> canto convexo: pode dobrar.` : ''}${C > 0 ? ` <b style="color:${COR.verm}">②</b> canto côncavo: <b>não dobrar</b> (empuxo ao vazio) — N1 e N2 se cruzam e seguem ≥ ℓb = ${fmt(r.lb, 0)} cm pela face oposta, com gancho até a outra camada.` : ''}`
   };
 }
 
