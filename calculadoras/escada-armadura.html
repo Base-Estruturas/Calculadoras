@@ -51,6 +51,7 @@
   .kv.top0 { margin-top: 0; padding-top: 0; border-top: none; }
   .kv div { font-size: 11.5px; color: var(--texto-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .kv b { display: block; font-size: 13.5px; color: var(--texto); font-weight: 600; }
+  .kv b small { font-size: 10.5px; color: var(--texto-2); font-weight: 400; }
   .barra { height: 5px; background: var(--corpo); border-radius: 3px; overflow: hidden; margin-top: 3px; }
   .barra > span { display: block; height: 100%; background: var(--verde); }
   .barra.fail > span { background: var(--vermelho); }
@@ -59,6 +60,20 @@
   .pill.fail { background: var(--vermelho-bg); color: var(--vermelho); }
   .pill.warn { background: var(--ambar-bg); color: var(--ambar); }
 
+  .bit-tab { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; margin-top: 2px; }
+  .bit-tab th, .bit-tab td { text-align: center; padding: 1px 0; white-space: nowrap; border: 1px solid var(--borda); }
+  .bit-tab th { font-weight: 600; color: var(--texto-2); background: var(--corpo); }
+  .bit-tab tr > :first-child { width: 58px; text-align: left; padding-left: 6px; cursor: default; }
+  .bit-tab [data-phi] { cursor: pointer; }
+  .bit-tab [data-phi]:hover { background: #EEF3FD; }
+  .bit-tab tr.calc td { color: var(--texto-2); font-size: 11.5px; }
+  .bit-tab td.adot { font-weight: 600; color: var(--texto); }
+  .bit-tab .sel { background: #DCE6FB !important; color: var(--azulEsc, #0F3B9E); }
+  .bit-tab th.sel { background: var(--azul) !important; color: #fff; }
+  .bit-tab .inv { color: var(--vermelho); font-size: 10.5px; }
+  .bit-tab .aviso { color: var(--ambar); }
+  .res-adot { display: flex; justify-content: space-between; align-items: baseline; margin-top: 3px; font-size: 12.5px; color: var(--texto-2); }
+  .res-adot strong { font-size: 16px; color: var(--texto); font-weight: 600; }
   .alertas:empty { display: none; }
   .alertas { margin-top: 7px; display: flex; flex-direction: column; gap: 4px; }
   .alert { padding: 5px 9px; border-radius: 6px; font-size: 11.5px; line-height: 1.35; border-left: 3px solid; }
@@ -112,7 +127,7 @@
     .hdr { height: 60px; flex-basis: 60px; } .hdr img { height: 48px; }
     .corpo { gap: 10px; padding: 10px 10px 6px; } .col { gap: 10px; } .card { padding: 9px 12px; }
     .card-hd { margin-bottom: 5px; } .card > .rot { margin-bottom: 5px; }
-    .res-num .val { font-size: 23px; } .kv { margin-top: 6px; padding-top: 6px; gap: 3px 10px; }
+    .res-num .val { font-size: 23px; } .kv { margin-top: 4px; padding-top: 4px; gap: 3px 10px; } .linha-info { margin-top: 5px; padding: 4px 9px; }
     .rodape { padding: 8px 16px; } .btn { height: 32px; }
   }
 
@@ -151,7 +166,7 @@
           <div class="f"><label for="A" title="A — patamar inferior (pode ser 0)">A <span class="un">(m)</span></label><input type="number" id="A" value="0.46" step="0.01" min="0"></div>
           <div class="f"><label for="B" title="B — projeção horizontal do lance">B <span class="un">(m)</span></label><input type="number" id="B" value="1.68" step="0.01" min="0"></div>
           <div class="f"><label for="C" title="C — patamar superior (pode ser 0)">C <span class="un">(m)</span></label><input type="number" id="C" value="1.54" step="0.01" min="0"></div>
-          <div class="f"><label for="h" title="Espessura da laje, medida perpendicular ao lance">h <span class="un">(cm)</span></label><input type="number" id="h" value="10" step="0.5" min="0"></div>
+          <div class="f"><label for="h" title="Espessura da laje, medida perpendicular ao lance">h <span class="un">(cm)</span></label><input type="number" id="h" value="12" step="0.5" min="0"></div>
           <div class="f"><label for="e">e — espelho <span class="un">(cm)</span></label><input type="number" id="e" value="18" step="0.5" min="0"></div>
           <div class="f"><label for="p">p — piso <span class="un">(cm)</span></label><input type="number" id="p" value="28" step="0.5" min="0"></div>
         </div>
@@ -170,7 +185,7 @@
       </div>
 
       <div class="card">
-        <span class="rot">Materiais, armação e flecha</span>
+        <span class="rot">Materiais e flecha</span>
         <div class="g3">
           <div class="f"><label for="fck">fck <span class="un">(MPa)</span></label>
             <select id="fck"><option>20</option><option>25</option><option>30</option><option>35</option><option selected>40</option><option>45</option><option>50</option><option>55</option><option>60</option><option>65</option><option>70</option><option>75</option><option>80</option><option>85</option><option>90</option></select></div>
@@ -178,10 +193,6 @@
             <select id="aco"><option value="500" selected>CA-50</option><option value="600">CA-60</option></select></div>
           <div class="f"><label for="c" title="Cobrimento nominal (Tabela 7.2)">c <span class="un">(cm)</span></label><input type="number" id="c" value="2.0" step="0.5" min="0"></div>
           <div class="f"><label for="gf" title="γf aplicado a g e q (combinação normal, 11.7.1)">γf</label><input type="number" id="gf" value="1.4" step="0.05" min="1"></div>
-          <div class="f"><label for="phiP">Ø principal</label>
-            <select id="phiP"><option value="5">Ø 5</option><option value="6.3">Ø 6,3</option><option value="8">Ø 8</option><option value="10" selected>Ø 10</option><option value="12.5">Ø 12,5</option><option value="16">Ø 16</option><option value="20">Ø 20</option></select></div>
-          <div class="f"><label for="phiD">Ø distrib.</label>
-            <select id="phiD"><option value="5" selected>Ø 5</option><option value="6.3">Ø 6,3</option><option value="8">Ø 8</option><option value="10">Ø 10</option></select></div>
           <div class="f"><label for="psi2" title="Tabela 11.2: 0,3 residencial; 0,4 comercial; 0,6 bibliotecas e garagens">ψ2 (Tab. 11.2)</label>
             <select id="psi2"><option value="0.3" selected title="residencial">0,3</option><option value="0.4" title="comercial, escritórios">0,4</option><option value="0.6" title="bibliotecas, garagens, oficinas">0,6</option></select></div>
           <div class="f"><label for="aE" title="Agregado graúdo (8.2.8)">αE — agregado</label>
@@ -198,18 +209,21 @@
         <div class="card-hd"><span class="rot">Esforços por metro de largura</span><span class="pill warn" id="pill-geo" style="display:none"></span></div>
         <div class="kv k4 top0" id="esf-kv"></div>
         <div class="linha-info" id="geo-info">—</div>
+        <input type="hidden" id="phiP" value="10"><input type="hidden" id="phiD" value="5">
       </div>
 
       <div class="card">
         <div class="card-hd"><span class="rot">Armadura principal (inferior)</span><span id="flex-st"></span></div>
         <div id="flex-res"></div>
-        <div class="kv" id="flex-kv"></div>
+        <div id="tab-p"></div>
+        <div class="kv k4" id="flex-kv"></div>
         <div class="alertas" id="flex-al"></div>
       </div>
 
       <div class="card">
-        <div class="card-hd"><span class="rot">Distribuição · Borda · Cortante</span><span id="cis-st"></span></div>
-        <div class="kv top0" id="cis-kv"></div>
+        <div class="card-hd"><span class="rot">Distribuição · borda · cortante</span><span id="cis-st"></span></div>
+        <div id="tab-d"></div>
+        <div class="kv k4" id="cis-kv"></div>
         <div class="alertas" id="cis-al"></div>
       </div>
 
@@ -356,14 +370,18 @@ function calcularEscada(I) {
     const s = Math.min(Math.floor(sc), r.sMax);
     return { phi: f, a, sCalc: sc, s, AsEf: 100 * a / s, okPhi: f <= r.phiMax + 1e-9 };
   });
-  r.princ = r.tabela.find(t => t.phi === phiP);
+  r.princ = r.tabela.find(t => t.phi === phiP) || r.tabela[3];
   r.AsEf = r.princ.AsEf;
   r.utilFlex = (r.As || 0) / r.AsEf;
   // ---- Distribuição (Tabela 19.1 e 20.1)
   r.AsDist = Math.max(0.2 * r.AsNec, 0.9, 0.5 * r.AsMin);
   r.sMaxD = 33;
-  const aD = areaBarra(phiD);
-  r.sD = Math.min(Math.floor(100 * aD / r.AsDist), r.sMaxD); r.AsDistEf = 100 * aD / r.sD;
+  r.tabelaD = [5, 6.3, 8, 10].map(f => {
+    const a = areaBarra(f), sc = 100 * a / r.AsDist, s = Math.min(Math.floor(sc), r.sMaxD);
+    return { phi: f, a, sCalc: sc, s, AsEf: 100 * a / s };
+  });
+  r.dist = r.tabelaD.find(t => t.phi === phiD) || r.tabelaD[0];
+  r.sD = r.dist.s; r.AsDistEf = r.dist.AsEf;
   // ---- Armadura de borda (negativa) nos apoios — Tabela 19.1 e 19.3.3.2
   r.AsBorda = 0.67 * r.rhoMin / 100 * b * h;
   r.lBorda = 0.15 * L;
@@ -430,11 +448,24 @@ function lerDados() {
   const o = {}; IDS.forEach(id => { o[id] = parseFloat($(id).value); if (!isFinite(o[id])) o[id] = 0; }); return o;
 }
 
+function tabelaBitolas(tab, sel, campo, nome, invalido, dica) {
+  const c = (t, html, cls = '') => `<td data-phi="${t.phi}" data-campo="${campo}" class="${cls}${t.phi === sel ? ' sel' : ''}">${html}</td>`;
+  return `<table class="bit-tab" title="${dica}">
+    <tr><th>Ø (mm)</th>${tab.map(t => `<th data-phi="${t.phi}" data-campo="${campo}" class="${t.phi === sel ? 'sel' : ''}">${fphi(t.phi)}</th>`).join('')}</tr>
+    <tr><th>s adot.</th>${tab.map(t => { const inv = invalido(t); return inv ? c(t, '×', 'inv') : c(t, fmt(t.s, 0), 'adot' + (t.s < 7 ? ' aviso' : '')); }).join('')}</tr>
+    <tr class="calc"><th>s calc.</th>${tab.map(t => c(t, fmt(t.sCalc, 1))).join('')}</tr>
+  </table>`;
+}
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-phi][data-campo]'); if (!el) return;
+  $(el.dataset.campo).value = el.dataset.phi; atualizar();
+});
+
 function atualizar() {
   R = calcularEscada(lerDados());
   const r = R;
   if (!r.ok) {
-    ['esf-kv', 'flex-res', 'flex-kv', 'cis-kv', 'fl-kv', 'cis-al', 'fl-al'].forEach(id => $(id).innerHTML = '');
+    ['esf-kv', 'flex-res', 'tab-p', 'tab-d', 'flex-kv', 'cis-kv', 'fl-kv', 'cis-al', 'fl-al'].forEach(id => $(id).innerHTML = '');
     $('flex-al').innerHTML = r.erros.map(e => `<div class="alert alert-danger">${e}</div>`).join('');
     $('flex-st').innerHTML = pill('fail', 'Dados'); $('btn-pdf').disabled = true; desenhar(); return;
   }
@@ -442,7 +473,7 @@ function atualizar() {
   const I = r.I;
   // Geometria
   const bl = r.blondel;
-  $('geo-info').innerHTML = `L = <strong>${fmt(r.L)} m</strong> · α = <strong>${fmt(r.alfaGr, 1)}°</strong> · M<sub>máx</sub> em x = <strong>${fmt(r.xM)} m</strong> · 2e + p = <strong ${bl >= 63 && bl <= 65 ? '' : 'style="color:var(--ambar)" title="fora de 63 a 65 cm (NBR 9050)"'}>${fmt(bl, 0)} cm</strong>`;
+  $('geo-info').innerHTML = `L = <strong>${fmt(r.L)} m</strong> · d = <strong>${fmt(r.d, 1)} cm</strong> · 2e+p = <strong ${bl >= 63 && bl <= 65 ? '' : 'style="color:var(--ambar)" title="fora de 63 a 65 cm (NBR 9050)"'}>${fmt(bl, 0)} cm</strong>`;
 
   // Esforços
   $('esf-kv').innerHTML = `
@@ -460,37 +491,32 @@ function atualizar() {
   } else {
     const xdOk = r.xd <= r.xdLim + 1e-9;
     $('flex-st').innerHTML = !xdOk ? pill('fail', `x/d > ${fmt(r.xdLim)}`) : (r.AsEf > r.AsMax ? pill('fail', 'As > 4%') : pill('ok', 'OK'));
-    $('flex-res').innerHTML = `
-      <div class="res-topo">
-        <div class="res-num"><span class="val">Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}</span><span class="un">cm</span></div>
-        <div class="res-num"><span class="lbl">A<sub>s,ef</sub></span><span class="val" style="font-size:18px">${fmt(r.AsEf)}</span><span class="un">cm²/m</span></div>
-      </div>`;
+    $('flex-res').innerHTML = '';
     $('flex-kv').innerHTML = `
-      <div>A<sub>s,calc</sub><b>${fmt(r.As)} cm²/m</b></div>
-      <div>A<sub>s,mín</sub> (${fmt(r.rhoMin, 3)}%)<b>${fmt(r.AsMin)} cm²/m</b></div>
-      <div>Taxa A<sub>s</sub>/A<sub>s,ef</sub><b>${fmt(r.utilFlex * 100, 0)} %</b>${barra(r.utilFlex)}</div>
-      <div>d<b>${fmt(r.d)} cm</b></div>
-      <div>x/d (lim ${fmt(r.xdLim)})<b>${fmt(r.xd, 3)}</b></div>
-      <div>s<sub>máx</sub> (20.1)<b>${fmt(r.sMax, 0)} cm</b></div>`;
+      <div>A<sub>s,calc</sub><b>${fmt(r.As)} <small>cm²/m</small></b></div>
+      <div title="ρmín = ${fmt(r.rhoMin, 3)}% (Tabela 17.3)">A<sub>s,mín</sub><b>${fmt(r.AsMin)} <small>cm²/m</small></b></div>
+      <div>x/d (≤ ${fmt(r.xdLim)})<b>${fmt(r.xd, 3)}</b></div>
+      <div title="As,calc / As,ef">Taxa A<sub>s</sub><b>${fmt(r.utilFlex * 100, 0)} %</b>${barra(r.utilFlex)}</div>`;
     if (!xdOk) fa.push(`<div class="alert alert-danger">x/d = ${fmt(r.xd, 3)} &gt; ${fmt(r.xdLim)} (14.6.4.3 e 14.7.4): aumentar h. Armadura dupla não é usual em escada.</div>`);
     if ((r.As || 0) < r.AsMin) fa.push(`<div class="alert alert-info">A<sub>s,calc</sub> &lt; A<sub>s,mín</sub>: governa a mínima (Tabela 19.1 → ρ<sub>mín</sub> da Tabela 17.3).</div>`);
-    if (r.princ.sCalc > r.sMax) fa.push(`<div class="alert alert-info">Espaçamento limitado por s<sub>máx</sub> = ${fmt(r.sMax, 0)} cm (20.1).</div>`);
   }
   if (I.phiP > r.phiMax + 1e-9) fa.push(`<div class="alert alert-danger">Ø ${fphi(I.phiP)} &gt; h/8 = ${fmt(r.phiMax, 1)} mm (20.1): reduzir a bitola.</div>`);
   if (r.princ.s < 7) fa.push(`<div class="alert alert-warning">s = ${fmt(r.princ.s, 0)} cm: espaçamento pequeno para concretagem (recomendação prática, não normativa). Aumentar a bitola.</div>`);
+  $('tab-p').innerHTML = r.flexImpossivel ? '' : tabelaBitolas(r.tabela, I.phiP, 'phiP', 'Principal', t => !t.okPhi ? 'Ø > h/8' : null, `Espaçamentos em cm. × = Ø > h/8 (20.1); âmbar = s < 7 cm. s adot. = mín(s calc.; s,máx = ${fmt(r.sMax, 0)} cm), arredondado para baixo. Clique para escolher.`)
+    + `<div class="res-adot"><span>Adotado: <strong>Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}</strong></span><span>A<sub>s,ef</sub> = <strong>${fmt(r.AsEf)}</strong> cm²/m</span></div>`;
   if (I.h < 8) fa.push(`<div class="alert alert-warning">h = ${fmt(I.h, 1)} cm &lt; 8 cm (13.2.4.1, lajes de piso).</div>`);
   $('flex-al').innerHTML = fa.join('');
 
   // Distribuição, borda e cortante
   const vOk = r.utilV <= 1;
   $('cis-st').innerHTML = vOk ? pill('ok', 'V OK') : pill('fail', 'V > VRd1');
+  $('tab-d').innerHTML = tabelaBitolas(r.tabelaD, I.phiD, 'phiD', 'Distribuição', () => null, 'Espaçamentos em cm. s adot. = mín(s calc.; 33 cm), arredondado para baixo. Clique para escolher.')
+    + `<div class="res-adot"><span>Adotado: <strong>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)}</strong></span><span>nec. ${fmt(r.AsDist)} · ef. <strong>${fmt(r.AsDistEf)}</strong> cm²/m</span></div>`;
   $('cis-kv').innerHTML = `
-    <div>Distribuição<b>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)}</b></div>
-    <div>A<sub>s,dist</sub> nec./ef.<b>${fmt(r.AsDist)} / ${fmt(r.AsDistEf)}</b></div>
-    <div>Borda (apoios)<b>${fmt(r.AsBorda)} cm²/m</b></div>
-    <div>V<sub>Sd</sub><b>${fmt(r.Vsd)} tf/m</b></div>
-    <div>V<sub>Rd1</sub><b>${fmt(r.VRd1)} tf/m</b></div>
-    <div>Taxa V<sub>Sd</sub>/V<sub>Rd1</sub><b>${fmt(r.utilV * 100, 0)} %</b>${barra(r.utilV)}</div>`;
+    <div title="armadura negativa de borda nos apoios, até 0,15·L">Borda<b>${fmt(r.AsBorda)} <small>cm²/m</small></b></div>
+    <div>V<sub>Sd</sub><b>${fmt(r.Vsd)} <small>tf/m</small></b></div>
+    <div>V<sub>Rd1</sub><b>${fmt(r.VRd1)} <small>tf/m</small></b></div>
+    <div>Taxa V<b>${fmt(r.utilV * 100, 0)} %</b>${barra(r.utilV)}</div>`;
   const ca = [];
   if (!vOk) ca.push(`<div class="alert alert-danger">V<sub>Sd</sub> &gt; V<sub>Rd1</sub> (19.4.1): aumentar h ou a armadura que chega ao apoio.</div>`);
   $('cis-al').innerHTML = ca.join('');
@@ -500,13 +526,13 @@ function atualizar() {
   $('fl-st').innerHTML = fOk && qOk ? pill('ok', 'OK') : pill('fail', 'Não atende');
   $('fl-kv').innerHTML = `
     <div title="combinação quase permanente g + ψ2·q">a<sub>0</sub> imediata<b>${fmt(r.a0, 2)} cm</b></div>
-    <div title="a0·(1 + αf)">a<sub>t</sub> (≤ L/250 = ${fmt(r.aLim, 2)})<b>${fmt(r.aT, 2)} cm</b></div>
-    <div>Taxa a<sub>t</sub><b>${fmt(r.utilFl * 100, 0)} %</b>${barra(r.utilFl)}</div>
+    <div title="a0·(1 + αf)">a<sub>t</sub> total<b>${fmt(r.aT, 2)} cm</b></div>
+    <div title="limite L/250 (Tabela 13.3)">a<sub>t</sub> / ${fmt(r.aLim, 2)} (L/250)<b>${fmt(r.utilFl * 100, 0)} %</b>${barra(r.utilFl)}</div>
     <div>M<sub>a</sub> / M<sub>r</sub> (tf·m/m)<b>${fmt(r.Ma)} / ${fmt(r.Mr)}</b></div>
     <div>I<sub>eq</sub> / I<sub>c</sub><b>${fmt(r.Ieq / r.Ic * 100, 0)} %</b></div>
     <div>α<sub>f</sub> (t<sub>0</sub> = ${fmt(r.I.t0, 1)})<b>${fmt(r.alfaF, 2)}</b></div>
-    <div title="vibração: parcela ψ2·q">a<sub>q</sub> (≤ L/350 = ${fmt(r.aLimQ, 2)})<b>${fmt(r.aQpsi, 2)} cm</b></div>
-    <div>Taxa a<sub>q</sub><b>${fmt(r.utilQ * 100, 0)} %</b>${barra(r.utilQ)}</div>`;
+    <div title="vibração: parcela ψ2·q">a<sub>q</sub> (ψ<sub>2</sub>q)<b>${fmt(r.aQpsi, 2)} cm</b></div>
+    <div title="limite L/350 (Tabela 13.3)">a<sub>q</sub> / ${fmt(r.aLimQ, 2)} (L/350)<b>${fmt(r.utilQ * 100, 0)} %</b>${barra(r.utilQ)}</div>`;
   const fl = [];
   if (!fOk) fl.push(`<div class="alert alert-danger">a<sub>t</sub> &gt; L/250 (Tabela 13.3): aumentar h ou prever contraflecha.</div>`);
   if (!qOk) fl.push(`<div class="alert alert-danger">Flecha da variável &gt; L/350 (Tabela 13.3, vibração).</div>`);
@@ -823,7 +849,9 @@ function memorialHTML(r) {
   </div>
   <div class="card mm bloco"><h3>5. Distribuição, borda e cortante</h3>
     <div class="fml">As,dist ≥ máx(0,2·As,nec; 0,9 cm²/m; 0,5·As,mín) = máx(${fmt(0.2 * r.AsNec, 3)}; 0,90; ${fmt(0.5 * r.AsMin, 3)}) = ${fmt(r.AsDist, 3)} cm²/m (Tabela 19.1 e 20.1)</div>
-    Adotado: <strong>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} cm</strong> (s ≤ 33 cm) → ${fmt(r.AsDistEf, 2)} cm²/m<br>
+    <table><tr><th>Bitola</th><th>Aφ (cm²)</th><th>s calc (cm)</th><th>s adot (cm)</th><th>As,ef (cm²/m)</th></tr>
+      ${r.tabelaD.map(t => `<tr class="${t.phi === I.phiD ? 'sel' : ''}"><td>Ø ${fphi(t.phi)}</td><td>${fmt(t.a, 3)}</td><td>${fmt(t.sCalc, 1)}</td><td>${fmt(t.s, 0)}</td><td>${fmt(t.AsEf)}</td></tr>`).join('')}</table>
+    Adotado: <strong>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} cm</strong> (s ≤ 33 cm, 20.1) → ${fmt(r.AsDistEf, 2)} cm²/m<br>
     <div class="fml">Borda sem continuidade (apoios): As ≥ 0,67·ρmín·b·h = ${fmt(r.AsBorda, 3)} cm²/m, estendida 0,15·L = ${fmt(r.lBorda, 2)} m a partir do apoio (Tabela 19.1 e 19.3.3.2)</div>
     fctm = ${fmt(r.fctm, 3)} MPa · fctd = 0,7·fctm/γc = ${fmt(r.fctd, 3)} MPa · τRd = 0,25·fctd = ${fmt(r.tauRd, 4)} MPa<br>
     k = 1,6 − d(m) = ${fmt(r.kV, 3)} ≥ 1 <span class="adot">(ADOTADO — CONFIRMAR: toda a armadura inferior chega ao apoio)</span> · ρ1 = As,ef/(b·d) = ${fmt(r.rho1 * 100, 3)} % ≤ 2 %<br>
