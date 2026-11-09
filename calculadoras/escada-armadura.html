@@ -854,7 +854,7 @@ function memorialHTML(r) {
     Adotado: <strong>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} cm</strong> (s ≤ 33 cm, 20.1) → ${fmt(r.AsDistEf, 2)} cm²/m<br>
     <div class="fml">Borda sem continuidade (apoios): As ≥ 0,67·ρmín·b·h = ${fmt(r.AsBorda, 3)} cm²/m, estendida 0,15·L = ${fmt(r.lBorda, 2)} m a partir do apoio (Tabela 19.1 e 19.3.3.2)</div>
     fctm = ${fmt(r.fctm, 3)} MPa · fctd = 0,7·fctm/γc = ${fmt(r.fctd, 3)} MPa · τRd = 0,25·fctd = ${fmt(r.tauRd, 4)} MPa<br>
-    k = 1,6 − d(m) = ${fmt(r.kV, 3)} ≥ 1 <span class="adot">(ADOTADO — CONFIRMAR: toda a armadura inferior chega ao apoio)</span> · ρ1 = As,ef/(b·d) = ${fmt(r.rho1 * 100, 3)} % ≤ 2 %<br>
+    k = 1,6 − d(m) = ${fmt(r.kV, 3)} ≥ 1 (toda a armadura inferior chega ao apoio) · ρ1 = As,ef/(b·d) = ${fmt(r.rho1 * 100, 3)} % ≤ 2 %<br>
     <div class="fml">VRd1 = τRd·k·(1,2 + 40ρ1)·b·d = ${fmt(r.VRd1, 3)} tf/m (19.4.1, σcp = 0)</div>
     <div class="fml">VSd = γf·máx(R<sub>A</sub>; R<sub>B</sub>) = ${fmt(r.Vsd, 3)} tf/m → taxa ${fmt(r.utilV * 100, 0)} %: ${ok(r.utilV <= 1)}</div>
     <span class="nota">VSd tomado como a reação (a favor da segurança; no lance o cortante normal à laje é V·cos α).</span><br>
@@ -867,7 +867,7 @@ function memorialHTML(r) {
     <div class="fml">Estádio II (sem A's): b·x²/2 + n·As·x − n·As·d = 0 → xII = ${fmt(r.x2, 3)} cm · III = b·x³/3 + n·As·(d − x)² = ${fmt(r.I2, 0)} cm⁴</div>
     ${r.fissurada ? `<div class="fml">Ma &gt; Mr → Ieq = (Mr/Ma)³·Ic + [1 − (Mr/Ma)³]·III = ${fmt(r.Ieq, 0)} cm⁴ ≤ Ic</div>` : `<div class="fml">Ma ≤ Mr → seção não fissurada: Ieq = Ic = ${fmt(r.Ieq, 0)} cm⁴</div>`}
     <div class="fml">a0 = ∬ M<sub>qp</sub>(x)/(Ecs·Ieq) dx² (dupla integração numérica, cargas por trecho) = <strong>${fmt(r.a0, 3)} cm</strong> em x = ${fmt(r.xa0, 2)} m</div>
-    Flecha diferida (17.3.2.1.2): ξ(t0 = ${fmt(I.t0, 1)} mês) = ${fmt(r.xiT0, 3)} · ξ(∞) = 2 · ρ' = 0 <span class="adot">(ADOTADO — CONFIRMAR)</span> → αf = Δξ/(1 + 50ρ') = ${fmt(r.alfaF, 3)}
+    Flecha diferida (17.3.2.1.2): ξ(t0 = ${fmt(I.t0, 1)} mês) = ${fmt(r.xiT0, 3)} · ξ(∞) = 2 · ρ' = 0 (sem armadura de compressão) → αf = Δξ/(1 + 50ρ') = ${fmt(r.alfaF, 3)}
     <div class="fml">at = a0·(1 + αf) = ${fmt(r.aT, 3)} cm ≤ L/250 = ${fmt(r.aLim, 3)} cm → taxa ${fmt(r.utilFl * 100, 0)} %: ${ok(r.utilFl <= 1)} (Tabela 13.3, aceitabilidade visual)</div>
     <div class="fml">Vibração: a(ψ2·q) = ${fmt(r.aQpsi, 3)} cm ≤ L/350 = ${fmt(r.aLimQ, 3)} cm → taxa ${fmt(r.utilQ * 100, 0)} %: ${ok(r.utilQ <= 1)}</div>
     <span class="nota">Interpretação: a parcela da variável foi tomada com ψ2·q (combinação quase permanente, 11.8.3). Com q integral: a(q) = ${fmt(r.aQ, 3)} cm → taxa ${fmt(r.aQ / r.aLimQ * 100, 0)} % (${ok(r.aQ <= r.aLimQ)}). Rigidez (EI)eq constante no vão, sem a contribuição dos degraus (a favor da segurança).</span>
