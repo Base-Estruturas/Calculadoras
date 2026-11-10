@@ -115,8 +115,10 @@
   .est-tab { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
   .est-tab th, .est-tab td { text-align: center; padding: 3px 2px; border: 1px solid var(--borda); }
   .est-tab th { font-weight: 600; color: var(--texto-2); background: var(--corpo); }
-  .est-tab tr th:first-child { width: 82px; text-align: left; padding-left: 6px; }
+  .est-tab tr th:first-child { width: 100px; text-align: left; padding-left: 6px; }
   .est-tab td strong { font-weight: 600; color: var(--texto); }
+  .est-ramos { width: 100%; height: 19px; line-height: 17px; border: 1px solid var(--borda-campo); border-radius: 4px; font: inherit; font-size: 12px; font-weight: 600; color: var(--texto); background: #fff; padding: 0 2px; cursor: pointer; }
+  .est-ramos:focus { outline: none; border-color: var(--azul); }
   .est-tab tr.calc td { color: var(--texto-2); font-size: 12px; }
   .est-tab td.inv { color: var(--vermelho); font-size: 10.5px; white-space: nowrap; }
   .kv6 { grid-template-columns: repeat(6, 1fr); }
@@ -1611,11 +1613,32 @@ function renderCisalhamento(cis, c) {
   atualizarEstribo();
 }
 
-// Todas as bitolas de estribo (2 ramos) com o espaçamento adotado
+// Todas as bitolas de estribo com o espaçamento adotado, para n ramos (só consulta: não altera Asw/s)
+let nRamos = 2;   // sempre começa com 2 ramos ao abrir a calculadora
+function sEstribo(cis, phi, n) {
+  // Retorna s necessário (cm) para estribo de n ramos com bitola phi (mm)
+  const A_phi = Math.PI * Math.pow(phi / 10, 2) / 4;   // cm²
+  const t = cis.tor && !cis.tor.erro ? cis.tor : null;
+  let sV;
+  if (t) {
+    // 17.7.2.3: cada ramo leva Asw,V/(n·s); os 2 ramos externos levam também A90/s da torção
+    const porRamo = cis.Asw_per_m_calc / n + t.A90_m;   // cm²/m no ramo externo
+    sV = porRamo > 0 ? A_phi / porRamo * 100 : 999;
+  } else sV = cis.Asw_per_m_calc > 0 ? n * A_phi / cis.Asw_per_m_calc * 100 : 999;
+  const sMin = cis.Asw_per_m_min > 0 ? n * A_phi / cis.Asw_per_m_min * 100 : 999;   // Asw,mín sobre todos os ramos
+  return Math.min(sV, sMin);
+}
 function atualizarEstribo() {
   const out = document.getElementById('estribos-tab');
   if (!ultimoCis || ultimoCis.falhaBiela) { out.innerHTML = ''; return; }
-  const bits = ultimoCis.tabelaBitolas;
+  const n = nRamos;
+  const bits = ultimoCis.tabelaBitolas.map(b => {
+    if (n === 2) return b;   // 2 ramos: valores originais do cálculo
+    const s_nec = sEstribo(ultimoCis, b.phi, n);
+    const s_adotado = Math.floor(Math.min(s_nec, ultimoCis.s_max));
+    const bitolaOk = b.phi <= ultimoCis.phi_est_max;
+    return { ...b, s_nec, s_adotado, viavel: s_adotado >= 5 && bitolaOk };
+  });
   const lbl = phi => fmtBR(phi, phi % 1 === 0 ? 0 : 1);
   const cel = b => {
     if (b.viavel) return `<td><strong>c/ ${b.s_adotado}</strong></td>`;
@@ -1623,12 +1646,16 @@ function atualizarEstribo() {
     const dica = b.phi > ultimoCis.phi_est_max ? `Ø > bw/10 = ${fmtBR(ultimoCis.phi_est_max, 1)} mm` : 's < 5 cm: usar mais ramos ou bitola maior';
     return `<td class="inv" title="${dica}">${motivo}</td>`;
   };
+  const t = ultimoCis.tor && !ultimoCis.tor.erro;
+  const dicaTab = t ? `Estribo de ${n} ramos. Com torção, só os 2 ramos externos resistem a A90/s (17.7.2.3): s = mín[Aφ/(Asw,V/(n·s) + A90/s); n·Aφ/Asw,mín]. s adot. = mín(s calc.; s,máx), arredondado para baixo (cm)`
+                    : `Estribo de ${n} ramos: s = n·Aφ/(Asw/s). s adot. = mín(s calc.; s,máx), arredondado para baixo (cm)`;
   out.innerHTML = `
-    <table class="est-tab" title="Estribo de 2 ramos. s adot. = mín(s calc.; s,máx), arredondado para baixo (cm)">
-      <tr><th>Estribo 2R</th>${bits.map(b => `<th>${lbl(b.phi)}</th>`).join('')}</tr>
+    <table class="est-tab" title="${dicaTab}">
+      <tr><th><select id="est-ramos" class="est-ramos" aria-label="Número de ramos do estribo" title="Número de ramos do estribo (só altera os espaçamentos desta tabela)">${[2, 4, 6, 8].map(k => `<option value="${k}"${k === n ? ' selected' : ''}>Estribo ${k}R</option>`).join('')}</select></th>${bits.map(b => `<th>${lbl(b.phi)}</th>`).join('')}</tr>
       <tr><th>s adot. (cm)</th>${bits.map(cel).join('')}</tr>
       <tr class="calc"><th>s calc. (cm)</th>${bits.map(b => `<td>${b.s_nec >= 999 ? '—' : fmtBR(b.s_nec, 1)}</td>`).join('')}</tr>
     </table>`;
+  document.getElementById('est-ramos').addEventListener('change', e => { nRamos = +e.target.value; atualizarEstribo(); });
 }
 
 function tabelaEstribosHTML(cis) {
