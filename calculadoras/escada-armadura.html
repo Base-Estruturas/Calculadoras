@@ -31,7 +31,8 @@
   .rot { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-2); font-weight: 600; }
   .card > .rot { display: block; margin-bottom: 8px; }
 
-  .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 8px; }
+  .g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 8px; }
+  .g3 .f label, .g4 .f label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .g4 { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.15fr) minmax(0, .9fr) minmax(0, .8fr); gap: 6px 8px; margin-bottom: 6px; }
   .f label { display: block; font-size: 12px; color: var(--texto-2); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .f label .un { color: var(--texto-3); }
@@ -88,6 +89,15 @@
   .seg label { padding: 3px 10px; cursor: pointer; font-size: 12px; color: var(--texto-2); user-select: none; white-space: nowrap; }
   .seg label + input + label { border-left: 1px solid var(--borda-campo); }
   .seg input:checked + label { background: var(--texto); color: #fff; font-weight: 600; }
+  table.qc { width: 100%; border-collapse: collapse; font-size: 12px; margin: 2px 0 4px; }
+  table.qc th, table.qc td { border: 1px solid var(--borda, #E3E5E8); padding: 3px 7px; text-align: right; }
+  .desenho table.qc { font-size: 11.5px; } .desenho table.qc td, .desenho table.qc th { padding: 1.5px 6px; line-height: 1.3; }
+  table.qc th { background: #F1F3F4; font-weight: 600; font-size: 11px; color: #5F6368; }
+  table.qc td:first-child, table.qc th:first-child { text-align: left; }
+  table.qc td, table.qc th { white-space: nowrap; }
+  table.qc td small { color: #5F6368; font-size: 10.5px; }
+  .desenho table.qc td small { display: none; }
+  table.qc tr.tot td { font-weight: 700; background: #F8FAFF; }
   .seg-tipo label { padding: 2px 8px; font-size: 11.5px; }
   .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 425px); min-height: 190px; }
   .desenho svg text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
@@ -185,8 +195,8 @@
           <div class="f"><label for="gL" title="Revestimento e demais permanentes no lance (por m² em projeção horizontal)">g lance</label><input type="number" id="gL" value="0.10" step="0.01" min="0"></div>
           <div class="f"><label for="gP" title="Revestimento e demais permanentes nos patamares">g patamar</label><input type="number" id="gP" value="0.10" step="0.01" min="0"></div>
           <div class="f"><label for="q" title="Carga variável (NBR 6120:2019)">q variável</label><input type="number" id="q" value="0.30" step="0.05" min="0"></div>
-          <div class="f"><label for="gA" title="Permanente adicional distribuída no patamar A (ex.: reação de outro lance espalhada)">g extra A</label><input type="number" id="gA" value="0" step="0.01" min="0"></div>
-          <div class="f"><label for="gC" title="Permanente adicional distribuída no patamar C">g extra C</label><input type="number" id="gC" value="0" step="0.01" min="0"></div>
+          <div class="f"><label for="gA" title="g extra no patamar A — reação de outro lance (tf/m²). A conversão da reação (tf/m) para tf/m² é feita pelo usuário.">g extra A <span class="un">(reação)</span></label><input type="number" id="gA" value="0" step="0.01" min="0"></div>
+          <div class="f"><label for="gC" title="g extra no patamar C — reação de outro lance (tf/m²). A conversão da reação (tf/m) para tf/m² é feita pelo usuário.">g extra C <span class="un">(reação)</span></label><input type="number" id="gC" value="0" step="0.01" min="0"></div>
           <div class="f"><label for="gamaDeg" title="Peso específico do enchimento dos degraus (NBR 6120:2019: concreto simples 2,4; armado 2,5)">γ deg. <span class="un">(tf/m³)</span></label><input type="number" id="gamaDeg" value="2.4" step="0.1" min="0"></div>
           <div class="f"><label for="hAlv" title="Altura da alvenaria sobre o lance, medida na vertical (0 = sem alvenaria)">alv. altura <span class="un">(m)</span></label><input type="number" id="hAlv" value="0" step="0.1" min="0"></div>
           <div class="f"><label for="bloco" title="Bloco cerâmico vazado de vedação: 14 cm = 0,19 tf/m²; 19 cm = 0,23 tf/m² de parede">bloco</label><select id="bloco"><option value="0.19" selected title="0,19 tf/m²">14 cm</option><option value="0.23" title="0,23 tf/m²">19 cm</option></select></div>
@@ -247,6 +257,7 @@
         <div class="card-hd"><span class="rot" id="des-tit">Desenho</span>
           <div class="seg">
             <input type="radio" name="aba" id="aba-geo" value="geo" checked><label for="aba-geo">Geometria</label>
+            <input type="radio" name="aba" id="aba-car" value="car"><label for="aba-car">Cargas</label>
             <input type="radio" name="aba" id="aba-deg" value="deg"><label for="aba-deg">Degrau</label>
             <input type="radio" name="aba" id="aba-esf" value="esf"><label for="aba-esf">Esforços</label>
             <input type="radio" name="aba" id="aba-arm" value="arm"><label for="aba-arm">Armação</label>
@@ -1222,12 +1233,14 @@ function memorialHTMLP(r) {
     Tipo: <strong>escada plissada</strong> (laje em zigue-zague de espessura constante) · A = ${fmt(I.A)} m · B = ${fmt(I.B)} m · C = ${fmt(I.C)} m → L = ${fmt(r.L)} m (projeção horizontal)<br>
     t = ${fmt(I.h, 1)} cm (pisos, espelhos e patamares) · e = ${fmt(I.e, 1)} cm · p = ${fmt(I.p, 1)} cm → n = ${r.nDeg} degraus${r.pAj ? ` (B/p = ${fmt(r.nDegCalc, 2)}; adotados p' = ${fmt(r.pw * 100, 2)} cm e e' = ${fmt(r.ew * 100, 2)} cm)` : ''}<br>
     Materiais: concreto C${I.fck} (γc = 1,4) · ${I.aco === 600 ? 'CA-60' : 'CA-50'} (γs = 1,15) · c = ${fmt(I.c, 1)} cm · γf = ${fmt(I.gf)} (g e q) · faixa b = 100 cm<br>
-    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · extra A = ${fmt(I.gA)} · extra C = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ (sem enchimento de degraus)${r.alv.qLin > 0 ? `<br>Alvenaria no lance: bloco cerâmico vazado ${I.bloco === 0.23 ? '19' : '14'} cm (${fmt(I.bloco, 2)} tf/m²) · H = ${fmt(I.hAlv, 2)} m → ${fmt(I.bloco, 2)}·${fmt(I.hAlv, 2)} = ${fmt(r.alv.qLin, 3)} tf/m, distribuída na largura do lance b = ${fmt(I.bLance, 2)} m → g<sub>alv</sub> = ${fmt(r.alv.qLin, 3)}/${fmt(I.bLance, 2)} = <strong>${fmt(r.alv.gAlv, 3)} tf/m²</strong> (permanente, só no trecho B)` : ''}<br>
+    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · g extra A (reação de outro lance) = ${fmt(I.gA)} · g extra C (reação) = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ (sem enchimento de degraus)${r.alv.qLin > 0 ? `<br>Alvenaria no lance: bloco cerâmico vazado ${I.bloco === 0.23 ? '19' : '14'} cm (${fmt(I.bloco, 2)} tf/m²) · H = ${fmt(I.hAlv, 2)} m → ${fmt(I.bloco, 2)}·${fmt(I.hAlv, 2)} = ${fmt(r.alv.qLin, 3)} tf/m, distribuída na largura do lance b = ${fmt(I.bLance, 2)} m → g<sub>alv</sub> = ${fmt(r.alv.qLin, 3)}/${fmt(I.bLance, 2)} = <strong>${fmt(r.alv.gAlv, 3)} tf/m²</strong> (permanente, só no trecho B)` : ''}<br>
     Conversões: 1 tf = 10 kN; 1 MPa = 10 kgf/cm² = 0,1 kN/cm².
   </div>
   <div class="card mm bloco"><h3>2. Modelo e cargas</h3>
     Pórtico plano (método da rigidez, barras de Euler-Bernoulli com EA e EI), nós nos cantos dos degraus; ${r.apoioTxt} — mesmo esquema do modelo de referência no Ftool.
     <div class="fml">pp piso = pp espelho = pp patamar = 2,5·t = 2,5·${fmt(I.h / 100, 3)} = ${fmt(r.ppPiso, 3)} tf/m por m de barra (equivalente no lance: 2,5·t·(p + e)/p = ${fmt(r.ppProj, 3)} tf/m²)</div>
+    ${quadroCargas(r).html}
+    Soma (g + q)·ℓ = ${fmt(quadroCargas(r).tot, 3)} tf/m = R<sub>A,k</sub> + R<sub>B,k</sub>. g extra = reação de outro lance, informada em tf/m² (conversão do usuário). Aplicação no pórtico:
     <table><tr><th>Barra</th><th>g (tf/m)</th><th>q (tf/m)</th><th>g + q (tf/m)</th><th>Direção</th></tr>
       ${I.A > 0 ? `<tr><td>Patamar A</td><td>${fmt(r.carga({ tipo: 'pA' }, 'g'), 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.carga({ tipo: 'pA' }, 'k'), 3)}</td><td>vertical, por m</td></tr>` : ''}
       <tr><td>Pisos (${r.nDeg}× ${fmt(r.pw * 100, 1)} cm)</td><td>${fmt(r.carga({ tipo: 'piso' }, 'g'), 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.carga({ tipo: 'piso' }, 'k'), 3)}</td><td>vertical, por m</td></tr>
@@ -1272,12 +1285,48 @@ function memorialHTMLP(r) {
   </div>`;
 }
 
+/* ==================== QUADRO DE CARGAS (parciais por trecho) ==================== */
+function quadroCargas(r) {
+  const I = r.I, P = r.plis, gc = 2.5;
+  const ppLaje = P ? [r.ppPat, r.ppPiso, r.ppPat] : [r.ppP, gc * I.h / 100 / r.cosA, r.ppP];
+  const ppDeg = P ? [0, gc * r.t / 100 * r.ew / r.pw, 0] : [0, I.gamaDeg * I.e / 200, 0];
+  const rev = [I.gP, I.gL, I.gP], alv = [0, r.alv.gAlv, 0], ext = [I.gA, 0, I.gC];
+  const g = [0, 1, 2].map(i => ppLaje[i] + ppDeg[i] + rev[i] + alv[i] + ext[i]);
+  const len = [I.A, I.B, I.C], nomes = ['A · patamar inf.', 'B · lance', 'C · patamar sup.'];
+  const cols = [0, 1, 2].filter(i => len[i] > 1e-9);
+  const linhas = [
+    ['extensão ℓ (m)', len, 2, '', 'comprimento do trecho em projeção horizontal'],
+    ['pp laje', ppLaje, 3, '', P ? '2,5·t' : 'patamares 2,5·h; lance 2,5·h/cos α'],
+    [P ? 'pp espelhos' : 'pp degraus', ppDeg, 3, '', P ? '2,5·t·e/p (equivalente em projeção)' : 'γdeg·e/2'],
+    ['revestimento', rev, 3, '', 'g lance / g patamar'],
+    ['alvenaria', alv, 3, '', 'γbloco·H / largura do lance'],
+    ['g extra (reação)', ext, 3, '', 'reação de outro lance, informada em tf/m²'],
+    ['g total', g, 3, 'tot', ''],
+    ['q', [I.q, I.q, I.q], 3, '', 'carga variável'],
+    ['g + q', g.map(v => v + I.q), 3, 'tot', ''],
+    ['g + ψ2·q', g.map(v => v + I.psi2 * I.q), 3, '', 'combinação quase permanente (flecha)'],
+    ['(g + q)·ℓ (tf/m)', g.map((v, i) => (v + I.q) * len[i]), 3, '', 'carga total do trecho na faixa de 1 m']
+  ];
+  const tot = cols.reduce((a, i) => a + (g[i] + I.q) * len[i], 0);
+  const html = `<table class="qc"><tr><th>tf/m² <small>(= tf/m na faixa de 1 m)</small></th>${cols.map(i => `<th>${nomes[i]}</th>`).join('')}</tr>
+    ${linhas.map(([n, v, dec, cls, tt]) => `<tr class="${cls}"><td title="${tt}">${n}${tt && !cls ? ` <small>${tt}</small>` : ''}</td>${cols.map(i => `<td>${fmt(v[i], dec)}</td>`).join('')}</tr>`).join('')}</table>`;
+  return { html, tot, g, cols };
+}
+
+function desenhoCargas(r) {
+  const q = quadroCargas(r);
+  return {
+    svg: q.html,
+    leg: `Características, por m² em projeção. Σ(g + q)·ℓ = <b>${fmt(q.tot, 3)} tf/m</b> = R<sub>A</sub> + R<sub>B</sub>.${r.plis ? ' pp dos espelhos aplicado na altura.' : ''} g extra = reação de outro lance, já em tf/m².`
+  };
+}
+
 function desenhar() {
   const box = $('svg-box'), leg = $('leg');
   if (!R || !R.ok) { box.innerHTML = ''; leg.innerHTML = ''; return; }
   const a = aba();
-  const tit = { geo: 'Elevação — geometria e cargas', deg: 'Detalhe do degrau', esf: 'Esforços e elástica', arm: 'Esquema de armação' }[a];
-  const P = R.plis, d = a === 'geo' ? (P ? desenhoGeometriaP(R) : desenhoGeometria(R)) : a === 'deg' ? (P ? desenhoDegrauP(R) : desenhoDegrau(R)) : a === 'esf' ? (P ? desenhoEsforcosP(R) : desenhoEsforcos(R)) : (P ? desenhoArmacaoP(R) : desenhoArmacao(R));
+  const tit = { geo: 'Elevação — geometria e cargas', car: 'Quadro de cargas', deg: 'Detalhe do degrau', esf: 'Esforços e elástica', arm: 'Esquema de armação' }[a];
+  const P = R.plis, d = a === 'car' ? desenhoCargas(R) : a === 'geo' ? (P ? desenhoGeometriaP(R) : desenhoGeometria(R)) : a === 'deg' ? (P ? desenhoDegrauP(R) : desenhoDegrau(R)) : a === 'esf' ? (P ? desenhoEsforcosP(R) : desenhoEsforcos(R)) : (P ? desenhoArmacaoP(R) : desenhoArmacao(R));
   box.innerHTML = d.svg; leg.innerHTML = d.leg;
 }
 
@@ -1289,18 +1338,15 @@ function memorialHTML(r) {
   <div class="card mm bloco"><h3>1. Dados</h3>
     Geometria: A = ${fmt(I.A)} m · B = ${fmt(I.B)} m · C = ${fmt(I.C)} m → L = ${fmt(r.L)} m (projeção horizontal) · h = ${fmt(I.h, 1)} cm · e = ${fmt(I.e, 1)} cm · p = ${fmt(I.p, 1)} cm<br>
     Materiais: concreto C${I.fck} (γc = 1,4) · ${I.aco === 600 ? 'CA-60' : 'CA-50'} (γs = 1,15) · c = ${fmt(I.c, 1)} cm · γf = ${fmt(I.gf)} (g e q) · faixa b = 100 cm<br>
-    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · extra A = ${fmt(I.gA)} · extra C = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ · γ<sub>degraus</sub> = ${fmt(I.gamaDeg, 1)} tf/m³${r.alv.qLin > 0 ? `<br>Alvenaria no lance: bloco cerâmico vazado ${I.bloco === 0.23 ? '19' : '14'} cm (${fmt(I.bloco, 2)} tf/m²) · H = ${fmt(I.hAlv, 2)} m → ${fmt(I.bloco, 2)}·${fmt(I.hAlv, 2)} = ${fmt(r.alv.qLin, 3)} tf/m, distribuída na largura do lance b = ${fmt(I.bLance, 2)} m → g<sub>alv</sub> = ${fmt(r.alv.qLin, 3)}/${fmt(I.bLance, 2)} = <strong>${fmt(r.alv.gAlv, 3)} tf/m²</strong> (permanente, só no trecho B)` : ''}<br>
+    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · g extra A (reação de outro lance) = ${fmt(I.gA)} · g extra C (reação) = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ · γ<sub>degraus</sub> = ${fmt(I.gamaDeg, 1)} tf/m³${r.alv.qLin > 0 ? `<br>Alvenaria no lance: bloco cerâmico vazado ${I.bloco === 0.23 ? '19' : '14'} cm (${fmt(I.bloco, 2)} tf/m²) · H = ${fmt(I.hAlv, 2)} m → ${fmt(I.bloco, 2)}·${fmt(I.hAlv, 2)} = ${fmt(r.alv.qLin, 3)} tf/m, distribuída na largura do lance b = ${fmt(I.bLance, 2)} m → g<sub>alv</sub> = ${fmt(r.alv.qLin, 3)}/${fmt(I.bLance, 2)} = <strong>${fmt(r.alv.gAlv, 3)} tf/m²</strong> (permanente, só no trecho B)` : ''}<br>
     Conversões: 1 tf = 10 kN; 1 MPa = 10 kgf/cm² = 0,1 kN/cm².
   </div>
   <div class="card mm bloco"><h3>2. Cargas por m² em projeção horizontal</h3>
     <div class="fml">tg α = e/p = ${fmt(r.tgA, 4)} → α = ${fmt(r.alfaGr, 2)}° · cos α = ${fmt(r.cosA, 4)}</div>
     <div class="fml">pp lance = 2,5·h/cos α + γdeg·e/2 = 2,5·${fmt(I.h / 100, 3)}/${fmt(r.cosA, 4)} + ${fmt(I.gamaDeg, 1)}·${fmt(I.e / 200, 3)} = ${fmt(r.ppL, 3)} tf/m²</div>
     <div class="fml">pp patamar = 2,5·h = ${fmt(r.ppP, 3)} tf/m²</div>
-    <table><tr><th>Trecho</th><th>g (tf/m²)</th><th>q (tf/m²)</th><th>g + q (tf/m²)</th><th>g + ψ2q (tf/m²)</th></tr>
-      ${I.A > 0 ? `<tr><td>A — patamar inferior</td><td>${fmt(r.g1, 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.g1 + I.q, 3)}</td><td>${fmt(r.g1 + I.psi2 * I.q, 3)}</td></tr>` : ''}
-      <tr><td>B — lance</td><td>${fmt(r.g2, 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.g2 + I.q, 3)}</td><td>${fmt(r.g2 + I.psi2 * I.q, 3)}</td></tr>
-      ${I.C > 0 ? `<tr><td>C — patamar superior</td><td>${fmt(r.g3, 3)}</td><td>${fmt(I.q, 3)}</td><td>${fmt(r.g3 + I.q, 3)}</td><td>${fmt(r.g3 + I.psi2 * I.q, 3)}</td></tr>` : ''}
-    </table>
+    ${quadroCargas(r).html}
+    Soma das cargas (g + q)·ℓ = ${fmt(quadroCargas(r).tot, 3)} tf/m = R<sub>A,k</sub> + R<sub>B,k</sub>. g extra = reação de outro lance, informada em tf/m² (conversão do usuário).
   </div>
   <div class="card mm bloco"><h3>3. Esforços (viga biapoiada, faixa de 1 m)</h3>
     <div class="fml">R<sub>B</sub> = Σ(qᵢ·ℓᵢ·x̄ᵢ)/L ; R<sub>A</sub> = Σ(qᵢ·ℓᵢ) − R<sub>B</sub></div>
