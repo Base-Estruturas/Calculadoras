@@ -86,6 +86,21 @@
   #sv-box { flex: 1 1 auto; min-height: 0; position: relative; }
   #sv { position: absolute; inset: 0; display: block; }
   #sv text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
+  .cons { position: absolute; right: 40px; top: 0; display: none; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 12px; color: var(--texto-2); z-index: 2; max-width: calc(100% - 230px); }
+  .cons.on { display: flex; }
+  .cons-l { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .cons-l label { font-weight: 600; color: var(--texto); }
+  .cons input, .cons select { height: 24px; border: 1px solid var(--borda-campo); border-radius: 5px; font: inherit; font-size: 12px; color: var(--texto); background: #fff; padding: 0 6px; }
+  .cons input { width: 74px; text-align: right; }
+  .cons input::-webkit-outer-spin-button, .cons input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .cons input { -moz-appearance: textfield; appearance: textfield; }
+  .cons select { max-width: 170px; }
+  .cons input:focus, .cons select:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.14); }
+  .leg-row { display: flex; flex-wrap: wrap; align-items: flex-start; column-gap: 16px; }
+  .leg-row .legend { flex: 0 1 auto; min-width: 0; }
+  .cons-r { flex: 0 1 auto; margin-left: auto; max-width: 100%; margin-top: 4px; font-size: 12px; color: var(--texto); text-align: right; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cons-r b { font-weight: 600; }
+  .cons-r .nao { color: var(--texto-2); }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--texto-2); margin-top: 4px; }
   .legend span { display: inline-flex; align-items: center; gap: 5px; }
   .res-card { flex: 0 0 auto; }
@@ -206,8 +221,11 @@
           <span class="rot">Esforços — fletor e cortante</span>
           <span class="xm">fletor + para baixo (tração embaixo) · cortante + para cima</span>
         </div>
-        <div id="sv-box"><svg id="sv" role="img" aria-label="Esquema da viga e diagramas de momento fletor e cortante"></svg></div>
-        <div class="legend" id="legend"></div>
+        <div id="sv-box"><svg id="sv" role="img" aria-label="Esquema da viga e diagramas de momento fletor e cortante"></svg>
+          <div class="cons" id="consulta">
+            <div class="cons-l"><label for="cM">Consultar M</label><input type="number" id="cM" step="0.01" placeholder="valor"><span>tf·m em</span><select id="cE" aria-label="Envoltória de referência"></select></div>
+          </div></div>
+        <div class="leg-row"><div class="legend" id="legend"></div><div class="cons-r" id="cR"></div></div>
       </div>
       <div class="card res-card">
         <div class="card-hd"><span class="rot">Resultados por envoltória (característicos)</span><span class="xm" id="resSub"></span></div>
@@ -335,7 +353,7 @@ function limpar(msg) {
   ultimo = null;
   $('alertBox').innerHTML = `<div class="alert alert-danger">${msg}</div>`;
   ['sv', 'resBody', 'resHead', 'kpis', 'legend'].forEach(id => $(id).innerHTML = ''); $('resSub').textContent = ''; $('trechos').value = '';
-  $('btn-pdf').disabled = true; $('btn-memo').disabled = true;
+  $('btn-pdf').disabled = true; $('btn-memo').disabled = true; $('consulta').classList.remove('on');
 }
 function calc() {
   const g = lerGeometria();
@@ -390,6 +408,7 @@ function calc() {
     t += `<td class="num${cl(r.neg.m)}">${r.neg.m < -1e-6 ? fmt(r.neg.m) + `<span class="xm">${fmt(r.neg.x)}</span>` : '—'}</td>`;
     return t + `<td class="num">${fmt(r.vmax.Vabs)}</td></tr>`;
   }).join('');
+  opcoesConsulta();
   $('legend').innerHTML = state.cases.map((c, i) => `<span><i class="sw" style="background:${col(i)}"></i>${esc(nome(i))}</span>`).join('') + '<span><i class="sw" style="background:#E3E5E8"></i>Faixa da envoltória</span>';
   draw();
 }
@@ -419,10 +438,39 @@ function draw() {
   const box = $('sv-box');
   const W = Math.max(480, Math.round(box.clientWidth)), H = Math.max(200, Math.round(box.clientHeight));
   const sv = $('sv'); sv.setAttribute('viewBox', `0 0 ${W} ${H}`); sv.setAttribute('width', W); sv.setAttribute('height', H);
-  sv.innerHTML = svgEsforcos(L, xs, R, W, H);
+  const cons = $('consulta'); cons.classList.add('on');
+  const c = consultaAtual(R);
+  $('cR').innerHTML = c ? `<span class="sw" style="background:${col(c.i)}"></span> M = ${fmt(c.Mq)} tf·m → ` + c.html : ''; $('cR').title = c ? $('cR').textContent : ''; $('cR').style.display = c ? '' : 'none';
+  sv.innerHTML = svgEsforcos(L, xs, R, W, H, { h: cons.offsetHeight, w: cons.offsetWidth, c, el: cons });
 }
 
-function svgEsforcos(L, xs, R, W, H) {
+// ---------- consulta: onde o fletor de uma envoltória vale M (não altera resultados) ----------
+function raizesM(r, Mq) {
+  const out = [];
+  r.segs.forEach(g => {
+    const len = g.x1 - g.x0, a = -r.q / 2, b = g.Vl, c = g.Ml - Mq;   // M(x0 + t) = Ml + Vl·t − q·t²/2
+    let ts = [];
+    if (Math.abs(a) < 1e-12) { if (Math.abs(b) > 1e-12) ts = [-c / b]; else if (Math.abs(c) < 1e-9) ts = [0, len]; }
+    else { const D = b * b - 4 * a * c; if (D >= -1e-12) { const sq = Math.sqrt(Math.max(0, D)); ts = [(-b + sq) / (2 * a), (-b - sq) / (2 * a)]; } }
+    ts.forEach(t => { if (t >= -1e-9 && t <= len + 1e-9) out.push({ x: g.x0 + Math.min(Math.max(t, 0), len), salto: false }); });
+  });
+  r.nos.forEach(n => { const lo = Math.min(n.Ml, n.Mr), hi = Math.max(n.Ml, n.Mr); if (Mq > lo + 1e-9 && Mq < hi - 1e-9) out.push({ x: n.x, salto: true }); });
+  out.sort((p, q) => p.x - q.x);
+  return out.filter((p, k) => k === 0 || p.x - out[k - 1].x > 1e-6);
+}
+function consultaAtual(R) {
+  const v = $('cM').value.trim(); if (v === '') return null;
+  const Mq = parseFloat(v), i = +$('cE').value || 0; if (!isFinite(Mq) || !R[i]) return null;
+  const r = R[i], L = r.L, xs = raizesM(r, Mq);
+  let html;
+  if (!xs.length) {
+    const mx = Math.max(0, ...r.segs.map(g => g.max.m)), mn = Math.min(0, ...r.segs.map(g => g.min.m));
+    html = `<span class="nao">M = ${fmt(Mq)} tf·m não ocorre em ${esc(nome(i))} (varia de ${fmt(mn)} a ${fmt(mx)} tf·m)</span>`;
+  } else html = 'de A / de B: ' + xs.map(p => `<b>${fmt(p.x)} / ${fmt(L - p.x)} m</b>${p.salto ? ' (salto no pilar)' : ''}`).join(' &nbsp;·&nbsp; ');
+  return { Mq, i, xs, html };
+}
+
+function svgEsforcos(L, xs, R, W, H, cons) {
   const X0 = 40, X1 = W - 40, sx = x => X0 + (X1 - X0) * x / L;
   const lab = new Rotulos(W, H);
   let s = `<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="${T1}"/></marker>
@@ -465,7 +513,7 @@ function svgEsforcos(L, xs, R, W, H) {
 
   // ===== faixas dos diagramas =====
   const rest = H - ySchemEnd;
-  const fM = 0.56, bandM = { top: ySchemEnd + 2, h: rest * fM - 2 }, bandV = { top: ySchemEnd + rest * fM + 2, h: rest * (1 - fM) - 4 };
+  const fM = cons && cons.c ? 0.62 : 0.56, bandM = { top: ySchemEnd + 2, h: rest * fM - 2 }, bandV = { top: ySchemEnd + rest * fM + 2, h: rest * (1 - fM) - 4 };
   // grade de pontos por trecho
   const grid = [];
   for (let k = 0; k < px.length - 1; k++) { const N = 40; for (let i = 0; i <= N; i++) grid.push({ x: px[k] + (px[k + 1] - px[k]) * i / N, d: i === 0 ? +1 : -1 }); }
@@ -474,10 +522,12 @@ function svgEsforcos(L, xs, R, W, H) {
 
   // --- fletor ---
   const tM = 'Momento fletor (tf·m)';
-  s += `<text x="${X0}" y="${bandM.top + 12}" font-size="13" font-weight="600" fill="${T1}">${tM}</text>`; lab.reserva(X0 - 2, bandM.top, tw(tM, 13) + 6, 16);
-  const hM = Math.max(30, bandM.h - 22 - 18);           // 22 acima (título/rótulos -) e 18 abaixo (rótulos +)
+  s += `<text x="${X0}" y="${bandM.top + 15}" font-size="13" font-weight="600" fill="${T1}">${tM}</text>`; lab.reserva(X0 - 2, bandM.top + 3, tw(tM, 13) + 6, 16);
+  const hdrM = cons ? Math.max(22, cons.h + 4) : 22;     // título + campo de consulta acima do diagrama
+  if (cons) { cons.el.style.top = bandM.top + 'px'; lab.reserva(W - 40 - cons.w, bandM.top, cons.w, cons.h); }
+  const hM = Math.max(30, bandM.h - hdrM - 18);          // 18 abaixo (rótulos +)
   const spanM = Math.max(mPos + mNeg, 1e-9), kM = hM / spanM;
-  const y0 = bandM.top + 22 + mNeg * kM + (mNeg === 0 ? 6 : 0), ym = v => y0 + v * kM;
+  const y0 = bandM.top + hdrM + mNeg * kM + (mNeg === 0 ? 6 : 0), ym = v => y0 + v * kM;
   // faixa da envoltória
   const env = grid.map((g, k) => ({ x: g.x, max: Math.max(...vals.map(v => v[k])), min: Math.min(...vals.map(v => v[k])) }));
   const ep = env.map((e, k) => `${k ? 'L' : 'M'}${sx(e.x).toFixed(1)} ${ym(Math.max(e.max, 0)).toFixed(1)}`).join(' ') + ' ' + env.slice().reverse().map(e => `L${sx(e.x).toFixed(1)} ${ym(Math.min(e.min, 0)).toFixed(1)}`).join(' ') + 'Z';
@@ -512,6 +562,22 @@ function svgEsforcos(L, xs, R, W, H) {
     textos.push(tx);
   });
   s += pontos.join('') + textos.join('');
+  // consulta de momento: linha tracejada no valor e pontos com a distância a A
+  if (cons && cons.c && cons.c.xs.length) {
+    const c = cons.c, r = R[c.i], cor = col(c.i), Yq = ym(c.Mq);
+    // as curvas passam a ser obstáculos para os rótulos da consulta
+    vals.forEach(v => grid.forEach((g, k) => lab.reserva(sx(g.x) - 1.5, ym(v[k]) - 1.5, 3, 3)));
+    s += `<line x1="${X0}" y1="${Yq.toFixed(1)}" x2="${X1}" y2="${Yq.toFixed(1)}" stroke="${cor}" stroke-width="1.2" stroke-dasharray="5 4" opacity=".8"/>`;
+    c.xs.forEach(p => {
+      const X = sx(p.x);
+      s += `<line x1="${X.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${X.toFixed(1)}" y2="${Yq.toFixed(1)}" stroke="${cor}" stroke-width="1" opacity=".6"/>`;
+      s += `<circle cx="${X.toFixed(1)}" cy="${Yq.toFixed(1)}" r="4" fill="#FFFFFF" stroke="${cor}" stroke-width="2"/>`;
+    });
+    c.xs.forEach(p => {
+      const X = sx(p.x), t = `${fmt(p.x)} m`, up = c.Mq >= 0 ? -1 : 1;
+      s += lab.txt(t, [{ x: X + 7, y: Yq + (up < 0 ? -6 : 15), anc: 'start' }, { x: X - 7, y: Yq + (up < 0 ? -6 : 15), anc: 'end' }, { x: X + 7, y: Yq + (up < 0 ? 15 : -6), anc: 'start' }, { x: X - 7, y: Yq + (up < 0 ? 15 : -6), anc: 'end' }], 12, cor, true);
+    });
+  }
 
   // --- cortante ---
   const tV = 'Cortante (tf)';
@@ -525,6 +591,11 @@ function svgEsforcos(L, xs, R, W, H) {
     r.segs.forEach(g => d += ` L${sx(g.x0).toFixed(1)} ${yv(g.Vl).toFixed(1)} L${sx(g.x1).toFixed(1)} ${yv(g.Vr).toFixed(1)}`);
     s += `<path d="${d} L${X1} ${y1}" fill="none" stroke="${col(i)}" stroke-width="2" stroke-linejoin="round"/>`;
   });
+  // as linhas do cortante são obstáculos para os rótulos (evita número em cima de linha)
+  R.forEach(r => r.segs.forEach(g => {
+    const xa = sx(g.x0), xb = sx(g.x1), ya = yv(g.Vl), yb2 = yv(g.Vr), n = Math.max(2, Math.ceil((xb - xa) / 6));
+    for (let k = 0; k <= n; k++) { const X = xa + (xb - xa) * k / n, Y = ya + (yb2 - ya) * k / n; lab.reserva(X - 1.5, Y - 2, 3, 4); }
+  }));
   // rótulo do maior |V| de cada trecho, no lado em que ocorre
   R[0].segs.forEach((sg, k) => {
     let b = null; R.forEach((r, i) => { const t = r.segs[k]; if (!b || t.Vabs > b.t.Vabs) b = { t, i }; });
@@ -533,8 +604,8 @@ function svgEsforcos(L, xs, R, W, H) {
     const anc = t.Vend === 0 ? 'start' : 'end', dx = t.Vend === 0 ? 7 : -7, xm = (sx(t.x0) + sx(t.x1)) / 2;
     const dentro = Math.abs(Y - y1) > 16, cands = [];
     // 1º dentro do diagrama (entre a linha e o eixo), depois fora
-    if (dentro) cands.push({ x: X + dx, y: t.Vsig >= 0 ? Y + 15 : Y - 5, anc }, { x: xm, y: t.Vsig >= 0 ? Y + 15 : Y - 5, anc: 'middle' });
-    cands.push({ x: X + dx, y: t.Vsig >= 0 ? Y - 5 : Y + 15, anc }, { x: xm, y: t.Vsig >= 0 ? Y - 5 : Y + 15, anc: 'middle' });
+    if (dentro) [15, 25].forEach(d => cands.push({ x: X + dx, y: t.Vsig >= 0 ? Y + d : Y - d + 10, anc }, { x: xm, y: t.Vsig >= 0 ? Y + d : Y - d + 10, anc: 'middle' }));
+    [5, 14].forEach(d => cands.push({ x: X + dx, y: t.Vsig >= 0 ? Y - d : Y + d + 10, anc }, { x: xm, y: t.Vsig >= 0 ? Y - d : Y + d + 10, anc: 'middle' }));
     cands.push({ x: xm, y: t.Vsig >= 0 ? y1 + 15 : y1 - 5, anc: 'middle' });
     s += lab.txt(fmt(t.Vsig), cands, 13, col(b.i), true);
   });
@@ -590,7 +661,7 @@ function gerarPDF() {
   if (!ultimo) return;
   const { L, xs } = ultimo;
   const W = 900, H = 520;
-  const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Arial">${svgEsforcos(L, xs, ultimo.R, W, H)}</svg>`;
+  const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Arial">${svgEsforcos(L, xs, ultimo.R, W, H, null)}</svg>`;
   const tab = `<table><thead>${$('resHead').innerHTML}</thead><tbody>${$('resBody').innerHTML}</tbody></table>`;
   const hoje = new Date().toLocaleDateString('pt-BR');
   $('print-area').innerHTML = `<h1>Viga de transição biapoiada — verificação manual</h1><div class="sub">BASE Estruturas · ${hoje} · L = ${fmt(L)} m · ${xs.map((x, j) => `a${SUB[j + 1]} = ${fmt(x)} m`).join(' · ')}</div>
@@ -607,6 +678,16 @@ $('np1').addEventListener('click', () => { setNp(1); calc(); });
 $('np2').addEventListener('click', () => { setNp(2); calc(); });
 $('addCase').addEventListener('click', () => { state.cases.push({ n: 'Envoltória ' + state.cases.length, P1: 0, M1: 0, P2: 0, M2: 0, q: 0 }); renderCases(); calc(); });
 $('resetEx').addEventListener('click', () => { state = clone(EXAMPLE); $('L').value = state.L; $('a1').value = state.a1; $('a2').value = state.a2; renderCases(); setNp(1); calc(); });
+function opcoesConsulta() {
+  const sel = $('cE'), atual = Math.min(+(state.consulta?.i ?? sel.value) || 0, state.cases.length - 1);
+  const html = state.cases.map((c, i) => `<option value="${i}">${esc(nome(i))}</option>`).join('');
+  if (sel.innerHTML !== html) sel.innerHTML = html;
+  sel.value = String(Math.max(0, atual));
+}
+state.consulta = state.consulta || { M: '', i: 0 };
+$('cM').value = state.consulta.M ?? '';
+$('cM').addEventListener('input', () => { state.consulta.M = $('cM').value; save(); draw(); });
+$('cE').addEventListener('change', () => { state.consulta.i = +$('cE').value; save(); draw(); });
 renderCases(); setNp(state.np === 2 ? 2 : 1); calc();
 let rz; new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(draw, 60); }).observe($('sv-box'));
 </script>
