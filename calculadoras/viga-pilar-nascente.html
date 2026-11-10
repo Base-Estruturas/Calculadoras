@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Viga com pilar nascente — esforços</title>
+<style>
+  /* ===== Padrão de interface BASE (mesmo da extensão pyRevit) ===== */
+  :root {
+    --preto: #000000; --corpo: #F1F3F4; --cartao: #FFFFFF; --borda: #E3E5E8; --borda-campo: #C4C7CC;
+    --texto: #1F2328; --texto-2: #5F6368; --texto-3: #9AA0A6; --azul: #1A56DB;
+    --verde: #1B5E20; --verde-bg: #E8F5E9; --vermelho: #C62828; --vermelho-bg: #FDECEA;
+    --ambar: #8A5300; --ambar-bg: #FFF4E5;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+         font-size: 13px; color: var(--texto); background: var(--corpo); line-height: 1.4; }
+  .app { display: flex; flex-direction: column; height: 100vh; min-height: 600px; }
+
+  .hdr { background: var(--preto); height: 76px; flex: 0 0 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+  .hdr img { height: 64px; width: auto; }
+  .hdr-tool { color: var(--texto-3); text-align: right; font-size: 13px; line-height: 1.35; }
+  .hdr-tool strong { display: block; color: var(--texto-3); font-size: 15px; font-weight: 600; }
+
+  .corpo { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(380px, 470px) minmax(0, 1fr); gap: 12px; padding: 12px; }
+  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+
+  .card { background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 12px 14px; min-width: 0; }
+  .card-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; min-height: 24px; }
+  .rot { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-2); font-weight: 600; }
+
+  .g4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1.35fr; gap: 8px 10px; }
+  .f label { display: block; font-size: 12px; color: var(--texto-2); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .f label .un { color: var(--texto-3); }
+  .f input { width: 100%; height: 30px; padding: 0 8px; border: 1px solid var(--borda-campo); border-radius: 6px; font: inherit; font-size: 13px; color: var(--texto); background: #fff; }
+  .f input:focus, td input:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.14); }
+  .f input[readonly] { background: var(--corpo); color: var(--texto-2); }
+  .f.off { visibility: hidden; }
+
+  .seg { display: inline-flex; }
+  .btn-sm { height: 24px; padding: 0 10px; border-radius: 5px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--borda-campo); background: #fff; color: var(--texto); }
+  .btn-sm:hover { background: var(--corpo); }
+  .btn-sm[aria-pressed="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
+  .seg .btn-sm { border-radius: 0; }
+  .seg .btn-sm:first-child { border-radius: 5px 0 0 5px; }
+  .seg .btn-sm:last-child { border-radius: 0 5px 5px 0; border-left: none; }
+
+  .env-card { display: flex; flex-direction: column; flex: 0 0 auto; }
+  .env-card .tbl-wrap { max-height: 210px; }
+  .col-esq { overflow-y: auto; }
+  .tbl-wrap { overflow: auto; min-height: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--texto-2); text-align: left; padding: 5px 4px; border-bottom: 1px solid var(--borda); white-space: nowrap; background: #FAFBFB; position: sticky; top: 0; }
+  th .un { text-transform: none; color: var(--texto-3); font-weight: 400; }
+  td { padding: 3px 4px; border-bottom: 1px solid var(--borda); vertical-align: middle; white-space: nowrap; }
+  td.num, th.num { text-align: right; }
+  td input { width: 100%; min-width: 48px; height: 26px; padding: 0 5px; border: 1px solid var(--borda-campo); border-radius: 5px; font: inherit; font-size: 12.5px; color: var(--texto); background: #fff; text-align: right; }
+  td input.nm { min-width: 76px; text-align: left; }
+  td input::-webkit-outer-spin-button, td input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  td input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; }
+  .x { background: none; border: none; color: var(--texto-3); font-size: 16px; cursor: pointer; line-height: 1; padding: 0 2px; }
+  .x:hover { color: var(--vermelho); }
+  .p2 { }
+  .um .p2 { display: none; }
+  .conv { font-size: 11.5px; color: var(--texto-2); margin-top: 8px; padding: 6px 9px; background: var(--corpo); border-radius: 6px; line-height: 1.5; }
+  .conv b { color: var(--texto); font-weight: 600; }
+
+  .alertas:empty { display: none; }
+  .alertas { display: flex; flex-direction: column; gap: 5px; }
+  .alert { padding: 6px 10px; border-radius: 6px; font-size: 12px; line-height: 1.35; border-left: 3px solid; }
+  .alert-warning { background: var(--ambar-bg); color: var(--ambar); border-color: #E8A33D; }
+  .alert-danger { background: var(--vermelho-bg); color: var(--vermelho); border-color: var(--vermelho); }
+
+  .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; flex: 0 0 auto; }
+  .kpi { background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 8px 12px; min-width: 0; }
+  .kpi .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-2); font-weight: 600; }
+  .kpi .v { font-size: 21px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .kpi .v small { font-size: 12px; font-weight: 400; color: var(--texto-2); margin-left: 3px; }
+  .kpi .d { font-size: 11.5px; color: var(--texto-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi.ok .v { color: var(--verde); }
+  .kpi.fail { border-color: #F2C4C4; } .kpi.fail .v { color: var(--vermelho); }
+
+  .dg-card { flex: 1 1 auto; min-height: 260px; display: flex; flex-direction: column; }
+  #sv-box { flex: 1 1 auto; min-height: 0; position: relative; }
+  #sv { position: absolute; inset: 0; display: block; }
+  #sv text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--texto-2); margin-top: 4px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .res-card { flex: 0 0 auto; }
+  .res-card .tbl-wrap { max-height: 150px; }
+  .res-card td, .res-card th { padding: 4px 3px; }
+  .res-card td { font-size: 12px; }
+  .bar { color: var(--texto-3); margin: 0 2px; }
+  .neg { color: var(--vermelho); font-weight: 600; }
+  .xm { color: var(--texto-3); font-size: 11.5px; margin-left: 3px; }
+
+  .rodape { flex: 0 0 auto; background: #fff; border-top: 1px solid var(--borda); padding: 10px 16px; display: flex; justify-content: center; gap: 10px; }
+  .btn { height: 34px; padding: 0 18px; border-radius: 6px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--borda-campo); background: #fff; color: var(--texto); }
+  .btn:hover { background: var(--corpo); }
+  .btn-pri { background: var(--azul); border-color: var(--azul); color: #fff; }
+  .btn-pri:hover { background: #1749B8; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  .modal.aberto { display: flex; }
+  .modal-box { background: var(--corpo); border-radius: 8px; width: min(900px, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-hd { background: var(--preto); color: var(--texto-3); padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-hd strong { color: #fff; font-size: 15px; font-weight: 600; }
+  .modal-hd button { background: none; border: none; color: var(--texto-3); font-size: 20px; cursor: pointer; line-height: 1; }
+  .modal-body { padding: 14px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+  .modal-body .card { font-size: 13px; line-height: 1.6; }
+  .modal-ft { padding: 10px; display: flex; justify-content: center; gap: 10px; background: #fff; border-top: 1px solid var(--borda); }
+  .memo .dados { font-size: 12.5px; color: var(--texto-2); margin: 4px 0 8px; }
+  .fml { background: var(--corpo); border-radius: 6px; padding: 8px 10px; font-family: Consolas, "Courier New", monospace; font-size: 12px; color: var(--texto); white-space: pre; overflow-x: auto; line-height: 1.55; }
+
+  @media (max-height: 760px) {
+    .hdr { height: 60px; flex-basis: 60px; } .hdr img { height: 48px; }
+    .corpo { gap: 10px; padding: 10px; } .col { gap: 10px; } .card { padding: 9px 12px; }
+    .card-hd { margin-bottom: 5px; }
+    .kpi { padding: 5px 10px; } .kpi .v { font-size: 18px; } .kpi .d { font-size: 11px; }
+    .conv { margin-top: 6px; padding: 5px 8px; }
+    .rodape { padding: 7px 16px; }
+    .res-card .tbl-wrap { max-height: 120px; }
+  }
+  @media (max-width: 980px) {
+    .app { height: auto; }
+    .corpo { grid-template-columns: 1fr; }
+    .dg-card { min-height: 460px; }
+    .col-esq { overflow: visible; }
+  }
+
+  /* ===== Memória de cálculo em PDF (impressão) ===== */
+  #print-area { display: none; }
+  @media print {
+    @page { size: A4; margin: 18mm 16mm; }
+    body { background: white !important; color: black !important; font-size: 10.5pt; }
+    .app, .modal { display: none !important; }
+    #print-area { display: block !important; color: black; }
+    #print-area h1 { font-size: 15pt; text-align: center; margin: 0 0 4px; }
+    #print-area .sub { text-align: center; font-size: 10pt; color: #555; margin: 0 0 14px; }
+    #print-area h2 { font-size: 12pt; margin: 14px 0 6px; padding-bottom: 3px; border-bottom: 1px solid #999; page-break-after: avoid; }
+    #print-area table { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: 9.5pt; page-break-inside: avoid; }
+    #print-area td, #print-area th { border: 1px solid #888; padding: 3px 6px; position: static; background: none; color: black; text-transform: none; font-size: 9.5pt; }
+    #print-area .fml { background: #f4f4f4; border-left: 3px solid #333; border-radius: 0; font-size: 9pt; white-space: pre-wrap; page-break-inside: avoid; }
+    #print-area svg { width: 100%; height: auto; page-break-inside: avoid; }
+    #print-area .memo { page-break-inside: avoid; margin-bottom: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="hdr">
+    <img src="../assets/logo-horizontal.png" alt="BASE Estruturas">
+    <div class="hdr-tool"><strong>Viga com pilar nascente</strong>Viga biapoiada · cargas concentradas, momentos e carga distribuída</div>
+  </header>
+
+  <main class="corpo">
+    <!-- ===== Coluna 1: dados ===== -->
+    <section class="col col-esq">
+      <div class="card">
+        <div class="card-hd">
+          <span class="rot">Geometria</span>
+          <span class="seg" role="group" aria-label="Número de pilares nascentes">
+            <button type="button" class="btn-sm" id="np1" aria-pressed="true">1 pilar</button>
+            <button type="button" class="btn-sm" id="np2" aria-pressed="false">2 pilares</button>
+          </span>
+        </div>
+        <div class="g4">
+          <div class="f"><label for="L">L <span class="un">(m)</span></label><input type="number" id="L" step="0.05" min="0.1"></div>
+          <div class="f"><label for="a1">a₁ — A ao P₁ <span class="un">(m)</span></label><input type="number" id="a1" step="0.05" min="0"></div>
+          <div class="f" id="f-a2"><label for="a2">a₂ — A ao P₂ <span class="un">(m)</span></label><input type="number" id="a2" step="0.05" min="0"></div>
+          <div class="f"><label for="trechos">Trechos <span class="un">(m)</span></label><input type="text" id="trechos" readonly tabindex="-1"></div>
+        </div>
+      </div>
+
+      <div class="card env-card" id="env-card">
+        <div class="card-hd">
+          <span class="rot">Envoltórias</span>
+          <button type="button" class="btn-sm" id="addCase">+ Envoltória</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th></th><th>Nome</th>
+              <th class="num">P₁ <span class="un">tf</span></th><th class="num">M₁ <span class="un">tf·m</span></th>
+              <th class="num p2">P₂ <span class="un">tf</span></th><th class="num p2">M₂ <span class="un">tf·m</span></th>
+              <th class="num">q <span class="un">tf/m</span></th><th></th></tr></thead>
+            <tbody id="casesBody"></tbody>
+          </table>
+        </div>
+        <div class="conv">
+          <b>M &gt; 0 horário ↻</b>: face do pilar voltada para A tracionada (no TQS, diagrama do lado tracionado). P para baixo +. P, M e q todos de cálculo ou todos característicos. Exemplo: <b>ADOTADO — CONFIRMAR</b>.
+        </div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+      <div class="alertas" id="alertBox"></div>
+    </section>
+
+    <!-- ===== Coluna 2: resultados ===== -->
+    <section class="col">
+      <div class="card dg-card">
+        <div class="card-hd">
+          <span class="rot">Esforços — fletor e cortante</span>
+          <span class="xm">fletor + para baixo (tração embaixo) · cortante + para cima</span>
+        </div>
+        <div id="sv-box"><svg id="sv" role="img" aria-label="Esquema da viga e diagramas de momento fletor e cortante"></svg></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="card res-card">
+        <div class="card-hd"><span class="rot">Resultados por envoltória</span><span class="xm" id="resSub"></span></div>
+        <div class="tbl-wrap"><table><thead id="resHead"></thead><tbody id="resBody"></tbody></table></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <button type="button" class="btn" id="resetEx">Restaurar exemplo</button>
+    <button type="button" class="btn" id="btn-memo">Ver memorial</button>
+    <button type="button" class="btn btn-pri" id="btn-pdf">Gerar memória (PDF)</button>
+  </footer>
+</div>
+
+<div class="modal" id="modal-memo" role="dialog" aria-modal="true" aria-labelledby="memo-tit">
+  <div class="modal-box">
+    <div class="modal-hd"><span><strong id="memo-tit">Memorial de cálculo</strong> &nbsp;Viga com pilar nascente</span><button type="button" id="btn-memo-x" aria-label="Fechar">×</button></div>
+    <div class="modal-body" id="memoBox"></div>
+    <div class="modal-ft">
+      <button type="button" class="btn" id="btn-memo-fechar">Fechar</button>
+      <button type="button" class="btn btn-pri" id="btn-pdf2">Gerar memória (PDF)</button>
+    </div>
+  </div>
+</div>
+
+<div id="print-area"></div>
+
+<script>
+/*CALC_START*/
+// Viga biapoiada (A em x = 0, B em x = L) com q uniforme (para baixo) e cargas concentradas.
+// loads: [{x, P, M}] — P para baixo positivo; M aplicado na viga, horário positivo.
+function calcViga(L, loads, q) {
+  q = +q || 0;
+  const cs = loads.map((c, i) => ({ i, x: +c.x, P: +c.P || 0, M: +c.M || 0 }));
+  const sP = cs.reduce((s, c) => s + c.P, 0), sPx = cs.reduce((s, c) => s + c.P * c.x, 0), sM = cs.reduce((s, c) => s + c.M, 0);
+  const RB = (q * L * L / 2 + sPx + sM) / L;            // ΣM em A = 0
+  const RA = q * L + sP - RB;                           // ΣFy = 0
+  const pega = (x, dir) => cs.filter(c => c.x < x || (c.x === x && dir > 0));
+  const V = (x, dir) => RA - q * x - pega(x, dir).reduce((s, c) => s + c.P, 0);
+  const Mx = (x, dir) => RA * x - q * x * x / 2 - pega(x, dir).reduce((s, c) => s + c.P * (x - c.x) - c.M, 0);
+  const xs = [0, ...cs.map(c => c.x), L].filter((v, k, arr) => arr.indexOf(v) === k).sort((p, r) => p - r);
+  const segs = [];
+  for (let k = 0; k < xs.length - 1; k++) {
+    const x0 = xs[k], x1 = xs[k + 1];
+    const s = { k, x0, x1, Vl: V(x0, +1), Vr: V(x1, -1), Ml: Mx(x0, +1), Mr: Mx(x1, -1) };
+    const pts = [{ x: x0, m: s.Ml }, { x: x1, m: s.Mr }];
+    if (q > 0) { const xv = x0 + s.Vl / q; if (xv > x0 + 1e-9 && xv < x1 - 1e-9) { s.xv = xv; s.Mv = Mx(xv, +1); pts.push({ x: xv, m: s.Mv }); } }
+    s.max = pts.reduce((p, c) => c.m > p.m ? c : p); s.min = pts.reduce((p, c) => c.m < p.m ? c : p);
+    s.Vabs = Math.max(Math.abs(s.Vl), Math.abs(s.Vr)); s.Vsig = Math.abs(s.Vl) >= Math.abs(s.Vr) ? s.Vl : s.Vr;
+    s.Vend = Math.abs(s.Vl) >= Math.abs(s.Vr) ? 0 : 1;
+    segs.push(s);
+  }
+  const pos = segs.map(s => s.max).reduce((p, c) => c.m > p.m ? c : p);
+  const neg = segs.map(s => s.min).reduce((p, c) => c.m < p.m ? c : p);
+  const nos = cs.map(c => ({ i: c.i, x: c.x, P: c.P, M: c.M, Ml: Mx(c.x, -1), Mr: Mx(c.x, +1), Vl: V(c.x, -1), Vr: V(c.x, +1) }));
+  const vmax = segs.reduce((p, s) => s.Vabs > p.Vabs ? s : p);
+  return { L, q, cs, sP, sPx, sM, RA, RB, V, Mx, segs, pos, neg, nos, vmax };
+}
+/*CALC_END*/
+
+const COLORS = ['#5F6368', '#1A56DB', '#C25400', '#1B7F3B', '#7B3FB8', '#00838F', '#AD1457', '#6D4C41'];
+const EXAMPLE = { L: 6, a1: 4.5, a2: 5.25, np: 1, cases: [
+  { n: 'Só P (ref.)', P1: 40, M1: 0, P2: 0, M2: 0, q: 0 },
+  { n: 'Envoltória 1', P1: 40, M1: 15.47, P2: 0, M2: 0, q: 0 },
+  { n: 'Envoltória 2', P1: 40, M1: -10.19, P2: 0, M2: 0, q: 0 }] };
+const KEY = 'viga-pilar-nascente-v3';
+const $ = id => document.getElementById(id);
+const clone = o => JSON.parse(JSON.stringify(o));
+let state = null;
+try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) { state = null; }
+if (!state || !Array.isArray(state.cases)) {
+  // migra o estado da versão anterior (1 pilar: P, M, q)
+  let old = null; try { old = JSON.parse(localStorage.getItem('viga-pilar-nascente-v2')); } catch (e) { old = null; }
+  if (old && Array.isArray(old.cases)) state = { L: old.L ?? 6, a1: old.a ?? 4.5, a2: '', np: 1, cases: old.cases.map(c => ({ n: c.n, P1: c.P, M1: c.M, P2: 0, M2: 0, q: c.q })) };
+  else state = clone(EXAMPLE);
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+function fmt(v, c = 2) { if (!isFinite(v)) return '—'; if (Math.abs(v) < 0.5 * Math.pow(10, -c)) v = 0; return v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: c }); }
+function esc(s) { return String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
+const col = i => COLORS[i % COLORS.length];
+const nome = i => state.cases[i].n || ('Envoltória ' + (i + 1));
+const SUB = ['', '₁', '₂'];
+const sgn = v => (v < 0 ? '− ' : '+ ') + fmt(Math.abs(v));
+const par = v => (v < 0 ? '(' + fmt(v) + ')' : fmt(v));
+
+// ---------- entrada ----------
+function renderCases() {
+  $('casesBody').innerHTML = state.cases.map((c, i) => `<tr>
+    <td><span class="sw" style="background:${col(i)}"></span></td>
+    <td><input class="nm" id="c${i}_n" value="${esc(c.n)}" aria-label="Nome da envoltória ${i + 1}"></td>
+    <td><input type="number" id="c${i}_P1" value="${c.P1}" step="0.01" aria-label="P1 linha ${i + 1}"></td>
+    <td><input type="number" id="c${i}_M1" value="${c.M1}" step="0.01" aria-label="M1 linha ${i + 1}"></td>
+    <td class="p2"><input type="number" id="c${i}_P2" value="${c.P2}" step="0.01" aria-label="P2 linha ${i + 1}"></td>
+    <td class="p2"><input type="number" id="c${i}_M2" value="${c.M2}" step="0.01" aria-label="M2 linha ${i + 1}"></td>
+    <td><input type="number" id="c${i}_q" value="${c.q}" step="0.01" min="0" aria-label="q linha ${i + 1}"></td>
+    <td><button class="x" type="button" data-del="${i}" title="Remover envoltória" aria-label="Remover linha ${i + 1}">×</button></td></tr>`).join('');
+  state.cases.forEach((c, i) => ['n', 'P1', 'M1', 'P2', 'M2', 'q'].forEach(k => $(`c${i}_${k}`).addEventListener('input', e => { c[k] = e.target.value; calc(); })));
+  document.querySelectorAll('[data-del]').forEach(bt => bt.addEventListener('click', () => { state.cases.splice(+bt.dataset.del, 1); renderCases(); calc(); }));
+}
+function setNp(n) {
+  state.np = n;
+  $('np1').setAttribute('aria-pressed', n === 1); $('np2').setAttribute('aria-pressed', n === 2);
+  $('env-card').classList.toggle('um', n === 1);
+  $('f-a2').classList.toggle('off', n === 1);
+  if (n === 2) {
+    const L = parseFloat($('L').value), a1 = parseFloat($('a1').value), a2 = parseFloat($('a2').value);
+    if (!(a2 > a1 && a2 < L) && L > 0 && a1 > 0 && a1 < L) { $('a2').value = +((a1 + L) / 2).toFixed(2); state.a2 = $('a2').value; }
+  }
+}
+
+// ---------- cálculo ----------
+let ultimo = null;
+function lerGeometria() {
+  const L = parseFloat($('L').value), a1 = parseFloat($('a1').value), a2 = parseFloat($('a2').value);
+  state.L = $('L').value; state.a1 = $('a1').value; state.a2 = $('a2').value; save();
+  if (!(L > 0)) return { erro: 'Informe L &gt; 0.' };
+  if (!(a1 > 0 && a1 < L)) return { erro: 'Informe 0 &lt; a₁ &lt; L.' };
+  if (state.np === 2 && !(a2 > a1 && a2 < L)) return { erro: 'Com 2 pilares, informe a₁ &lt; a₂ &lt; L.' };
+  const xs = state.np === 2 ? [a1, a2] : [a1];
+  return { L, xs };
+}
+function limpar(msg) {
+  ultimo = null;
+  $('alertBox').innerHTML = `<div class="alert alert-danger">${msg}</div>`;
+  ['sv', 'resBody', 'resHead', 'kpis', 'legend'].forEach(id => $(id).innerHTML = ''); $('resSub').textContent = ''; $('trechos').value = '';
+  $('btn-pdf').disabled = true; $('btn-memo').disabled = true;
+}
+function calc() {
+  const g = lerGeometria();
+  if (g.erro) return limpar(g.erro);
+  if (!state.cases.length) return limpar('Adicione pelo menos uma envoltória.');
+  const { L, xs } = g;
+  const pts = [0, ...xs, L];
+  $('trechos').value = pts.slice(1).map((x, k) => (x - pts[k]).toFixed(2).replace('.', ',')).join(' · ');
+  const R = state.cases.map(c => calcViga(L, xs.map((x, j) => ({ x, P: c['P' + (j + 1)], M: c['M' + (j + 1)] })), c.q));
+  ultimo = { L, xs, R };
+  $('btn-pdf').disabled = false; $('btn-memo').disabled = false;
+
+  // alertas
+  const notes = [];
+  R.forEach((r, i) => {
+    const n = esc(nome(i));
+    if (+state.cases[i].q < 0) notes.push(`<div class="alert alert-warning"><b>${n}:</b> q negativo (para cima). Confira o sinal.</div>`);
+    if (r.neg.m < -1e-6) notes.push(`<div class="alert alert-warning"><b>${n}:</b> momento negativo de ${fmt(r.neg.m)} tf·m em x = ${fmt(r.neg.x)} m. A armadura superior desse trecho deixa de ser porta-estribo e precisa ser calculada e ancorada.</div>`);
+    const rn = [['A', r.RA], ['B', r.RB]].filter(([, v]) => v < -1e-6);
+    if (rn.length) notes.push(`<div class="alert alert-danger"><b>${n}:</b> reação negativa (${rn.map(([s, v]) => `R<sub>${s}</sub> = ${fmt(v)} tf`).join('; ')}). O apoio precisa resistir à tração, senão a viga levanta.</div>`);
+  });
+  $('alertBox').innerHTML = notes.join('');
+
+  // KPIs
+  let best = { m: -Infinity }, worst = { m: Infinity }, vm = { v: -1 }, rm = { v: -Infinity };
+  R.forEach((r, i) => {
+    if (r.pos.m > best.m) best = { m: r.pos.m, x: r.pos.x, i };
+    if (r.neg.m < worst.m) worst = { m: r.neg.m, x: r.neg.x, i };
+    if (r.vmax.Vabs > vm.v) vm = { v: r.vmax.Vabs, s: r.vmax, i };
+    [['A', r.RA], ['B', r.RB]].forEach(([s, v]) => { if (v > rm.v) rm = { v, s, i }; });
+  });
+  const trecho = s => `trecho ${fmt(s.x0)}–${fmt(s.x1)} m`;
+  const neg = Math.min(0, worst.m);
+  const kp = [
+    ['M⁺ máximo', fmt(Math.max(0, best.m)), 'tf·m', best.m > 0 ? `${nome(best.i)} · x = ${fmt(best.x)} m` : 'Não ocorre momento positivo', best.m > 0 ? 'ok' : ''],
+    ['M⁻ mínimo', fmt(neg), 'tf·m', neg < 0 ? `${nome(worst.i)} · x = ${fmt(worst.x)} m` : 'Não ocorre momento negativo', neg < 0 ? 'fail' : ''],
+    ['|V| máximo', fmt(vm.v), 'tf', `${nome(vm.i)} · ${trecho(vm.s)}`, ''],
+    ['Reação máxima', fmt(rm.v), 'tf', `Apoio ${rm.s} · ${nome(rm.i)}`, '']];
+  $('kpis').innerHTML = kp.map(([k, v, u, d, t]) => `<div class="kpi ${t}"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div><div class="d" title="${esc(d)}">${esc(d)}</div></div>`).join('');
+  $('resSub').textContent = best.m > 0 ? `maior positivo: ${nome(best.i)}, x = ${fmt(best.x)} m de A` : '';
+
+  // tabela de resultados
+  const cl = v => v < -1e-6 ? ' neg' : '';
+  let hd = '<tr><th>Envoltória</th><th class="num">R<sub>A</sub> <span class="un">tf</span></th><th class="num">R<sub>B</sub> <span class="un">tf</span></th>';
+  xs.forEach((x, j) => hd += `<th class="num">M(a${SUB[j + 1]}⁻) / M(a${SUB[j + 1]}⁺)</th>`);
+  hd += '<th class="num">M⁺ máx <span class="un">(x m)</span></th><th class="num">M⁻ mín <span class="un">(x m)</span></th><th class="num">|V| máx <span class="un">tf</span></th></tr>';
+  $('resHead').innerHTML = hd;
+  $('resBody').innerHTML = R.map((r, i) => {
+    let t = `<tr><td><span class="sw" style="background:${col(i)}"></span> ${esc(nome(i))}</td><td class="num${cl(r.RA)}">${fmt(r.RA)}</td><td class="num${cl(r.RB)}">${fmt(r.RB)}</td>`;
+    r.nos.forEach(n => t += `<td class="num"><span class="${cl(n.Ml)}">${fmt(n.Ml)}</span><span class="bar">/</span><span class="${cl(n.Mr)}">${fmt(n.Mr)}</span></td>`);
+    t += `<td class="num">${r.pos.m > 1e-6 ? fmt(r.pos.m) + `<span class="xm">${fmt(r.pos.x)}</span>` : '—'}</td>`;
+    t += `<td class="num${cl(r.neg.m)}">${r.neg.m < -1e-6 ? fmt(r.neg.m) + `<span class="xm">${fmt(r.neg.x)}</span>` : '—'}</td>`;
+    return t + `<td class="num">${fmt(r.vmax.Vabs)}</td></tr>`;
+  }).join('');
+  $('legend').innerHTML = state.cases.map((c, i) => `<span><i class="sw" style="background:${col(i)}"></i>${esc(nome(i))}</span>`).join('') + '<span><i class="sw" style="background:#E3E5E8"></i>Faixa da envoltória</span>';
+  draw();
+}
+
+// ---------- desenho (SVG em pixels reais, rótulos sem sobreposição) ----------
+const T1 = '#1F2328', T2 = '#5F6368', GR = '#9AA0A6';
+const tw = (s, fs) => String(s).length * fs * 0.56;
+function Rotulos(W, H) { this.W = W; this.H = H; this.b = []; }
+Rotulos.prototype.livre = function (r) {
+  if (r.x < 0 || r.x + r.w > this.W || r.y < 0 || r.y + r.h > this.H) return false;
+  return !this.b.some(o => r.x < o.x + o.w && r.x + r.w > o.x && r.y < o.y + o.h && r.y + r.h > o.y);
+};
+Rotulos.prototype.reserva = function (x, y, w, h) { this.b.push({ x, y, w, h }); };
+// cands: [{x, y, anc}] — y é a linha de base do texto; devolve o primeiro candidato livre
+Rotulos.prototype.txt = function (t, cands, fs, cor, peso) {
+  for (const c of cands) {
+    const w = tw(t, fs), x = c.anc === 'end' ? c.x - w : c.anc === 'middle' ? c.x - w / 2 : c.x;
+    const r = { x: x - 2, y: c.y - fs * 0.9, w: w + 4, h: fs * 1.15 };
+    if (this.livre(r)) { this.b.push(r); return `<text x="${c.x.toFixed(1)}" y="${c.y.toFixed(1)}" font-size="${fs}" fill="${cor}" text-anchor="${c.anc}"${peso ? ' font-weight="600"' : ''} stroke="#FFFFFF" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke">${esc(t)}</text>`; }
+  }
+  return '';
+};
+
+function draw() {
+  if (!ultimo) return;
+  const { L, xs, R } = ultimo;
+  const box = $('sv-box');
+  const W = Math.max(480, Math.round(box.clientWidth)), H = Math.max(200, Math.round(box.clientHeight));
+  const sv = $('sv'); sv.setAttribute('viewBox', `0 0 ${W} ${H}`); sv.setAttribute('width', W); sv.setAttribute('height', H);
+  sv.innerHTML = svgEsforcos(L, xs, R, W, H);
+}
+
+function svgEsforcos(L, xs, R, W, H) {
+  const X0 = 40, X1 = W - 40, sx = x => X0 + (X1 - X0) * x / L;
+  const lab = new Rotulos(W, H);
+  let s = `<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="${T1}"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1A56DB"/></marker>
+    <marker id="am" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="${GR}"/></marker></defs>`;
+
+  // ===== esquema =====
+  const yb = 68, xp = xs.map(sx);
+  // pilares, cargas e momentos
+  xp.forEach((X, j) => {
+    s += `<rect x="${X - 11}" y="${yb - 50}" width="22" height="26" fill="none" stroke="${T2}" stroke-dasharray="4 3"/>`;
+    s += `<line x1="${X}" y1="${yb - 46}" x2="${X}" y2="${yb - 5}" stroke="${T1}" stroke-width="2.2" marker-end="url(#ar)"/>`;
+    s += `<path d="M${X - 17} ${yb - 9} A17 17 0 0 1 ${X + 17} ${yb - 9}" fill="none" stroke="#1A56DB" stroke-width="1.8" marker-end="url(#ab)"/>`;
+    lab.reserva(X - 19, yb - 50, 38, 48);
+  });
+  xp.forEach((X, j) => {
+    s += lab.txt(`P${SUB[j + 1]}`, [{ x: X, y: yb - 54, anc: 'middle' }, { x: X - 14, y: yb - 36, anc: 'end' }, { x: X + 14, y: yb - 36, anc: 'start' }], 13, T1, true);
+    s += lab.txt(`M${SUB[j + 1]}`, [{ x: X + 21, y: yb - 14, anc: 'start' }, { x: X - 21, y: yb - 14, anc: 'end' }, { x: X + 21, y: yb - 28, anc: 'start' }], 12, '#1A56DB', true);
+  });
+  // carga distribuída (setas fora da região dos pilares)
+  if (R.some(r => +r.q > 0)) {
+    for (let x = X0; x <= X1 + 0.1; x += 24) { if (xp.some(X => Math.abs(X - x) < 24)) continue; s += `<line x1="${x}" y1="${yb - 18}" x2="${x}" y2="${yb - 4}" stroke="${GR}" stroke-width="1.2" marker-end="url(#am)"/>`; }
+    s += `<line x1="${X0}" y1="${yb - 18}" x2="${X1}" y2="${yb - 18}" stroke="${GR}"/>`;
+    s += lab.txt('q', [{ x: X0 + 4, y: yb - 23, anc: 'start' }, { x: X1 - 4, y: yb - 23, anc: 'end' }], 12, T2);
+  }
+  // viga e apoios
+  s += `<line x1="${X0}" y1="${yb}" x2="${X1}" y2="${yb}" stroke="${T1}" stroke-width="5"/>`;
+  [X0, X1].forEach(x => { s += `<path d="M${x} ${yb + 3} l-10 17 h20 z" fill="#FFFFFF" stroke="${T2}" stroke-width="1.5"/>`; lab.reserva(x - 11, yb + 2, 22, 19); });
+  s += lab.txt('A', [{ x: X0 - 14, y: yb + 17, anc: 'end' }], 13, T1, true) + lab.txt('B', [{ x: X1 + 14, y: yb + 17, anc: 'start' }], 13, T1, true);
+  // cotas
+  const yc = yb + 28, px = [0, ...xs, L];
+  s += `<line x1="${X0}" y1="${yc}" x2="${X1}" y2="${yc}" stroke="${GR}"/>`;
+  px.forEach(x => s += `<line x1="${sx(x)}" y1="${yc - 5}" x2="${sx(x)}" y2="${yc + 5}" stroke="${GR}"/>`);
+  lab.reserva(X0, yc - 5, X1 - X0, 10);
+  for (let k = 0; k < px.length - 1; k++) {
+    const xm = (sx(px[k]) + sx(px[k + 1])) / 2, t = `${fmt(px[k + 1] - px[k])} m`;
+    s += lab.txt(t, [{ x: xm, y: yc + 16, anc: 'middle' }, { x: xm, y: yc - 8, anc: 'middle' }, { x: xm, y: yc + 29, anc: 'middle' }], 12, T2);
+  }
+  const ySchemEnd = yc + 22;
+
+  // ===== faixas dos diagramas =====
+  const rest = H - ySchemEnd;
+  const fM = 0.56, bandM = { top: ySchemEnd + 2, h: rest * fM - 2 }, bandV = { top: ySchemEnd + rest * fM + 2, h: rest * (1 - fM) - 4 };
+  // grade de pontos por trecho
+  const grid = [];
+  for (let k = 0; k < px.length - 1; k++) { const N = 40; for (let i = 0; i <= N; i++) grid.push({ x: px[k] + (px[k + 1] - px[k]) * i / N, d: i === 0 ? +1 : -1 }); }
+  const vals = R.map(r => grid.map(g => r.Mx(g.x, g.d)));
+  const mPos = Math.max(0, ...vals.flat()), mNeg = Math.max(0, ...vals.flat().map(v => -v));
+
+  // --- fletor ---
+  const tM = 'Momento fletor (tf·m)';
+  s += `<text x="${X0}" y="${bandM.top + 12}" font-size="13" font-weight="600" fill="${T1}">${tM}</text>`; lab.reserva(X0 - 2, bandM.top, tw(tM, 13) + 6, 16);
+  const hM = Math.max(30, bandM.h - 22 - 18);           // 22 acima (título/rótulos -) e 18 abaixo (rótulos +)
+  const spanM = Math.max(mPos + mNeg, 1e-9), kM = hM / spanM;
+  const y0 = bandM.top + 22 + mNeg * kM + (mNeg === 0 ? 6 : 0), ym = v => y0 + v * kM;
+  // faixa da envoltória
+  const env = grid.map((g, k) => ({ x: g.x, max: Math.max(...vals.map(v => v[k])), min: Math.min(...vals.map(v => v[k])) }));
+  const ep = env.map((e, k) => `${k ? 'L' : 'M'}${sx(e.x).toFixed(1)} ${ym(Math.max(e.max, 0)).toFixed(1)}`).join(' ') + ' ' + env.slice().reverse().map(e => `L${sx(e.x).toFixed(1)} ${ym(Math.min(e.min, 0)).toFixed(1)}`).join(' ') + 'Z';
+  s += `<path d="${ep}" fill="#E3E5E8" fill-opacity=".75" stroke="none"/>`;
+  s += `<line x1="${X0}" y1="${y0}" x2="${X1}" y2="${y0}" stroke="${T2}"/>`;
+  vals.forEach((v, i) => {
+    const tracejar = i === 0 && state.cases.length > 1 && state.cases[0].M1 == 0 && (state.np === 1 || state.cases[0].M2 == 0);
+    s += `<path d="${grid.map((g, k) => `${k ? 'L' : 'M'}${sx(g.x).toFixed(1)} ${ym(v[k]).toFixed(1)}`).join(' ')}" fill="none" stroke="${col(i)}" stroke-width="2.2" stroke-linejoin="round"${tracejar ? ' stroke-dasharray="6 4"' : ''}/>`;
+  });
+  // linhas dos pilares (fletor e cortante)
+  xp.forEach(X => s += `<line x1="${X}" y1="${ySchemEnd}" x2="${X}" y2="${H - 2}" stroke="${GR}" stroke-dasharray="3 4"/>`);
+  s += `<text x="${X1 + 8}" y="${y0 - 5}" font-size="12" fill="${T2}">−</text><text x="${X1 + 8}" y="${y0 + 14}" font-size="12" fill="${T2}">+</text>`;
+  lab.reserva(X1 + 6, y0 - 16, 12, 32);
+  // pontos notáveis: maior + e menor − de cada trecho (entre as envoltórias), maiores primeiro
+  const marc = [];
+  R[0].segs.forEach((sg, k) => {
+    let mx = null, mn = null;
+    R.forEach((r, i) => { const t = r.segs[k]; if (t.max.m > 1e-6 && (!mx || t.max.m > mx.m)) mx = { ...t.max, i, k }; if (t.min.m < -1e-6 && (!mn || t.min.m < mn.m)) mn = { ...t.min, i, k }; });
+    [mx, mn].forEach(p => { if (p && !marc.some(o => Math.abs(o.x - p.x) < 1e-6 && Math.abs(o.m - p.m) < 0.005)) marc.push(p); });
+  });
+  marc.sort((p, r) => Math.abs(r.m) - Math.abs(p.m));
+  const pontos = [], textos = [];
+  marc.forEach(p => {
+    const X = sx(p.x), Y = ym(p.m), sg = R[0].segs[p.k];
+    const naEsq = Math.abs(p.x - sg.x1) < 1e-9, naDir = Math.abs(p.x - sg.x0) < 1e-9;
+    const anc = naEsq ? 'end' : naDir ? 'start' : 'middle', dx = naEsq ? -7 : naDir ? 7 : 0;
+    const inv = anc === 'end' ? 'start' : anc === 'start' ? 'end' : 'middle';
+    const t = fmt(p.m), dy = p.m > 0 ? [15, 29, -7] : [-7, -21, 15];
+    const cands = [{ x: X + dx, y: Y + dy[0], anc }, { x: X + dx, y: Y + dy[1], anc }, { x: X - dx * 2, y: Y + dy[0], anc: inv }, { x: X + dx, y: Y + dy[2], anc }, { x: X - dx * 2, y: Y + dy[1], anc: inv }];
+    const tx = lab.txt(t, cands, 13, col(p.i), true);
+    pontos.push(`<circle cx="${X.toFixed(1)}" cy="${Y.toFixed(1)}" r="3.5" fill="${col(p.i)}" stroke="#FFFFFF" stroke-width="1.5"/>`);
+    textos.push(tx);
+  });
+  s += pontos.join('') + textos.join('');
+
+  // --- cortante ---
+  const tV = 'Cortante (tf)';
+  s += `<text x="${X0}" y="${bandV.top + 12}" font-size="13" font-weight="600" fill="${T1}">${tV}</text>`; lab.reserva(X0 - 2, bandV.top, tw(tV, 13) + 6, 16);
+  const vPos = Math.max(0, ...R.flatMap(r => r.segs.flatMap(g => [g.Vl, g.Vr]))), vNeg = Math.max(0, ...R.flatMap(r => r.segs.flatMap(g => [-g.Vl, -g.Vr])));
+  const hV = Math.max(24, bandV.h - 18 - 20), kV = hV / Math.max(vPos + vNeg, 1e-9);
+  const y1 = bandV.top + 18 + vPos * kV, yv = v => y1 - v * kV;
+  s += `<line x1="${X0}" y1="${y1}" x2="${X1}" y2="${y1}" stroke="${T2}"/>`;
+  R.forEach((r, i) => {
+    let d = `M${X0} ${y1}`;
+    r.segs.forEach(g => d += ` L${sx(g.x0).toFixed(1)} ${yv(g.Vl).toFixed(1)} L${sx(g.x1).toFixed(1)} ${yv(g.Vr).toFixed(1)}`);
+    s += `<path d="${d} L${X1} ${y1}" fill="none" stroke="${col(i)}" stroke-width="2" stroke-linejoin="round"/>`;
+  });
+  // rótulo do maior |V| de cada trecho, no lado em que ocorre
+  R[0].segs.forEach((sg, k) => {
+    let b = null; R.forEach((r, i) => { const t = r.segs[k]; if (!b || t.Vabs > b.t.Vabs) b = { t, i }; });
+    if (!b || b.t.Vabs < 1e-6) return;
+    const t = b.t, xe = t.Vend === 0 ? t.x0 : t.x1, X = sx(xe), Y = yv(t.Vsig);
+    const anc = t.Vend === 0 ? 'start' : 'end', dx = t.Vend === 0 ? 7 : -7, xm = (sx(t.x0) + sx(t.x1)) / 2;
+    const dentro = Math.abs(Y - y1) > 16, cands = [];
+    // 1º dentro do diagrama (entre a linha e o eixo), depois fora
+    if (dentro) cands.push({ x: X + dx, y: t.Vsig >= 0 ? Y + 15 : Y - 5, anc }, { x: xm, y: t.Vsig >= 0 ? Y + 15 : Y - 5, anc: 'middle' });
+    cands.push({ x: X + dx, y: t.Vsig >= 0 ? Y - 5 : Y + 15, anc }, { x: xm, y: t.Vsig >= 0 ? Y - 5 : Y + 15, anc: 'middle' });
+    cands.push({ x: xm, y: t.Vsig >= 0 ? y1 + 15 : y1 - 5, anc: 'middle' });
+    s += lab.txt(fmt(t.Vsig), cands, 13, col(b.i), true);
+  });
+  return s;
+}
+
+// ---------- memorial ----------
+function memorialHTML() {
+  if (!ultimo) return '';
+  const { L, xs, R } = ultimo;
+  return R.map((r, i) => {
+    const c = r.cs, n = c.length;
+    let dados = `L = ${fmt(L)} m · ` + c.map((p, j) => `a${SUB[j + 1]} = ${fmt(p.x)} m · P${SUB[j + 1]} = ${fmt(p.P)} tf · M${SUB[j + 1]} = ${fmt(p.M)} tf·m (${p.M > 0 ? 'horário' : p.M < 0 ? 'anti-horário' : 'nulo'})`).join(' · ') + ` · q = ${fmt(r.q)} tf/m`;
+    const idx = c.map((p, j) => SUB[j + 1]);
+    let f = `Reações (ΣM_A = 0 e ΣFy = 0; M horário positivo)\n`;
+    f += `R_B = [q·L²/2 + ${idx.map(s => `P${s}·a${s}`).join(' + ')} + ${idx.map(s => `M${s}`).join(' + ')}] / L\n`;
+    f += `R_B = [${fmt(r.q)}·${fmt(L)}²/2 + ${c.map(p => `${par(p.P)}·${fmt(p.x)}`).join(' + ')} + ${c.map(p => par(p.M)).join(' + ')}] / ${fmt(L)}\n`;
+    f += `R_B = [${fmt(r.q * L * L / 2)} + ${fmt(r.sPx)} + ${par(r.sM)}] / ${fmt(L)} = ${fmt(r.RB)} tf\n\n`;
+    f += `R_A = q·L/2 + ${idx.map(s => `P${s}·(L − a${s})/L`).join(' + ')} − (${idx.map(s => `M${s}`).join(' + ')})/L\n`;
+    f += `R_A = ${fmt(r.q * L / 2)} ${c.map(p => sgn(p.P * (L - p.x) / L)).join(' ')} ${sgn(-r.sM / L)} = ${fmt(r.RA)} tf\n`;
+    f += `Conferência: R_A + R_B = ${fmt(r.RA + r.RB)} tf = q·L + ΣP = ${fmt(r.q * L + r.sP)} tf\n\n`;
+    f += `Momento fletor nos pilares (tração embaixo +; salto = M aplicado)\n`;
+    r.nos.forEach((no, j) => {
+      const s = SUB[j + 1], ant = c.slice(0, j);
+      let ex = `R_A·a${s} − q·a${s}²/2` + ant.map((p, k) => ` − P${SUB[k + 1]}·(a${s} − a${SUB[k + 1]}) + M${SUB[k + 1]}`).join('');
+      let nu = `${fmt(r.RA)}·${fmt(no.x)} − ${fmt(r.q)}·${fmt(no.x)}²/2` + ant.map(p => ` − ${par(p.P)}·${fmt(no.x - p.x)} ${sgn(p.M)}`).join('');
+      f += `M(a${s}⁻) = ${ex}\n        = ${nu} = ${fmt(no.Ml)} tf·m\n`;
+      f += `M(a${s}⁺) = M(a${s}⁻) + M${s} = ${fmt(no.Ml)} ${sgn(no.M)} = ${fmt(no.Mr)} tf·m\n`;
+    });
+    f += `\nCortante por trecho (V = R_A − q·x − ΣP à esquerda)\n`;
+    r.segs.forEach(g => {
+      f += `x = ${fmt(g.x0)} a ${fmt(g.x1)} m: V de ${fmt(g.Vl)} a ${fmt(g.Vr)} tf`;
+      if (g.xv !== undefined) f += ` · V = 0 em x = ${fmt(g.xv)} m → M = ${fmt(g.Mv)} tf·m`;
+      f += '\n';
+    });
+    f += `Parcela de cortante devida aos momentos: ΣM/L = ${fmt(r.sM / L)} tf, constante em todo o vão\n\n`;
+    f += `M⁺ máx = ${r.pos.m > 1e-6 ? fmt(r.pos.m) + ' tf·m (x = ' + fmt(r.pos.x) + ' m)' : 'não ocorre'}\n`;
+    f += `M⁻ mín = ${r.neg.m < -1e-6 ? fmt(r.neg.m) + ' tf·m (x = ' + fmt(r.neg.x) + ' m)' : 'não ocorre'}\n`;
+    f += `|V| máx = ${fmt(r.vmax.Vabs)} tf (trecho ${fmt(r.vmax.x0)}–${fmt(r.vmax.x1)} m)`;
+    return `<div class="card memo"><div class="rot"><span class="sw" style="background:${col(i)}"></span> ${esc(nome(i))}</div><div class="dados">${dados}</div><div class="fml">${esc(f)}</div></div>`;
+  }).join('');
+}
+const modal = $('modal-memo');
+function abrirMemorial() { if (!ultimo) return; $('memoBox').innerHTML = `<div class="card" style="font-size:12.5px;color:var(--texto-2)">Estática de viga biapoiada (apoio A em x = 0, B em x = L). Forças em tf, momentos em tf·m, carga distribuída em tf/m. P para baixo positivo; M aplicado pelo pilar à viga, horário positivo; fletor positivo com tração embaixo.</div>` + memorialHTML(); modal.classList.add('aberto'); }
+function fecharMemorial() { modal.classList.remove('aberto'); }
+$('btn-memo').addEventListener('click', abrirMemorial);
+$('btn-memo-x').addEventListener('click', fecharMemorial);
+$('btn-memo-fechar').addEventListener('click', fecharMemorial);
+modal.addEventListener('click', e => { if (e.target === modal) fecharMemorial(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharMemorial(); });
+
+function gerarPDF() {
+  if (!ultimo) return;
+  const { L, xs } = ultimo;
+  const W = 900, H = 520;
+  const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Arial">${svgEsforcos(L, xs, ultimo.R, W, H)}</svg>`;
+  const tab = `<table><thead>${$('resHead').innerHTML}</thead><tbody>${$('resBody').innerHTML}</tbody></table>`;
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  $('print-area').innerHTML = `<h1>Viga com pilar nascente — esforços</h1><div class="sub">BASE Estruturas · ${hoje} · L = ${fmt(L)} m · ${xs.map((x, j) => `a${SUB[j + 1]} = ${fmt(x)} m`).join(' · ')}</div>
+    <h2>Esquema e diagramas</h2>${svg}<h2>Resultados por envoltória</h2>${tab}<h2>Memorial</h2>${memorialHTML()}`;
+  window.print();
+}
+$('btn-pdf').addEventListener('click', gerarPDF);
+$('btn-pdf2').addEventListener('click', gerarPDF);
+
+// ---------- inicialização ----------
+$('L').value = state.L ?? 6; $('a1').value = state.a1 ?? 4.5; $('a2').value = state.a2 ?? '';
+['L', 'a1', 'a2'].forEach(id => $(id).addEventListener('input', calc));
+$('np1').addEventListener('click', () => { setNp(1); calc(); });
+$('np2').addEventListener('click', () => { setNp(2); calc(); });
+$('addCase').addEventListener('click', () => { state.cases.push({ n: 'Envoltória ' + state.cases.length, P1: 0, M1: 0, P2: 0, M2: 0, q: 0 }); renderCases(); calc(); });
+$('resetEx').addEventListener('click', () => { state = clone(EXAMPLE); $('L').value = state.L; $('a1').value = state.a1; $('a2').value = state.a2; renderCases(); setNp(1); calc(); });
+renderCases(); setNp(state.np === 2 ? 2 : 1); calc();
+let rz; new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(draw, 60); }).observe($('sv-box'));
+</script>
+</body>
+</html>

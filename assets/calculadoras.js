@@ -41,6 +41,14 @@ const CALCULADORAS = [
      descricao: 'Espaçamento entre barras longitudinais.'
    },
 
+  {
+    categoria: 'Vigas',
+    id: 'viga-pilar-nascente',
+    nome: 'Viga — Pilar nascente',
+    arquivo: 'viga-pilar-nascente.html',
+    descricao: 'Viga biapoiada com 1 ou 2 pilares nascentes (P e M) e carga distribuída: reações, fletor e cortante por envoltória.'
+  },
+
   // ===== PILARES =====
   // {
   //   categoria: 'Pilares',
