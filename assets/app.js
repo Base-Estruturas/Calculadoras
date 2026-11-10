@@ -150,7 +150,7 @@ document.addEventListener('keydown', (e) => {
 function abrirPeloHash() {
   const hash = window.location.hash.slice(1);
   if (hash) {
-    const calc = CALCULADORAS.find(c => c.id === hash);
+    const calc = CALCULADORAS.find(c => c.id === hash || (c.aliases || []).includes(hash));
     if (calc) abrir(calc);
   }
 }

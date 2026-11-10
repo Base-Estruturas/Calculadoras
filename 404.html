@@ -9,7 +9,10 @@
   const path = window.location.pathname.split('/').filter(Boolean);
   // Detecta se está em subpasta (caso de username.github.io/repo)
   const base = path.length > 0 && path[0] !== 'index.html' ? '/' + path[0] + '/' : '/';
-  window.location.replace(base);
+  if (window.self === window.top) window.location.replace(base);
+  else document.addEventListener('DOMContentLoaded', () => {
+    document.body.innerHTML = '<div><h1>CALCULADORA NÃO ENCONTRADA</h1><p>O menu pode estar desatualizado. Atualize a página (Ctrl+F5).</p></div>';
+  });
 </script>
 <style>
   body {

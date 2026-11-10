@@ -46,6 +46,7 @@ const CALCULADORAS = [
     id: 'viga-transicao-biapoiada',
     nome: 'Viga — Transição biapoiada',
     arquivo: 'viga-transicao-biapoiada.html',
+    aliases: ['viga-pilar-nascente'],   // nome antigo (links salvos continuam abrindo)
     descricao: 'Viga de transição biapoiada — verificação manual: 1 ou 2 pilares nascentes (P e M) e carga distribuída, valores característicos; reações, fletor e cortante por envoltória.'
   },
 

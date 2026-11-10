@@ -69,7 +69,13 @@
 
 </div>
 
-<script src="assets/calculadoras.js?v=20261031"></script>
-<script src="assets/app.js?v=20261031"></script>
+<script>
+  // Carrega a lista e o controle sempre na versão mais recente (evita menu antigo em cache)
+  (function () {
+    const v = Date.now();
+    const js = src => new Promise((ok, erro) => { const t = document.createElement('script'); t.src = src + '?v=' + v; t.onload = ok; t.onerror = erro; document.body.appendChild(t); });
+    js('assets/calculadoras.js').then(() => js('assets/app.js'));
+  })();
+</script>
 </body>
 </html>
