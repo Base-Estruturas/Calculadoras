@@ -84,7 +84,10 @@
 
   .dg-card { flex: 1 1 auto; min-height: 260px; display: flex; flex-direction: column; }
   #sv-box { flex: 1 1 auto; min-height: 0; position: relative; }
-  #sv { position: absolute; inset: 0; display: block; }
+  #sv { position: absolute; left: 0; top: 0; display: block; }
+  #sv-box.rola { overflow-y: auto; overflow-x: hidden; }
+  .res-card.fechado .tbl-wrap { display: none; }
+  .res-card.fechado .card-hd { margin-bottom: 0; }
   #sv text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
   .cons { position: absolute; right: 40px; top: 0; display: none; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 12px; color: var(--texto-2); z-index: 2; max-width: calc(100% - 230px); }
   .cons.on { display: flex; }
@@ -228,7 +231,7 @@
         <div class="leg-row"><div class="legend" id="legend"></div><div class="cons-r" id="cR"></div></div>
       </div>
       <div class="card res-card">
-        <div class="card-hd"><span class="rot">Resultados por envoltória (característicos)</span><span class="xm" id="resSub"></span></div>
+        <div class="card-hd"><span class="rot" style="white-space:nowrap">Resultados por envoltória · característicos</span><span style="display:flex;align-items:center;gap:10px;min-width:0"><span class="xm" id="resSub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span><button type="button" class="btn-sm" id="resTog" aria-expanded="true">Recolher</button></span></div>
         <div class="tbl-wrap"><table><thead id="resHead"></thead><tbody id="resBody"></tbody></table></div>
       </div>
     </section>
@@ -436,10 +439,14 @@ function draw() {
   if (!ultimo) return;
   const { L, xs, R } = ultimo;
   const box = $('sv-box');
-  const W = Math.max(480, Math.round(box.clientWidth)), H = Math.max(200, Math.round(box.clientHeight));
-  const sv = $('sv'); sv.setAttribute('viewBox', `0 0 ${W} ${H}`); sv.setAttribute('width', W); sv.setAttribute('height', H);
   const cons = $('consulta'); cons.classList.add('on');
   const c = consultaAtual(R);
+  // altura mínima para não sobrepor: esquema + título/consulta + cotas + fletor + cortante
+  const n = c ? c.xs.length : 0, hCot = n ? (n > 1 ? 34 : 27) : 0;
+  const Hmin = 120 + Math.max(22, cons.offsetHeight + 4) + 18 + hCot + 50 + 54;
+  box.classList.toggle('rola', box.clientHeight < Hmin);
+  const W = Math.max(480, Math.round(box.clientWidth)), H = Math.max(Hmin, Math.round(box.clientHeight));
+  const sv = $('sv'); sv.setAttribute('viewBox', `0 0 ${W} ${H}`); sv.setAttribute('width', W); sv.setAttribute('height', H);
   $('cR').innerHTML = c ? `<span class="sw" style="background:${col(c.i)}"></span> M = ${fmt(c.Mq)} tf·m → ` + c.html : ''; $('cR').title = c ? $('cR').textContent : ''; $('cR').style.display = c ? '' : 'none';
   sv.innerHTML = svgEsforcos(L, xs, R, W, H, { h: cons.offsetHeight, w: cons.offsetWidth, c, el: cons });
 }
@@ -513,7 +520,14 @@ function svgEsforcos(L, xs, R, W, H, cons) {
 
   // ===== faixas dos diagramas =====
   const rest = H - ySchemEnd;
-  const fM = cons && cons.c ? 0.62 : 0.56, bandM = { top: ySchemEnd + 2, h: rest * fM - 2 }, bandV = { top: ySchemEnd + rest * fM + 2, h: rest * (1 - fM) - 4 };
+  // altura das faixas: o fletor recebe o que precisar (título, consulta e cotas); o cortante fica com no mínimo 46 px
+  const hdrM = cons ? Math.max(22, cons.h + 4) : 22;     // título + campo de consulta acima do diagrama
+  const nCot = cons && cons.c ? cons.c.xs.length : 0;
+  let hCot = nCot ? 10 + nCot * 17 : 0, cotaUnica = false;  // uma linha de cota por ponto
+  const minV = 46, minDiag = 50;
+  if (nCot > 1 && hdrM + 18 + hCot + minDiag > rest - minV) { cotaUnica = true; hCot = 34; }   // sem altura: cotas acumuladas numa linha só
+  const hMb = Math.min(Math.max(rest * 0.56, hdrM + 18 + hCot + minDiag), Math.max(rest - minV, rest * 0.56));
+  const bandM = { top: ySchemEnd + 2, h: hMb - 2 }, bandV = { top: ySchemEnd + hMb + 2, h: rest - hMb - 4 };
   // grade de pontos por trecho
   const grid = [];
   for (let k = 0; k < px.length - 1; k++) { const N = 40; for (let i = 0; i <= N; i++) grid.push({ x: px[k] + (px[k + 1] - px[k]) * i / N, d: i === 0 ? +1 : -1 }); }
@@ -523,11 +537,19 @@ function svgEsforcos(L, xs, R, W, H, cons) {
   // --- fletor ---
   const tM = 'Momento fletor (tf·m)';
   s += `<text x="${X0}" y="${bandM.top + 15}" font-size="13" font-weight="600" fill="${T1}">${tM}</text>`; lab.reserva(X0 - 2, bandM.top + 3, tw(tM, 13) + 6, 16);
-  const hdrM = cons ? Math.max(22, cons.h + 4) : 22;     // título + campo de consulta acima do diagrama
   if (cons) { cons.el.style.top = bandM.top + 'px'; lab.reserva(W - 40 - cons.w, bandM.top, cons.w, cons.h); }
-  const hM = Math.max(30, bandM.h - hdrM - 18);          // 18 abaixo (rótulos +)
+  const hM = Math.max(30, bandM.h - hdrM - 18 - hCot);   // 18 abaixo (rótulos +)
   const spanM = Math.max(mPos + mNeg, 1e-9), kM = hM / spanM;
   const y0 = bandM.top + hdrM + mNeg * kM + (mNeg === 0 ? 6 : 0), ym = v => y0 + v * kM;
+  // reserva as linhas de cota da consulta abaixo do diagrama (empilhadas, menor primeiro)
+  const cotas = [];
+  if (nCot) {
+    const yBase = y0 + mPos * kM + 18 + 14;
+    cons.c.xs.forEach((p, k) => { const y = cotaUnica ? yBase + 6 : yBase + k * 17; cotas.push({ p, y, k }); });
+    const xmax = sx(cons.c.xs[cons.c.xs.length - 1].x);
+    if (cotaUnica) lab.reserva(X0 - 6, yBase - 9, xmax - X0 + 80, 30);
+    else cotas.forEach(({ p, y }) => lab.reserva(X0 - 6, y - 15, sx(p.x) - X0 + 12 + 70, 20));
+  }
   // faixa da envoltória
   const env = grid.map((g, k) => ({ x: g.x, max: Math.max(...vals.map(v => v[k])), min: Math.min(...vals.map(v => v[k])) }));
   const ep = env.map((e, k) => `${k ? 'L' : 'M'}${sx(e.x).toFixed(1)} ${ym(Math.max(e.max, 0)).toFixed(1)}`).join(' ') + ' ' + env.slice().reverse().map(e => `L${sx(e.x).toFixed(1)} ${ym(Math.min(e.min, 0)).toFixed(1)}`).join(' ') + 'Z';
@@ -562,22 +584,31 @@ function svgEsforcos(L, xs, R, W, H, cons) {
     textos.push(tx);
   });
   s += pontos.join('') + textos.join('');
-  // consulta de momento: linha tracejada no valor e pontos com a distância a A
-  if (cons && cons.c && cons.c.xs.length) {
-    const c = cons.c, r = R[c.i], cor = col(c.i), Yq = ym(c.Mq);
-    // as curvas passam a ser obstáculos para os rótulos da consulta
-    vals.forEach(v => grid.forEach((g, k) => lab.reserva(sx(g.x) - 1.5, ym(v[k]) - 1.5, 3, 3)));
-    s += `<line x1="${X0}" y1="${Yq.toFixed(1)}" x2="${X1}" y2="${Yq.toFixed(1)}" stroke="${cor}" stroke-width="1.2" stroke-dasharray="5 4" opacity=".8"/>`;
-    c.xs.forEach(p => {
-      const X = sx(p.x);
-      s += `<line x1="${X.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${X.toFixed(1)}" y2="${Yq.toFixed(1)}" stroke="${cor}" stroke-width="1" opacity=".6"/>`;
+  // consulta de momento: linha tracejada no valor, chamadas tracejadas e cotas a partir de A
+  if (cotas.length) {
+    const c = cons.c, cor = col(c.i), Yq = ym(c.Mq), yUlt = cotas[cotas.length - 1].y;
+    s += `<line x1="${X0}" y1="${Yq.toFixed(1)}" x2="${X1}" y2="${Yq.toFixed(1)}" stroke="${cor}" stroke-width="1.2" stroke-dasharray="5 4" opacity=".85"/>`;
+    // chamada no apoio A
+    s += `<line x1="${X0}" y1="${(y0 + 4).toFixed(1)}" x2="${X0}" y2="${(yUlt + 5).toFixed(1)}" stroke="${cor}" stroke-width="1" stroke-dasharray="3 3"/>`;
+    cotas.forEach(({ p, y, k }) => {
+      const X = sx(p.x), w = X - X0, t = `${fmt(p.x)} m`;
+      // chamada do ponto até a sua linha de cota
+      s += `<line x1="${X.toFixed(1)}" y1="${(Yq + 5).toFixed(1)}" x2="${X.toFixed(1)}" y2="${(y + 5).toFixed(1)}" stroke="${cor}" stroke-width="1" stroke-dasharray="3 3"/>`;
+      // linha de cota com marcas oblíquas nas extremidades
+      s += `<line x1="${X0}" y1="${y.toFixed(1)}" x2="${X.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${cor}" stroke-width="1.2"/>`;
+      [X0, X].forEach(xx => s += `<line x1="${(xx - 4).toFixed(1)}" y1="${(y + 4).toFixed(1)}" x2="${(xx + 4).toFixed(1)}" y2="${(y - 4).toFixed(1)}" stroke="${cor}" stroke-width="1.6"/>`);
+      if (cotaUnica) {   // rótulo junto da marca, alternando acima/abaixo da linha
+        const dy = ((cotas.length - 1 - k) % 2 === 0) ? -5 : 14;
+        s += `<text x="${(X - 4).toFixed(1)}" y="${(y + dy).toFixed(1)}" font-size="12" font-weight="600" fill="${cor}" text-anchor="end" stroke="#FFFFFF" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke">${esc(t)}</text>`;
+        s += `<circle cx="${X.toFixed(1)}" cy="${Yq.toFixed(1)}" r="4" fill="#FFFFFF" stroke="${cor}" stroke-width="2"/>`;
+        return;
+      }
+      const cabe = tw(t, 12) + 10 < w;
+      s += `<text x="${(cabe ? X0 + w / 2 : X + 8).toFixed(1)}" y="${(y - 4).toFixed(1)}" font-size="12" font-weight="600" fill="${cor}" text-anchor="${cabe ? 'middle' : 'start'}" stroke="#FFFFFF" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke">${esc(t)}</text>`;
       s += `<circle cx="${X.toFixed(1)}" cy="${Yq.toFixed(1)}" r="4" fill="#FFFFFF" stroke="${cor}" stroke-width="2"/>`;
     });
-    c.xs.forEach(p => {
-      const X = sx(p.x), t = `${fmt(p.x)} m`, up = c.Mq >= 0 ? -1 : 1;
-      s += lab.txt(t, [{ x: X + 7, y: Yq + (up < 0 ? -6 : 15), anc: 'start' }, { x: X - 7, y: Yq + (up < 0 ? -6 : 15), anc: 'end' }, { x: X + 7, y: Yq + (up < 0 ? 15 : -6), anc: 'start' }, { x: X - 7, y: Yq + (up < 0 ? 15 : -6), anc: 'end' }], 12, cor, true);
-    });
   }
+
 
   // --- cortante ---
   const tV = 'Cortante (tf)';
@@ -685,6 +716,13 @@ function opcoesConsulta() {
   sel.value = String(Math.max(0, atual));
 }
 state.consulta = state.consulta || { M: '', i: 0 };
+function resTabela(aberta) {
+  state.resFechado = !aberta; save();
+  document.querySelector('.res-card').classList.toggle('fechado', !aberta);
+  $('resTog').textContent = aberta ? 'Recolher' : 'Expandir'; $('resTog').setAttribute('aria-expanded', aberta);
+}
+$('resTog').addEventListener('click', () => resTabela(!!state.resFechado));
+resTabela(!state.resFechado);
 $('cM').value = state.consulta.M ?? '';
 $('cM').addEventListener('input', () => { state.consulta.M = $('cM').value; save(); draw(); });
 $('cE').addEventListener('change', () => { state.consulta.i = +$('cE').value; save(); draw(); });
