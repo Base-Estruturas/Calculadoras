@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Viga com pilar nascente — esforços</title>
+<title>Viga de transição biapoiada — verificação manual</title>
 <style>
   /* ===== Padrão de interface BASE (mesmo da extensão pyRevit) ===== */
   :root {
@@ -154,7 +154,7 @@
 
   <header class="hdr">
     <img src="../assets/logo-horizontal.png" alt="BASE Estruturas">
-    <div class="hdr-tool"><strong>Viga com pilar nascente</strong>Viga biapoiada · cargas concentradas, momentos e carga distribuída</div>
+    <div class="hdr-tool"><strong>Viga de transição biapoiada</strong>Verificação manual · esforços característicos</div>
   </header>
 
   <main class="corpo">
@@ -178,7 +178,7 @@
 
       <div class="card env-card" id="env-card">
         <div class="card-hd">
-          <span class="rot">Envoltórias</span>
+          <span class="rot">Envoltórias — valores característicos</span>
           <button type="button" class="btn-sm" id="addCase">+ Envoltória</button>
         </div>
         <div class="tbl-wrap">
@@ -191,7 +191,7 @@
           </table>
         </div>
         <div class="conv">
-          <b>M &gt; 0 horário ↻</b>: face do pilar voltada para A tracionada (no TQS, diagrama do lado tracionado). P para baixo +. P, M e q todos de cálculo ou todos característicos. Exemplo: <b>ADOTADO — CONFIRMAR</b>.
+          <b>M &gt; 0 horário ↻</b>: face do pilar voltada para A tracionada (no TQS, diagrama do lado tracionado). P para baixo +. Entrar com <b>P, M e q característicos</b> (sem γf); resultados também característicos. Exemplo: <b>ADOTADO — CONFIRMAR</b>.
         </div>
       </div>
 
@@ -210,7 +210,7 @@
         <div class="legend" id="legend"></div>
       </div>
       <div class="card res-card">
-        <div class="card-hd"><span class="rot">Resultados por envoltória</span><span class="xm" id="resSub"></span></div>
+        <div class="card-hd"><span class="rot">Resultados por envoltória (característicos)</span><span class="xm" id="resSub"></span></div>
         <div class="tbl-wrap"><table><thead id="resHead"></thead><tbody id="resBody"></tbody></table></div>
       </div>
     </section>
@@ -225,7 +225,7 @@
 
 <div class="modal" id="modal-memo" role="dialog" aria-modal="true" aria-labelledby="memo-tit">
   <div class="modal-box">
-    <div class="modal-hd"><span><strong id="memo-tit">Memorial de cálculo</strong> &nbsp;Viga com pilar nascente</span><button type="button" id="btn-memo-x" aria-label="Fechar">×</button></div>
+    <div class="modal-hd"><span><strong id="memo-tit">Memorial de cálculo</strong> &nbsp;Viga de transição biapoiada</span><button type="button" id="btn-memo-x" aria-label="Fechar">×</button></div>
     <div class="modal-body" id="memoBox"></div>
     <div class="modal-ft">
       <button type="button" class="btn" id="btn-memo-fechar">Fechar</button>
@@ -578,7 +578,7 @@ function memorialHTML() {
   }).join('');
 }
 const modal = $('modal-memo');
-function abrirMemorial() { if (!ultimo) return; $('memoBox').innerHTML = `<div class="card" style="font-size:12.5px;color:var(--texto-2)">Estática de viga biapoiada (apoio A em x = 0, B em x = L). Forças em tf, momentos em tf·m, carga distribuída em tf/m. P para baixo positivo; M aplicado pelo pilar à viga, horário positivo; fletor positivo com tração embaixo.</div>` + memorialHTML(); modal.classList.add('aberto'); }
+function abrirMemorial() { if (!ultimo) return; $('memoBox').innerHTML = `<div class="card" style="font-size:12.5px;color:var(--texto-2)">Estática de viga biapoiada (apoio A em x = 0, B em x = L). Valores característicos (sem γf). Forças em tf, momentos em tf·m, carga distribuída em tf/m. P para baixo positivo; M aplicado pelo pilar à viga, horário positivo; fletor positivo com tração embaixo.</div>` + memorialHTML(); modal.classList.add('aberto'); }
 function fecharMemorial() { modal.classList.remove('aberto'); }
 $('btn-memo').addEventListener('click', abrirMemorial);
 $('btn-memo-x').addEventListener('click', fecharMemorial);
@@ -593,8 +593,8 @@ function gerarPDF() {
   const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Arial">${svgEsforcos(L, xs, ultimo.R, W, H)}</svg>`;
   const tab = `<table><thead>${$('resHead').innerHTML}</thead><tbody>${$('resBody').innerHTML}</tbody></table>`;
   const hoje = new Date().toLocaleDateString('pt-BR');
-  $('print-area').innerHTML = `<h1>Viga com pilar nascente — esforços</h1><div class="sub">BASE Estruturas · ${hoje} · L = ${fmt(L)} m · ${xs.map((x, j) => `a${SUB[j + 1]} = ${fmt(x)} m`).join(' · ')}</div>
-    <h2>Esquema e diagramas</h2>${svg}<h2>Resultados por envoltória</h2>${tab}<h2>Memorial</h2>${memorialHTML()}`;
+  $('print-area').innerHTML = `<h1>Viga de transição biapoiada — verificação manual</h1><div class="sub">BASE Estruturas · ${hoje} · L = ${fmt(L)} m · ${xs.map((x, j) => `a${SUB[j + 1]} = ${fmt(x)} m`).join(' · ')}</div>
+    <h2>Esquema e diagramas</h2>${svg}<h2>Resultados por envoltória (valores característicos)</h2>${tab}<h2>Memorial</h2>${memorialHTML()}`;
   window.print();
 }
 $('btn-pdf').addEventListener('click', gerarPDF);

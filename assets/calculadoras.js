@@ -43,10 +43,10 @@ const CALCULADORAS = [
 
   {
     categoria: 'Vigas',
-    id: 'viga-pilar-nascente',
-    nome: 'Viga — Pilar nascente',
-    arquivo: 'viga-pilar-nascente.html',
-    descricao: 'Viga biapoiada com 1 ou 2 pilares nascentes (P e M) e carga distribuída: reações, fletor e cortante por envoltória.'
+    id: 'viga-transicao-biapoiada',
+    nome: 'Viga — Transição biapoiada',
+    arquivo: 'viga-transicao-biapoiada.html',
+    descricao: 'Viga de transição biapoiada — verificação manual: 1 ou 2 pilares nascentes (P e M) e carga distribuída, valores característicos; reações, fletor e cortante por envoltória.'
   },
 
   // ===== PILARES =====
