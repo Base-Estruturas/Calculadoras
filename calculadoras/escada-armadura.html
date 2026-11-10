@@ -32,6 +32,7 @@
   .card > .rot { display: block; margin-bottom: 8px; }
 
   .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 8px; }
+  .g4 { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.15fr) minmax(0, .9fr) minmax(0, .8fr); gap: 6px 8px; margin-bottom: 6px; }
   .f label { display: block; font-size: 12px; color: var(--texto-2); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .f label .un { color: var(--texto-3); }
   .f input, .f select { width: 100%; height: 28px; padding: 0 6px; border: 1px solid var(--borda-campo); border-radius: 6px;
@@ -187,23 +188,28 @@
           <div class="f"><label for="gA" title="Permanente adicional distribuída no patamar A (ex.: reação de outro lance espalhada)">g extra A</label><input type="number" id="gA" value="0" step="0.01" min="0"></div>
           <div class="f"><label for="gC" title="Permanente adicional distribuída no patamar C">g extra C</label><input type="number" id="gC" value="0" step="0.01" min="0"></div>
           <div class="f"><label for="gamaDeg" title="Peso específico do enchimento dos degraus (NBR 6120:2019: concreto simples 2,4; armado 2,5)">γ deg. <span class="un">(tf/m³)</span></label><input type="number" id="gamaDeg" value="2.4" step="0.1" min="0"></div>
+          <div class="f"><label for="hAlv" title="Altura da alvenaria sobre o lance, medida na vertical (0 = sem alvenaria)">alv. altura <span class="un">(m)</span></label><input type="number" id="hAlv" value="0" step="0.1" min="0"></div>
+          <div class="f"><label for="bloco" title="Bloco cerâmico vazado de vedação: 14 cm = 0,19 tf/m²; 19 cm = 0,23 tf/m² de parede">bloco</label><select id="bloco"><option value="0.19" selected title="0,19 tf/m²">14 cm</option><option value="0.23" title="0,23 tf/m²">19 cm</option></select></div>
+          <div class="f"><label for="bLance" title="Largura total do lance (só necessária com alvenaria): a carga linear da parede é distribuída nessa largura">larg. lance <span class="un">(m)</span></label><input type="number" id="bLance" value="0" step="0.05" min="0"></div>
         </div>
       </div>
 
       <div class="card">
         <span class="rot">Materiais e flecha</span>
-        <div class="g3">
-          <div class="f"><label for="fck">fck <span class="un">(MPa)</span></label>
+        <div class="g4">
+          <div class="f"><label for="fck" title="fck (MPa)">fck <span class="un">(MPa)</span></label>
             <select id="fck"><option>20</option><option>25</option><option>30</option><option>35</option><option selected>40</option><option>45</option><option>50</option><option>55</option><option>60</option><option>65</option><option>70</option><option>75</option><option>80</option><option>85</option><option>90</option></select></div>
           <div class="f"><label for="aco">Aço</label>
             <select id="aco"><option value="500" selected>CA-50</option><option value="600">CA-60</option></select></div>
           <div class="f"><label for="c" title="Cobrimento nominal (Tabela 7.2)">c <span class="un">(cm)</span></label><input type="number" id="c" value="2.0" step="0.5" min="0"></div>
           <div class="f"><label for="gf" title="γf aplicado a g e q (combinação normal, 11.7.1)">γf</label><input type="number" id="gf" value="1.4" step="0.05" min="1"></div>
-          <div class="f"><label for="psi2" title="Tabela 11.2: 0,3 residencial; 0,4 comercial; 0,6 bibliotecas e garagens">ψ2 (Tab. 11.2)</label>
+        </div>
+        <div class="g3">
+          <div class="f"><label for="psi2" title="Tabela 11.2: 0,3 residencial; 0,4 comercial; 0,6 bibliotecas e garagens">ψ2</label>
             <select id="psi2"><option value="0.3" selected title="residencial">0,3</option><option value="0.4" title="comercial, escritórios">0,4</option><option value="0.6" title="bibliotecas, garagens, oficinas">0,6</option></select></div>
-          <div class="f"><label for="aE" title="Agregado graúdo (8.2.8)">αE — agregado</label>
+          <div class="f"><label for="aE" title="Agregado graúdo (8.2.8)">αE</label>
             <select id="aE"><option value="1.2">basalto</option><option value="1.0" selected>granito</option><option value="0.9">calcário</option><option value="0.7">arenito</option></select></div>
-          <div class="f"><label for="t0" title="Idade de aplicação da carga de longa duração (17.3.2.1.2)">t0 <span class="un">(meses)</span></label>
+          <div class="f"><label for="t0" title="Idade de aplicação da carga de longa duração, em meses (17.3.2.1.2)">t0 <span class="un">(mês)</span></label>
             <select id="t0"><option value="0.5">0,5</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="6">6</option></select></div>
         </div>
       </div>
@@ -324,6 +330,13 @@ function fctmMPa(fck) { return fck <= 50 ? 0.3 * Math.pow(fck, 2 / 3) : 2.12 * M
 function eciMPa(fck, aE) { return fck <= 50 ? aE * 5600 * Math.sqrt(fck) : 21500 * aE * Math.pow(fck / 10 + 1.25, 1 / 3); } // 8.2.8
 function xi(t) { return t > 70 ? 2 : 0.68 * Math.pow(0.996, t) * Math.pow(t, 0.32); } // Tabela 17.2 / 17.3.2.1.2
 
+// Alvenaria sobre o lance: carga linear γb·H (tf/m por m de projeção horizontal) distribuída na largura do lance → tf/m²
+function cargaAlvenaria(I) {
+  const H = I.hAlv || 0, gb = I.bloco || 0, bl = I.bLance || 0;
+  if (H <= 0) return { gAlv: 0, qLin: 0, ok: true };
+  if (!(bl > 0)) return { gAlv: 0, qLin: gb * H, ok: false };
+  return { gAlv: gb * H / bl, qLin: gb * H, ok: true };
+}
 function calcularEscada(I) {
   const r = { I, ok: true, erros: [] };
   const { A, B, C, h, e, p, gL, gP, q, gA, gC, gamaDeg, fck, aco, c, gf, phiP, phiD, psi2, aE, t0 } = I;
@@ -336,7 +349,9 @@ function calcularEscada(I) {
   // ---- Cargas (tf/m², projeção horizontal)
   r.ppL = gc * h / 100 / cosA + gamaDeg * e / 100 / 2;
   r.ppP = gc * h / 100;
-  r.g1 = r.ppP + gP + gA; r.g2 = r.ppL + gL; r.g3 = r.ppP + gP + gC;
+  const alv = cargaAlvenaria(I); r.alv = alv;
+  if (!alv.ok) { r.ok = false; r.erros.push('Alvenaria informada: preencha a largura do lance.'); return r; }
+  r.g1 = r.ppP + gP + gA; r.g2 = r.ppL + gL + alv.gAlv; r.g3 = r.ppP + gP + gC;
   const segG = trechos(A, B, C, r.g1, r.g2, r.g3), segQ = trechos(A, B, C, q, q, q);
   const segK = trechos(A, B, C, r.g1 + q, r.g2 + q, r.g3 + q);
   const segQP = trechos(A, B, C, r.g1 + psi2 * q, r.g2 + psi2 * q, r.g3 + psi2 * q);
@@ -521,9 +536,11 @@ function calcularPlissada(I) {
   if (mod.pw * 100 < 2 * t || mod.ew * 100 < 0.5 * t) r.erros.push('aviso');
   // ---- Cargas por barra (tf/m de barra, verticais)
   r.ppPiso = gc * tm; r.ppEsp = gc * tm; r.ppPat = gc * tm;
+  const alv = cargaAlvenaria(I); r.alv = alv;
+  if (!alv.ok) { r.ok = false; r.erros.push('Alvenaria informada: preencha a largura do lance.'); return r; }
   r.ppProj = gc * tm * (mod.pw + mod.ew) / mod.pw;                // equivalente por m² de projeção horizontal no lance
   const carga = (br, comb) => {
-    const gq = br.tipo === 'pA' ? [r.ppPat + gP + gA, q] : br.tipo === 'pC' ? [r.ppPat + gP + gC, q] : br.tipo === 'piso' ? [r.ppPiso + gL, q] : [r.ppEsp, 0];
+    const gq = br.tipo === 'pA' ? [r.ppPat + gP + gA, q] : br.tipo === 'pC' ? [r.ppPat + gP + gC, q] : br.tipo === 'piso' ? [r.ppPiso + gL + alv.gAlv, q] : [r.ppEsp, 0];
     return comb === 'g' ? gq[0] : comb === 'q' ? gq[1] : comb === 'k' ? gq[0] + gq[1] : comb === 'qp' ? gq[0] + psi2 * gq[1] : psi2 * gq[1];
   };
   r.carga = carga;
@@ -638,7 +655,7 @@ function calcularPlissada(I) {
 /* ==================== FIM DO MOTOR ==================== */
 
 /* ==================== INTERFACE ==================== */
-const IDS = ['A', 'B', 'C', 'h', 'e', 'p', 'gL', 'gP', 'q', 'gA', 'gC', 'gamaDeg', 'fck', 'aco', 'c', 'gf', 'phiP', 'phiD', 'psi2', 'aE', 't0'];
+const IDS = ['A', 'B', 'C', 'h', 'e', 'p', 'gL', 'gP', 'q', 'gA', 'gC', 'gamaDeg', 'hAlv', 'bloco', 'bLance', 'fck', 'aco', 'c', 'gf', 'phiP', 'phiD', 'psi2', 'aE', 't0'];
 let R = null;
 const $ = id => document.getElementById(id);
 function fmt(v, n = 2) { return (v === undefined || v === null || !isFinite(v)) ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: n, maximumFractionDigits: n }); }
@@ -677,7 +694,7 @@ function atualizar() {
   R = pli ? calcularPlissada(lerDados()) : calcularEscada(lerDados());
   const r = R;
   if (!r.ok) {
-    ['esf-kv', 'flex-res', 'tab-p', 'tab-d', 'flex-kv', 'cis-kv', 'fl-kv', 'cis-al', 'fl-al'].forEach(id => $(id).innerHTML = '');
+    ['esf-kv', 'flex-res', 'tab-p', 'tab-d', 'flex-kv', 'cis-kv', 'fl-kv', 'cis-al', 'fl-al', 'geo-info', 'cis-st', 'fl-st'].forEach(id => $(id).innerHTML = '');
     $('flex-al').innerHTML = r.erros.map(e => `<div class="alert alert-danger">${e}</div>`).join('');
     $('flex-st').innerHTML = pill('fail', 'Dados'); $('btn-pdf').disabled = true; desenhar(); return;
   }
@@ -1205,7 +1222,7 @@ function memorialHTMLP(r) {
     Tipo: <strong>escada plissada</strong> (laje em zigue-zague de espessura constante) · A = ${fmt(I.A)} m · B = ${fmt(I.B)} m · C = ${fmt(I.C)} m → L = ${fmt(r.L)} m (projeção horizontal)<br>
     t = ${fmt(I.h, 1)} cm (pisos, espelhos e patamares) · e = ${fmt(I.e, 1)} cm · p = ${fmt(I.p, 1)} cm → n = ${r.nDeg} degraus${r.pAj ? ` (B/p = ${fmt(r.nDegCalc, 2)}; adotados p' = ${fmt(r.pw * 100, 2)} cm e e' = ${fmt(r.ew * 100, 2)} cm)` : ''}<br>
     Materiais: concreto C${I.fck} (γc = 1,4) · ${I.aco === 600 ? 'CA-60' : 'CA-50'} (γs = 1,15) · c = ${fmt(I.c, 1)} cm · γf = ${fmt(I.gf)} (g e q) · faixa b = 100 cm<br>
-    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · extra A = ${fmt(I.gA)} · extra C = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ (sem enchimento de degraus)<br>
+    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · extra A = ${fmt(I.gA)} · extra C = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ (sem enchimento de degraus)${r.alv.qLin > 0 ? `<br>Alvenaria no lance: bloco cerâmico vazado ${I.bloco === 0.23 ? '19' : '14'} cm (${fmt(I.bloco, 2)} tf/m²) · H = ${fmt(I.hAlv, 2)} m → ${fmt(I.bloco, 2)}·${fmt(I.hAlv, 2)} = ${fmt(r.alv.qLin, 3)} tf/m, distribuída na largura do lance b = ${fmt(I.bLance, 2)} m → g<sub>alv</sub> = ${fmt(r.alv.qLin, 3)}/${fmt(I.bLance, 2)} = <strong>${fmt(r.alv.gAlv, 3)} tf/m²</strong> (permanente, só no trecho B)` : ''}<br>
     Conversões: 1 tf = 10 kN; 1 MPa = 10 kgf/cm² = 0,1 kN/cm².
   </div>
   <div class="card mm bloco"><h3>2. Modelo e cargas</h3>
@@ -1272,7 +1289,7 @@ function memorialHTML(r) {
   <div class="card mm bloco"><h3>1. Dados</h3>
     Geometria: A = ${fmt(I.A)} m · B = ${fmt(I.B)} m · C = ${fmt(I.C)} m → L = ${fmt(r.L)} m (projeção horizontal) · h = ${fmt(I.h, 1)} cm · e = ${fmt(I.e, 1)} cm · p = ${fmt(I.p, 1)} cm<br>
     Materiais: concreto C${I.fck} (γc = 1,4) · ${I.aco === 600 ? 'CA-60' : 'CA-50'} (γs = 1,15) · c = ${fmt(I.c, 1)} cm · γf = ${fmt(I.gf)} (g e q) · faixa b = 100 cm<br>
-    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · extra A = ${fmt(I.gA)} · extra C = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ · γ<sub>degraus</sub> = ${fmt(I.gamaDeg, 1)} tf/m³<br>
+    Cargas características: g<sub>rev</sub> lance = ${fmt(I.gL)} · patamar = ${fmt(I.gP)} · extra A = ${fmt(I.gA)} · extra C = ${fmt(I.gC)} · q = ${fmt(I.q)} tf/m² · γ<sub>conc</sub> = 2,5 tf/m³ · γ<sub>degraus</sub> = ${fmt(I.gamaDeg, 1)} tf/m³${r.alv.qLin > 0 ? `<br>Alvenaria no lance: bloco cerâmico vazado ${I.bloco === 0.23 ? '19' : '14'} cm (${fmt(I.bloco, 2)} tf/m²) · H = ${fmt(I.hAlv, 2)} m → ${fmt(I.bloco, 2)}·${fmt(I.hAlv, 2)} = ${fmt(r.alv.qLin, 3)} tf/m, distribuída na largura do lance b = ${fmt(I.bLance, 2)} m → g<sub>alv</sub> = ${fmt(r.alv.qLin, 3)}/${fmt(I.bLance, 2)} = <strong>${fmt(r.alv.gAlv, 3)} tf/m²</strong> (permanente, só no trecho B)` : ''}<br>
     Conversões: 1 tf = 10 kN; 1 MPa = 10 kgf/cm² = 0,1 kN/cm².
   </div>
   <div class="card mm bloco"><h3>2. Cargas por m² em projeção horizontal</h3>
