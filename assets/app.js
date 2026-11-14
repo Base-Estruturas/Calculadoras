@@ -9,8 +9,14 @@ const welcome = document.getElementById('welcome');
 const topbarTitle = document.getElementById('topbar-title');
 const btnReload = document.getElementById('btn-reload');
 const btnMenu = document.getElementById('btn-menu');
-const sidebar = document.querySelector('.sidebar');
+const sidebar = document.getElementById('sidebar');
 const backdrop = document.getElementById('backdrop');
+const app = document.getElementById('app');
+const btnPin = document.getElementById('btn-pin');
+const btnPinTxt = document.getElementById('btn-pin-txt');
+const btnClose = document.getElementById('btn-close');
+const CHAVE_FIXO = 'base-calc-menu-fixo';
+const ehCelular = () => window.matchMedia('(max-width: 768px)').matches;
 
 let calculadoraAtiva = null;
 
@@ -55,7 +61,7 @@ function montarLista() {
       btn.title = c.descricao || c.nome;
       btn.addEventListener('click', () => {
         abrir(c);
-        fecharMenuMobile();
+        if (!menuFixo()) fecharMenu();
       });
       nav.appendChild(btn);
     });
@@ -114,24 +120,47 @@ btnReload.addEventListener('click', () => {
   }
 });
 
-// === Menu mobile ===
-function abrirMenuMobile() {
-  sidebar.classList.add('open');
-  backdrop.classList.add('visible');
+// === Menu recolhível / fixável ===
+// Padrão: recolhido; o botão "☰ Menu" abre por cima da calculadora.
+// "Fixar" mantém o menu aberto na coluna da esquerda (lembrado no navegador).
+// No celular o menu é sempre por cima.
+function menuFixo() {
+  return app.classList.contains('pinned') && !ehCelular();
 }
-function fecharMenuMobile() {
-  sidebar.classList.remove('open');
+function menuAberto() {
+  return menuFixo() || app.classList.contains('menu-open');
+}
+function abrirMenu() {
+  app.classList.add('menu-open');
+  if (!menuFixo()) backdrop.classList.add('visible');
+  btnMenu.setAttribute('aria-expanded', 'true');
+}
+function fecharMenu() {
+  app.classList.remove('menu-open');
   backdrop.classList.remove('visible');
+  btnMenu.setAttribute('aria-expanded', 'false');
+}
+function aplicarFixo(fixo, salvar) {
+  app.classList.toggle('pinned', fixo);
+  btnPin.setAttribute('aria-pressed', String(fixo));
+  btnPinTxt.textContent = fixo ? 'Fixado' : 'Fixar';
+  btnPin.title = fixo ? 'Desafixar (o menu passa a recolher)' : 'Fixar menu aberto';
+  if (salvar) { try { localStorage.setItem(CHAVE_FIXO, fixo ? '1' : '0'); } catch (e) {} }
+  if (fixo) { backdrop.classList.remove('visible'); app.classList.remove('menu-open'); }
+  else fecharMenu();
 }
 btnMenu.addEventListener('click', () => {
-  sidebar.classList.contains('open') ? fecharMenuMobile() : abrirMenuMobile();
+  menuAberto() ? fecharMenu() : abrirMenu();
 });
-backdrop.addEventListener('click', fecharMenuMobile);
+btnPin.addEventListener('click', () => aplicarFixo(!app.classList.contains('pinned'), true));
+btnClose.addEventListener('click', fecharMenu);
+backdrop.addEventListener('click', fecharMenu);
 
 // === Atalhos de teclado ===
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
+    if (!menuAberto()) abrirMenu();
     search.focus();
     search.select();
   }
@@ -140,8 +169,8 @@ document.addEventListener('keydown', (e) => {
       search.value = '';
       search.dispatchEvent(new Event('input'));
       search.blur();
-    } else if (sidebar.classList.contains('open')) {
-      fecharMenuMobile();
+    } else if (app.classList.contains('menu-open') && !menuFixo()) {
+      fecharMenu();
     }
   }
 });
@@ -156,5 +185,10 @@ function abrirPeloHash() {
 }
 
 // === Inicialização ===
+let fixoSalvo = false;
+try { fixoSalvo = localStorage.getItem(CHAVE_FIXO) === '1'; } catch (e) {}
+aplicarFixo(fixoSalvo, false);
 montarLista();
 abrirPeloHash();
+// Sem calculadora aberta: mostra o menu para escolher
+if (!calculadoraAtiva && !menuFixo()) abrirMenu();

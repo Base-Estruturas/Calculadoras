@@ -16,9 +16,16 @@
 </head>
 <body>
 
-<div class="app">
+<div class="app" id="app">
 
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar" aria-label="Menu de calculadoras">
+    <div class="sidebar-tools">
+      <button class="btn-side" id="btn-pin" type="button" title="Fixar menu aberto" aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M15 3l6 6-2.2.8-3.9 3.9.6 4.6-1.5 1.5-4.2-4.2L4.5 21 3 21l0-1.5 5.4-5.3-4.2-4.2 1.5-1.5 4.6.6 3.9-3.9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <span id="btn-pin-txt">Fixar</span>
+      </button>
+      <button class="btn-side btn-side-x" id="btn-close" type="button" title="Recolher menu (Esc)" aria-label="Recolher menu">✕</button>
+    </div>
     <div class="brand">
       <img src="assets/logo-horizontal.png" alt="BASE Estruturas" class="brand-logo" />
     </div>
@@ -41,7 +48,7 @@
 
   <main class="main">
     <header class="topbar">
-      <button class="btn-icon btn-menu" id="btn-menu" title="Menu" aria-label="Abrir menu">☰</button>
+      <button class="btn-menu" id="btn-menu" type="button" title="Abrir menu (Ctrl+K busca)" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false"><span class="ico">☰</span><span class="txt">Menu</span></button>
       <div class="topbar-title" id="topbar-title">Selecione uma calculadora</div>
       <button class="btn-icon" id="btn-reload" title="Recarregar (Ctrl+R)" disabled aria-label="Recarregar">↻</button>
     </header>
@@ -56,7 +63,7 @@
             Dimensionamento e verificações estruturais conforme NBR 6118:2023
             e demais normas brasileiras.
           </p>
-          <p class="hint">Selecione uma calculadora no menu lateral para começar.</p>
+          <p class="hint">Abra o <b>☰ Menu</b> e selecione uma calculadora para começar.</p>
         </div>
       </div>
 
@@ -64,7 +71,7 @@
     </div>
   </main>
 
-  <!-- Backdrop mobile -->
+  <!-- Fundo escuro do menu recolhível -->
   <div class="backdrop" id="backdrop"></div>
 
 </div>

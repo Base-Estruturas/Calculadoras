@@ -210,6 +210,8 @@ html, body {
 
 .topbar {
   height: 56px;
+  position: relative;
+  z-index: 5;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -251,8 +253,28 @@ html, body {
 }
 .btn-icon:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* Botão de menu hambúrguer (só aparece no mobile) */
-.btn-menu { display: none; }
+/* Botão "☰ Menu" (aparece sempre que o menu não está fixado) */
+.btn-menu {
+  font-family: inherit;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--black);
+  border-radius: 6px;
+  background: var(--black);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-menu .ico { font-size: 16px; line-height: 1; }
+.btn-menu:hover { background: var(--gray-700); border-color: var(--gray-700); }
+.app.pinned .btn-menu { display: none; }
 
 .content {
   flex: 1;
@@ -339,20 +361,74 @@ html, body {
   pointer-events: auto;
 }
 
+/* ===== MENU RECOLHÍVEL / FIXÁVEL =====
+   Padrão: recolhido (a calculadora usa a largura toda) e abre por cima do conteúdo.
+   Fixado (.app.pinned): volta a ocupar a coluna da esquerda, como antes. */
+.sidebar-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 10px 10px 0;
+}
+.btn-side {
+  font-family: inherit;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--black-line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--gray-400);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.btn-side:hover { background: var(--gray-900); color: var(--white); border-color: var(--gray-700); }
+.btn-side[aria-pressed="true"] { background: var(--white); color: var(--black); border-color: var(--white); }
+.btn-side[aria-pressed="true"] svg path { fill: currentColor; }
+.btn-side-x { width: 28px; padding: 0; justify-content: center; font-size: 13px; }
+.app.pinned .btn-side-x { display: none; }
+.brand { padding-top: 10px; }
+
+.app:not(.pinned) .sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform 0.22s ease, visibility 0s linear 0.22s;
+  box-shadow: 6px 0 24px rgba(0,0,0,0.25);
+}
+.app:not(.pinned).menu-open .sidebar {
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform 0.22s ease, visibility 0s;
+}
+.app.pinned .backdrop { display: none; }
+@media (min-width: 769px) {
+  .backdrop { background: rgba(0,0,0,0.28); }
+}
+
 /* ===== RESPONSIVO ===== */
 @media (max-width: 768px) {
-  .btn-menu { display: flex; }
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    box-shadow: 4px 0 16px rgba(0,0,0,0.2);
+  /* No celular o menu nunca fica fixado: sempre por cima */
+  #btn-pin { display: none; }
+  .app.pinned .btn-side-x { display: flex; }
+  .app.pinned .btn-menu { display: flex; }
+  .app.pinned .backdrop { display: block; }
+  .app.pinned .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    transform: translateX(-100%); visibility: hidden;
+    transition: transform 0.22s ease, visibility 0s linear 0.22s;
+    box-shadow: 6px 0 24px rgba(0,0,0,0.25);
   }
-  .sidebar.open { transform: translateX(0); }
+  .app.pinned.menu-open .sidebar { transform: translateX(0); visibility: visible; transition: transform 0.22s ease, visibility 0s; }
+  .btn-menu .txt { display: none; }
+  .btn-menu { padding: 0 11px; }
 
   .topbar { padding: 0 14px; }
   .welcome-card { padding: 32px 24px; }
