@@ -74,7 +74,7 @@
   .bit-tab th.sel { background: var(--azul) !important; color: #fff; }
   .bit-tab .inv { color: var(--vermelho); font-size: 10.5px; }
   .bit-tab .aviso { color: var(--ambar); }
-  .res-adot { display: flex; justify-content: space-between; align-items: baseline; margin-top: 3px; font-size: 12.5px; color: var(--texto-2); }
+  .res-adot { display: flex; justify-content: space-between; align-items: baseline; margin-top: 1px; font-size: 12.5px; color: var(--texto-2); }
   .res-adot strong { font-size: 16px; color: var(--texto); font-weight: 600; }
   .alertas:empty { display: none; }
   .alertas { margin-top: 7px; display: flex; flex-direction: column; gap: 4px; }
@@ -91,8 +91,11 @@
   .seg input:checked + label { background: var(--texto); color: #fff; font-weight: 600; }
   table.qc { width: 100%; border-collapse: collapse; font-size: 12px; margin: 2px 0 4px; }
   table.qc th, table.qc td { border: 1px solid var(--borda, #E3E5E8); padding: 3px 7px; text-align: right; }
-  .desenho table.qc { font-size: 11px; margin: 0; } .desenho table.qc td, .desenho table.qc th { padding: 0 6px; line-height: 1.3; }
-  .cons { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .desenho table.qc { font-size: 11px; margin: 0; } .desenho table.qc td, .desenho table.qc th { padding: 0 6px; line-height: 1.22; }
+  .kv.cons-kv { margin-top: 2px; padding-top: 3px; border-top: 1px dashed var(--borda); }
+  .nota-cons { font-size: 11px; line-height: 1.3; color: var(--ambar); margin-top: 1px; } .nota-cons:empty { display: none; } .nota-cons:empty { display: none; }
+  .geo-hd { font-size: 11.5px; color: var(--texto-2); white-space: nowrap; } .geo-hd strong { color: var(--texto); font-weight: 600; }
+  .cons-old { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .cons-v { display: flex; gap: 13px; font-size: 11.5px; color: var(--texto-2); }
   .cons-v b { font-size: 14px; color: var(--texto); font-weight: 600; } .cons-v small { font-size: 10.5px; }
   table.qc th { background: #F1F3F4; font-weight: 600; font-size: 11px; color: #5F6368; }
@@ -102,7 +105,7 @@
   .desenho table.qc td small { display: none; }
   table.qc tr.tot td { font-weight: 700; background: #F8FAFF; }
   .seg-tipo label { padding: 2px 8px; font-size: 11.5px; }
-  .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 500px); min-height: 185px; }
+  .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 530px); min-height: 158px; }
   .desenho svg text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
   .leg { margin-top: 4px; font-size: 11px; color: var(--texto-2); line-height: 1.45; }
   .leg b { color: var(--texto); font-weight: 600; }
@@ -231,13 +234,6 @@
     <!-- ===== Coluna 2: resultados ===== -->
     <section class="col">
       <div class="card">
-        <div class="card-hd"><span class="rot">Esforços por metro de largura</span><span class="pill warn" id="pill-geo" style="display:none"></span></div>
-        <div class="kv k4 top0" id="esf-kv"></div>
-        <div class="linha-info" id="geo-info">—</div>
-        <input type="hidden" id="phiP" value="10"><input type="hidden" id="phiD" value="5">
-      </div>
-
-      <div class="card">
         <div class="card-hd"><span class="rot" id="flex-tit">Armadura principal (inferior)</span><span id="flex-st"></span></div>
         <div id="flex-res"></div>
         <div id="tab-p"></div>
@@ -250,6 +246,10 @@
         <div id="tab-d"></div>
         <div class="kv k4" id="cis-kv"></div>
         <div class="alertas" id="cis-al"></div>
+        <div id="card-cons">
+          <div class="kv k4 cons-kv" id="cons-kv"></div>
+          <div class="nota-cons" id="cons-nota"></div>
+        </div>
       </div>
 
     </section>
@@ -274,10 +274,12 @@
         <div class="kv k4 top0" id="fl-kv"></div>
         <div class="alertas" id="fl-al"></div>
       </div>
-      <div class="card cons" id="card-cons">
-        <span class="rot" title="Escada inteira (patamares A e C + lance), degraus concretados junto. Aço pelo detalhe (N1, N2, N3 com ganchos e ℓb), sem N4. Detalhe no memorial.">Consumo</span>
-        <div class="cons-v" id="cons-kv"></div>
+      <div class="card">
+        <div class="card-hd"><span class="rot" title="Esforços por metro de largura" style="white-space:nowrap">Esforços (por m de largura)</span><span class="pill warn" id="pill-geo" style="display:none"></span><span class="geo-hd" id="geo-info">—</span></div>
+        <div class="kv k4 top0" id="esf-kv"></div>
+        <input type="hidden" id="phiP" value="10"><input type="hidden" id="phiD" value="5">
       </div>
+
     </section>
   </main>
 
@@ -757,8 +759,8 @@ function atualizar() {
   // Geometria
   const bl = r.blondel;
   $('geo-info').innerHTML = r.plis
-    ? `L = <strong>${fmt(r.L)} m</strong> · ${r.nDeg} degr. · <span title="Esforço normal característico nos espelhos: compressão (−) no inferior, tração (+) no superior">N<sub>k,esp</sub> <strong>${fmt(r.NespMin)} / +${fmt(r.NespMax)}</strong> tf/m</span>`
-    : `L = <strong>${fmt(r.L)} m</strong> · d = <strong>${fmt(r.d, 1)} cm</strong> · 2e+p = <strong ${bl >= 63 && bl <= 65 ? '' : 'style="color:var(--ambar)" title="fora de 63 a 65 cm (NBR 9050)"'}>${fmt(bl, 0)} cm</strong>`;
+    ? `L <strong>${fmt(r.L)}</strong> m · ${r.nDeg} degr. · <span title="Esforço normal característico nos espelhos: compressão (−) no inferior, tração (+) no superior">N<sub>k,esp</sub> <strong>${fmt(r.NespMin)} / +${fmt(r.NespMax)}</strong> tf/m</span>`
+    : `L <strong>${fmt(r.L)}</strong> m · d <strong>${fmt(r.d, 1)}</strong> cm · 2e+p <strong ${bl >= 63 && bl <= 65 ? '' : 'style="color:var(--ambar)" title="fora de 63 a 65 cm (NBR 9050)"'}>${fmt(bl, 0)}</strong>`;
 
   // Esforços
   $('esf-kv').innerHTML = `
@@ -831,10 +833,11 @@ function atualizar() {
   if (r.quant) {
     const Q = r.quant;
     $('cons-kv').innerHTML = `
-      <span title="${Q.bPadrao ? 'Largura do lance não informada: estimativa para 1 m' : 'Largura do lance informada'}">b <b>${fmt(Q.bw)}</b> <small>m${Q.bPadrao ? '*' : ''}</small></span>
-      <span title="Lance (trecho B, com degraus) = ${fmt(Q.volLance, 3)} m³ · patamares = ${fmt(Q.volPat, 3)} m³">Volume <b>${fmt(Q.vol, 3)}</b> <small>m³</small></span>
-      <span title="${Q.pos.map(t => `${t.nome}: ${t.n} Ø ${fphi(t.phi)} × ${fmt(t.l)} m = ${fmt(t.kg, 1)} kg`).join(' · ')}">Aço <b>${fmt(Q.aco, 1)}</b> <small>kg</small></span>
-      <span>Taxa <b>${fmt(Q.taxa, 0)}</b> <small>kg/m³</small></span>`;
+      <div title="Lance (trecho B, com degraus) = ${fmt(Q.volLance, 3)} m³ · patamares = ${fmt(Q.volPat, 3)} m³">Volume<b>${fmt(Q.vol, 3)} <small>m³</small></b></div>
+      <div title="${Q.pos.map(t => `${t.nome}: ${t.n} Ø ${fphi(t.phi)} × ${fmt(t.l)} m = ${fmt(t.kg, 1)} kg`).join(' · ')}">Aço<b>${fmt(Q.aco, 1)} <small>kg</small></b></div>
+      <div>Taxa<b>${fmt(Q.taxa, 0)} <small>kg/m³</small></b></div>
+      <div title="Consumo da escada inteira (A + B + C)">Largura<b>${fmt(Q.bw)} <small>m${Q.bPadrao ? '*' : ''}</small></b></div>`;
+    $('cons-nota').innerHTML = Q.bPadrao ? '* Escada calculada p/ 1 m de largura — preencher larg. lance.' : '';
   }
 
   desenhar();
@@ -1101,8 +1104,8 @@ function desenhoArmacao(r) {
   const VH = Y(-P.tv) + 34;
   return {
     svg: svgWrap(VW, VH, s, 'Esquema de armação da escada'),
-    leg: `Sem escala na espessura. <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distribuição Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
-      ${A > 0 ? `<b style="color:${COR.verde}">①</b> canto convexo: pode dobrar.` : ''}${C > 0 ? ` <b style="color:${COR.verm}">②</b> canto côncavo: <b>não dobrar</b> (empuxo ao vazio) — N1 e N2 se cruzam e seguem ≥ ℓb = ${fmt(r.lb, 0)} cm pela face oposta, com gancho até a outra camada.` : ''}`
+    leg: `Sem escala na espessura. <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distrib. Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
+      ${A > 0 ? `<b style="color:${COR.verde}">①</b> convexo: pode dobrar.` : ''}${C > 0 ? ` <b style="color:${COR.verm}">②</b> côncavo: <b>não dobrar</b> (empuxo ao vazio) — cruzar N1/N2, ℓb = ${fmt(r.lb, 0)} cm pela face oposta e gancho.` : ''}`
   };
 }
 
