@@ -189,16 +189,7 @@ html, body {
   color: var(--sidebar-text-muted);
   letter-spacing: 0.05em;
 }
-.footer .version {
-  margin-bottom: 6px;
-}
-.footer .credit {
-  font-size: 9.5px;
-  line-height: 1.5;
-  color: var(--gray-500);
-  letter-spacing: 0.02em;
-  opacity: 0.85;
-}
+.footer .version { margin: 0; }
 
 /* ===== ÁREA PRINCIPAL ===== */
 .main {
