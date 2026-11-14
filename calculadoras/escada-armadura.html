@@ -91,7 +91,10 @@
   .seg input:checked + label { background: var(--texto); color: #fff; font-weight: 600; }
   table.qc { width: 100%; border-collapse: collapse; font-size: 12px; margin: 2px 0 4px; }
   table.qc th, table.qc td { border: 1px solid var(--borda, #E3E5E8); padding: 3px 7px; text-align: right; }
-  .desenho table.qc { font-size: 11.5px; } .desenho table.qc td, .desenho table.qc th { padding: 1.5px 6px; line-height: 1.3; }
+  .desenho table.qc { font-size: 11px; margin: 0; } .desenho table.qc td, .desenho table.qc th { padding: 0 6px; line-height: 1.3; }
+  .cons { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .cons-v { display: flex; gap: 13px; font-size: 11.5px; color: var(--texto-2); }
+  .cons-v b { font-size: 14px; color: var(--texto); font-weight: 600; } .cons-v small { font-size: 10.5px; }
   table.qc th { background: #F1F3F4; font-weight: 600; font-size: 11px; color: #5F6368; }
   table.qc td:first-child, table.qc th:first-child { text-align: left; }
   table.qc td, table.qc th { white-space: nowrap; }
@@ -99,7 +102,7 @@
   .desenho table.qc td small { display: none; }
   table.qc tr.tot td { font-weight: 700; background: #F8FAFF; }
   .seg-tipo label { padding: 2px 8px; font-size: 11.5px; }
-  .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 456px); min-height: 190px; }
+  .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 500px); min-height: 185px; }
   .desenho svg text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
   .leg { margin-top: 4px; font-size: 11px; color: var(--texto-2); line-height: 1.45; }
   .leg b { color: var(--texto); font-weight: 600; }
@@ -200,7 +203,7 @@
           <div class="f"><label for="gamaDeg" title="Peso específico do enchimento dos degraus (NBR 6120:2019: concreto simples 2,4; armado 2,5)">γ deg. <span class="un">(tf/m³)</span></label><input type="number" id="gamaDeg" value="2.4" step="0.1" min="0"></div>
           <div class="f"><label for="hAlv" title="Altura da alvenaria sobre o lance, medida na vertical (0 = sem alvenaria)">alv. altura <span class="un">(m)</span></label><input type="number" id="hAlv" value="0" step="0.1" min="0"></div>
           <div class="f"><label for="bloco" title="Bloco cerâmico vazado de vedação: 14 cm = 0,19 tf/m²; 19 cm = 0,23 tf/m² de parede">bloco</label><select id="bloco"><option value="0.19" selected title="0,19 tf/m²">14 cm</option><option value="0.23" title="0,23 tf/m²">19 cm</option></select></div>
-          <div class="f"><label for="bLance" title="Largura total do lance (só necessária com alvenaria): a carga linear da parede é distribuída nessa largura">larg. lance <span class="un">(m)</span></label><input type="number" id="bLance" value="0" step="0.05" min="0"></div>
+          <div class="f"><label for="bLance" title="Largura total do lance: distribui a carga de alvenaria e define o consumo (volume, aço e taxa). Vazio ou 0 = consumo para 1 m de largura.">larg. lance <span class="un">(m)</span></label><input type="number" id="bLance" value="0" step="0.05" min="0"></div>
         </div>
       </div>
 
@@ -270,6 +273,10 @@
         <div class="card-hd"><span class="rot" id="fl-tit">Flecha — biapoiada</span><span id="fl-st"></span></div>
         <div class="kv k4 top0" id="fl-kv"></div>
         <div class="alertas" id="fl-al"></div>
+      </div>
+      <div class="card cons" id="card-cons">
+        <span class="rot" title="Escada inteira (patamares A e C + lance), degraus concretados junto. Aço pelo detalhe (N1, N2, N3 com ganchos e ℓb), sem N4. Detalhe no memorial.">Consumo</span>
+        <div class="cons-v" id="cons-kv"></div>
       </div>
     </section>
   </main>
@@ -347,6 +354,40 @@ function cargaAlvenaria(I) {
   if (H <= 0) return { gAlv: 0, qLin: 0, ok: true };
   if (!(bl > 0)) return { gAlv: 0, qLin: gb * H, ok: false };
   return { gAlv: gb * H / bl, qLin: gb * H, ok: true };
+}
+const kgPorM = phi => 0.0061654 * phi * phi;          // kg/m (ρaço = 7850 kg/m³)
+function areaPoligono(pts) { let a = 0; for (let i = 0; i < pts.length; i++) { const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length]; a += x1 * y2 - x2 * y1; } return Math.abs(a) / 2; }
+// Quantitativo da escada convencional: barras pelo detalhe do desenho (ganchos e ℓb no canto côncavo), sem N4
+function quantConv(r, I) {
+  const { A, B, C, c, phiP, phiD } = I, L = r.L, tg = r.tgA, cs = r.cosA, h = I.h / 100;
+  const bw = I.bLance > 0 ? I.bLance : 1, bPadrao = !(I.bLance > 0);
+  const a = (c + phiP / 20) / 100;                   // eixo da barra principal à face (m)
+  const tv = h / cs, R = B * tg, lb = r.lb / 100, gh = Math.max(h - 2 * a, 0);   // gancho até a outra camada
+  // N1: gancho no apoio A + patamar A + lance + face superior do patamar C (ℓb) + gancho até N2
+  let x0, n1 = gh;
+  if (A > 0) { x0 = A + (tv - a / cs - h + a) / tg; n1 += x0 - a; } else x0 = a;
+  const xF = Math.min(A + (R - a + tv - a / cs) / tg, L - a);
+  n1 += (xF - x0) / cs;
+  if (C > 0) { const xH = Math.min(xF + lb, L - a - 0.03); n1 += Math.max(xH - xF, 0) + gh; } else n1 += gh;
+  // N2: gancho no apoio C + patamar C + paralela à face superior do lance (ℓb) + gancho até N1
+  let n2 = 0;
+  if (C > 0) {
+    const yC2 = R - h + a, xF2 = Math.max(A + (yC2 + a / cs) / tg, A), x2b = Math.max(xF2 - lb * cs, A + 0.03);
+    n2 = gh + (L - a - xF2) + Math.max(xF2 - x2b, 0) / cs + gh;
+  }
+  const nP = Math.ceil((bw * 100 - 2 * c) / r.princ.s) + 1;
+  const lDes = A + B / cs + C;                       // comprimento desenvolvido da face inferior
+  const nD = Math.ceil(lDes * 100 / r.sD) + 1, n3 = Math.max(bw - 2 * c / 100, 0);
+  const pos = [
+    { nome: 'N1', phi: phiP, n: nP, l: n1, obs: 'patamar A + lance' },
+    ...(C > 0 ? [{ nome: 'N2', phi: phiP, n: nP, l: n2, obs: 'patamar C' }] : []),
+    { nome: 'N3', phi: phiD, n: nD, l: n3, obs: 'distribuição' }
+  ].map(t => ({ ...t, lt: t.n * t.l, kg: t.n * t.l * kgPorM(t.phi) }));
+  const nDeg = Math.max(1, Math.round(B * 100 / I.p));
+  const pf = perfil(A, B, C, tg, cs, h, nDeg);
+  const area = areaPoligono(pf.top.concat(pf.bot));  // m² em elevação (laje + degraus)
+  const vol = area * bw, volPat = (A + C) * h * bw, aco = pos.reduce((s2, t) => s2 + t.kg, 0);
+  return { bw, bPadrao, a, gh, lDes, nDeg, pos, area, vol, volPat, volLance: vol - volPat, aco, taxa: aco / vol };
 }
 function calcularEscada(I) {
   const r = { I, ok: true, erros: [] };
@@ -429,6 +470,8 @@ function calcularEscada(I) {
   const eta1 = aco === 600 ? 1.4 : 2.25;
   r.eta1 = eta1; r.fbd = eta1 * 1 * 1 * fctd;
   r.lb = Math.max(phiP / 10 / 4 * fyd / r.fbd, 25 * phiP / 10);
+  // ---- Consumo estimado (volume, aço e taxa) da peça toda A + B + C
+  r.quant = quantConv(r, I);
   // ---- Flecha (17.3.2.1.1 e 17.3.2.1.2) — combinação quase permanente
   r.Eci = eciMPa(fck, aE); r.alfaI = Math.min(1, 0.8 + 0.2 * fck / 80); r.Ecs = r.alfaI * r.Eci;
   r.Es = 210000; r.n = r.Es / r.Ecs;
@@ -782,6 +825,17 @@ function atualizar() {
   if (!fOk) fl.push(`<div class="alert alert-danger">a<sub>t</sub> &gt; L/250 (Tabela 13.3): aumentar h ou prever contraflecha.</div>`);
   if (!qOk) fl.push(`<div class="alert alert-danger">Flecha da variável &gt; L/350 (Tabela 13.3, vibração).</div>`);
   $('fl-al').innerHTML = fl.join('');
+
+  // Consumo (só convencional por enquanto)
+  $('card-cons').style.display = r.quant ? '' : 'none';
+  if (r.quant) {
+    const Q = r.quant;
+    $('cons-kv').innerHTML = `
+      <span title="${Q.bPadrao ? 'Largura do lance não informada: estimativa para 1 m' : 'Largura do lance informada'}">b <b>${fmt(Q.bw)}</b> <small>m${Q.bPadrao ? '*' : ''}</small></span>
+      <span title="Lance (trecho B, com degraus) = ${fmt(Q.volLance, 3)} m³ · patamares = ${fmt(Q.volPat, 3)} m³">Volume <b>${fmt(Q.vol, 3)}</b> <small>m³</small></span>
+      <span title="${Q.pos.map(t => `${t.nome}: ${t.n} Ø ${fphi(t.phi)} × ${fmt(t.l)} m = ${fmt(t.kg, 1)} kg`).join(' · ')}">Aço <b>${fmt(Q.aco, 1)}</b> <small>kg</small></span>
+      <span>Taxa <b>${fmt(Q.taxa, 0)}</b> <small>kg/m³</small></span>`;
+  }
 
   desenhar();
 }
@@ -1415,6 +1469,20 @@ function memorialHTML(r) {
     <div class="fml">at = a0·(1 + αf) = ${fmt(r.aT, 3)} cm ≤ L/250 = ${fmt(r.aLim, 3)} cm → taxa ${fmt(r.utilFl * 100, 0)} %: ${ok(r.utilFl <= 1)} (Tabela 13.3, aceitabilidade visual)</div>
     <div class="fml">Vibração: a(ψ2·q) = ${fmt(r.aQpsi, 3)} cm ≤ L/350 = ${fmt(r.aLimQ, 3)} cm → taxa ${fmt(r.utilQ * 100, 0)} %: ${ok(r.utilQ <= 1)}</div>
     <span class="nota">Interpretação: a parcela da variável foi tomada com ψ2·q (combinação quase permanente, 11.8.3). Com q integral: a(q) = ${fmt(r.aQ, 3)} cm → taxa ${fmt(r.aQ / r.aLimQ * 100, 0)} % (${ok(r.aQ <= r.aLimQ)}). Rigidez (EI)eq constante no vão, sem a contribuição dos degraus (a favor da segurança).</span>
+  </div>
+  ${memorialConsumo(r)}`;
+}
+function memorialConsumo(r) {
+  const Q = r.quant, I = r.I; if (!Q) return '';
+  return `<div class="card mm bloco"><h3>7. Consumo estimado — escada inteira (A + B + C)</h3>
+    Largura b = ${fmt(Q.bw, 2)} m${Q.bPadrao ? ' (larg. do lance não informada: estimativa para 1 m)' : ' (larg. do lance)'} · degraus concretados junto com a laje · aço = 7850 kg/m³ (kg/m = 0,006165·Ø²)<br>
+    <div class="fml">Volume = área do perfil em elevação (laje h = ${fmt(I.h, 1)} cm + ${Q.nDeg} degraus) × b = ${fmt(Q.area, 4)} m² × ${fmt(Q.bw, 2)} m = <strong>${fmt(Q.vol, 3)} m³</strong> (lance ${fmt(Q.volLance, 3)} + patamares ${fmt(Q.volPat, 3)})</div>
+    Comprimentos pelo detalhe do esquema de armação: ganchos nos apoios e no canto côncavo até a outra camada (h − 2·(c + Ø/2) = ${fmt(Q.gh * 100, 1)} cm), trechos de ℓb = ${fmt(r.lb, 1)} cm pela face oposta; N3 com b − 2c, reta, a cada ${fmt(r.sD, 0)} cm ao longo de ${fmt(Q.lDes, 2)} m; nº de barras = ⌈(b − 2c)/s⌉ + 1. Armadura de borda (N4) não incluída.
+    <table><tr><th>Posição</th><th>Ø</th><th>Qtde</th><th>Compr. unit. (m)</th><th>Compr. total (m)</th><th>Massa (kg)</th></tr>
+      ${Q.pos.map(t => `<tr><td>${t.nome} — ${t.obs}</td><td>${fphi(t.phi)}</td><td>${t.n}</td><td>${fmt(t.l, 2)}</td><td>${fmt(t.lt, 2)}</td><td>${fmt(t.kg, 1)}</td></tr>`).join('')}
+      <tr class="sel"><td>Total</td><td></td><td></td><td></td><td></td><td>${fmt(Q.aco, 1)}</td></tr></table>
+    <div class="fml">Taxa = ${fmt(Q.aco, 1)} kg / ${fmt(Q.vol, 3)} m³ = <strong>${fmt(Q.taxa, 0)} kg/m³</strong> · ${fmt(Q.aco / Q.bw, 1)} kg por metro de largura</div>
+    <span class="nota">Estimativa sem perdas, emendas e armaduras construtivas.</span>
   </div>`;
 }
 
@@ -1425,7 +1493,7 @@ function gerarPDF() {
   const hoje = new Date().toLocaleDateString('pt-BR');
   const P = R.plis, g = P ? desenhoGeometriaP(R) : desenhoGeometria(R), a = P ? desenhoArmacaoP(R) : desenhoArmacao(R), e = P ? desenhoEsforcosP(R) : desenhoEsforcos(R);
   $('print-area').innerHTML = `<h1>Memória de cálculo — Escada${P ? ' plissada' : ''}</h1><div class="sub">${P ? 'Escada plissada — pórtico plano' : 'Lance biapoiado com patamares'} · NBR 6118:2023 · BASE Estruturas · ${hoje}</div>
-    <div class="bloco">${g.svg}</div>${P ? memorialHTMLP(R) : memorialHTML(R)}<div class="bloco mm"><h3>7. ${P ? 'Pórtico: momento, normal e elástica' : 'Esforços e elástica'}</h3>${e.svg}</div><div class="bloco mm"><h3>8. Esquema de armação</h3>${a.svg}<p style="font-size:9.5pt">${a.leg}</p></div>`;
+    <div class="bloco">${g.svg}</div>${P ? memorialHTMLP(R) : memorialHTML(R)}<div class="bloco mm"><h3>${P ? 7 : 8}. ${P ? 'Pórtico: momento, normal e elástica' : 'Esforços e elástica'}</h3>${e.svg}</div><div class="bloco mm"><h3>${P ? 8 : 9}. Esquema de armação</h3>${a.svg}<p style="font-size:9.5pt">${a.leg}</p></div>`;
   setTimeout(() => window.print(), 100);
 }
 
