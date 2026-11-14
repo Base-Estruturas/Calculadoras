@@ -105,7 +105,7 @@
   .desenho table.qc td small { display: none; }
   table.qc tr.tot td { font-weight: 700; background: #F8FAFF; }
   .seg-tipo label { padding: 2px 8px; font-size: 11.5px; }
-  .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 530px); min-height: 158px; }
+  .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 470px); min-height: 190px; }
   .desenho svg text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
   .leg { margin-top: 4px; font-size: 11px; color: var(--texto-2); line-height: 1.45; }
   .leg b { color: var(--texto); font-weight: 600; }
@@ -143,7 +143,7 @@
   @media (max-width: 680px) { .corpo { grid-template-columns: 1fr; } .hdr { height: 60px; flex-basis: 60px; } .hdr img { height: 48px; } .credito { display: none; } .kv, .kv.k4 { grid-template-columns: 1fr 1fr; } }
   @media (max-height: 760px) {
     .hdr { height: 60px; flex-basis: 60px; } .hdr img { height: 48px; }
-    .corpo { gap: 10px; padding: 10px 10px 6px; } .col { gap: 10px; } .card { padding: 9px 12px; }
+    .corpo { gap: 10px; padding: 8px 10px 4px; } .col { gap: 8px; } .card { padding: 7px 12px; }
     .card-hd { margin-bottom: 5px; } .card > .rot { margin-bottom: 5px; }
     .res-num .val { font-size: 23px; } .kv { margin-top: 4px; padding-top: 4px; gap: 3px 10px; } .linha-info { margin-top: 5px; padding: 4px 9px; }
     .rodape { padding: 8px 16px; } .btn { height: 32px; }
@@ -234,6 +234,11 @@
     <!-- ===== Coluna 2: resultados ===== -->
     <section class="col">
       <div class="card">
+        <div class="card-hd"><span class="rot" title="Esforços por metro de largura" style="white-space:nowrap">Esforços (por m)</span><span class="pill warn" id="pill-geo" style="display:none"></span><span class="geo-hd" id="geo-info">—</span></div>
+        <div class="kv k4 top0" id="esf-kv"></div>
+        <input type="hidden" id="phiP" value="10"><input type="hidden" id="phiD" value="5">
+      </div>
+      <div class="card">
         <div class="card-hd"><span class="rot" id="flex-tit">Armadura principal (inferior)</span><span id="flex-st"></span></div>
         <div id="flex-res"></div>
         <div id="tab-p"></div>
@@ -273,11 +278,6 @@
         <div class="card-hd"><span class="rot" id="fl-tit">Flecha — biapoiada</span><span id="fl-st"></span></div>
         <div class="kv k4 top0" id="fl-kv"></div>
         <div class="alertas" id="fl-al"></div>
-      </div>
-      <div class="card">
-        <div class="card-hd"><span class="rot" title="Esforços por metro de largura" style="white-space:nowrap">Esforços (por m de largura)</span><span class="pill warn" id="pill-geo" style="display:none"></span><span class="geo-hd" id="geo-info">—</span></div>
-        <div class="kv k4 top0" id="esf-kv"></div>
-        <input type="hidden" id="phiP" value="10"><input type="hidden" id="phiD" value="5">
       </div>
 
     </section>
@@ -579,6 +579,54 @@ function flexComposta(Md, Nd, t, d, c) {
   return { As: Math.max(Msd / (fy * (d - y / 2)) + Nk / fy, 0), Msd, x, xd: x / d, z: d - y / 2 };
 }
 
+// Posições de N3 numa linha: nós (cantos de estribos) sem duplicar + barras intermediárias quando o vão entre nós > s
+function posLinha(xs, s) {
+  const v = xs.slice().sort((a, b) => a - b).filter((x, i, a) => i === 0 || x - a[i - 1] > 0.005);
+  const out = [];
+  v.forEach((x, i) => {
+    if (i > 0) { const g = x - v[i - 1], n = Math.ceil(g / s - 1e-9) - 1; for (let j = 1; j <= n; j++) out.push(v[i - 1] + g * j / (n + 1)); }
+    out.push(x);
+  });
+  return out;
+}
+// Quantitativo da plissada: estribos fechados nos trechos horizontais (N1) e nos espelhos (N2); N3 nos nós dos estribos
+function quantPli(r, I) {
+  const { A, B, C, c, phiP, phiD } = I, L = r.L, n = r.nDeg, pw = r.pw, ew = r.ew, t = r.t / 100;
+  const bw = I.bLance > 0 ? I.bLance : 1, bPadrao = !(I.bLance > 0);
+  const cc = c / 100, fP = phiP / 1000, cd = cc + fP + phiD / 2000, sD = r.sD / 100;
+  const gch = Math.max(5 * phiP / 1000, 0.05);                       // ponta reta dos ganchos do estribo (9.4.6.1)
+  const estribo = (lx, ly) => 2 * ((lx - 2 * cc - fP) + (ly - 2 * cc - fP)) + 2 * gch;
+  // trechos horizontais: [x0, x1, nível do topo]
+  const hor = [];
+  if (A > 0) hor.push({ nome: 'patamar A', x0: 0, x1: A + t, y: 0 });
+  for (let k = 1; k <= n; k++) {
+    const x0 = A + (k - 1) * pw, ult = k === n;
+    hor.push({ nome: ult && C > 0 ? `piso ${k} + patamar C` : `piso ${k}`, x0, x1: ult ? (C > 0 ? L : A + B) : A + k * pw + t, y: k * ew });
+  }
+  const nP = Math.ceil((bw * 100 - c * 2) / r.princ.s) + 1;
+  const pos = [];
+  const grupos = {};
+  hor.forEach(hh => { const l = estribo(hh.x1 - hh.x0, t), ch = (hh.nome.startsWith('piso') && !hh.nome.includes('patamar') ? 'pisos' : hh.nome) + '|' + l.toFixed(3); (grupos[ch] = grupos[ch] || { l, q: 0, nome: hh.nome, pisos: ch.startsWith('pisos') }).q++; });
+  Object.values(grupos).forEach(gp => pos.push({ nome: 'N1', obs: gp.pisos ? (gp.q > 1 ? `estribo dos pisos (${gp.q}×)` : `estribo ${gp.nome}${gp.nome === `piso ${n}` ? ' (último)' : ''}`) : `estribo ${gp.nome}`, phi: phiP, n: nP * gp.q, l: gp.l }));
+  pos.push({ nome: 'N2', obs: `estribo dos espelhos (${n}×)`, phi: phiP, n: nP * n, l: estribo(t, ew + t) });
+  // N3: em cada trecho horizontal, linhas inferior e superior com os cantos dos estribos que caem nela
+  let nD = 0;
+  hor.forEach((hh, j) => {
+    const k = hh.nome.startsWith('patamar A') ? 0 : j + (A > 0 ? 0 : 1);   // índice do piso (0 = patamar A)
+    const inf = [hh.x0 + cd, hh.x1 - cd], sup = [hh.x0 + cd, hh.x1 - cd];
+    const xEspDir = A + k * pw;                                         // espelho k+1 (à direita): cantos inferiores na linha inferior
+    if (k < n) { inf.push(xEspDir + cd, xEspDir + t - cd); }
+    if (k >= 1) { const xe = A + (k - 1) * pw; sup.push(xe + cd, xe + t - cd); }   // espelho k (à esquerda): cantos superiores
+    nD += posLinha(inf.filter(x => x >= hh.x0 + cd - 1e-6 && x <= hh.x1 - cd + 1e-6), sD).length;
+    nD += posLinha(sup.filter(x => x >= hh.x0 + cd - 1e-6 && x <= hh.x1 - cd + 1e-6), sD).length;
+  });
+  if (A <= 0) nD += 2;                                                 // espelho 1 sem patamar: cantos inferiores no apoio
+  pos.push({ nome: 'N3', obs: 'distribuição nos nós e nos pisos', phi: phiD, n: nD, l: Math.max(bw - 2 * cc, 0) });
+  pos.forEach(tq => { tq.lt = tq.n * tq.l; tq.kg = tq.lt * kgPorM(tq.phi); });
+  const pf = perfilP(r), area = areaPoligono(pf.top.concat(pf.bot));
+  const vol = area * bw, volPat = (A + C) * t * bw, aco = pos.reduce((s2, tq) => s2 + tq.kg, 0);
+  return { plis: true, bw, bPadrao, a: cc + fP / 2, gh: gch, gch, nDeg: n, pos, area, vol, volPat, volLance: vol - volPat, aco, taxa: aco / vol };
+}
 function calcularPlissada(I) {
   const r = { I, ok: true, erros: [], plis: true };
   const { A, B, C, h, e, p, gL, gP, q, gA, gC, fck, aco, c, gf, phiP, phiD, psi2, aE, t0 } = I;
@@ -703,6 +751,7 @@ function calcularPlissada(I) {
   r.aLim = L * 100 / 250; r.aLimQ = L * 100 / 350; r.utilFl = r.aT / r.aLim; r.utilQ = r.aQpsi / r.aLimQ;
 
 
+  r.quant = quantPli(r, I);
   r.flexOk = !r.flexImpossivel && r.xd <= xdLim + 1e-9 && r.AsEf <= r.AsMax;
   r.erros = r.erros.filter(x => x !== 'aviso');
   return r;
@@ -837,7 +886,7 @@ function atualizar() {
       <div title="${Q.pos.map(t => `${t.nome}: ${t.n} Ø ${fphi(t.phi)} × ${fmt(t.l)} m = ${fmt(t.kg, 1)} kg`).join(' · ')}">Aço<b>${fmt(Q.aco, 1)} <small>kg</small></b></div>
       <div>Taxa<b>${fmt(Q.taxa, 0)} <small>kg/m³</small></b></div>
       <div title="Consumo da escada inteira (A + B + C)">Largura<b>${fmt(Q.bw)} <small>m${Q.bPadrao ? '*' : ''}</small></b></div>`;
-    $('cons-nota').innerHTML = Q.bPadrao ? '* Escada calculada p/ 1 m de largura — preencher larg. lance.' : '';
+    $('cons-nota').innerHTML = Q.bPadrao ? '* Calculada p/ 1 m de largura — preencher larg. lance.' : '';
   }
 
   desenhar();
@@ -1255,12 +1304,13 @@ function desenhoArmacaoP(r) {
   [1, 2].forEach(kk => g += ret((kk - 1) * p + c, (kk - 1) * e - t + c, (kk - 1) * p + t - c, kk * e - c, COR.verde));
   // N3 — distribuição: cantos dos estribos e ao longo dos pisos
   const rp = Math.max(2.3, I.phiD / 20 * k), dot = (x, y) => `<circle cx="${X(x)}" cy="${Y(y)}" r="${rp}" fill="${COR.ambar}"/>`, cd = c + I.phiP / 10 + I.phiD / 20;
+  // N3 só nos nós (cantos dos estribos); no piso, barras intermediárias quando o vão entre nós passa de s
   [0, 1, 2].forEach(kk => {
     const xa = (kk - 1) * p + cd, xb = kk * p + t - cd, ya = kk * e - t + cd, yb = kk * e - cd;
-    const nInt = Math.max(0, Math.floor((xb - xa) / r.sD - 1e-9));
-    for (let i = 0; i <= nInt; i++) { const x = i === nInt ? xb : xa + i * (xb - xa) / Math.max(nInt, 1); g += dot(x, ya) + dot(x, yb); }
+    const inf = [xa, xb, kk * p + cd], sup = [xa, xb, (kk - 1) * p + t - cd];
+    posLinha(inf, r.sD).forEach(x => g += dot(x, ya));
+    posLinha(sup, r.sD).forEach(x => g += dot(x, yb));
   });
-  [1, 2].forEach(kk => { const x0 = (kk - 1) * p + cd, x1 = (kk - 1) * p + t - cd; [(kk - 1) * e - t + cd, kk * e - cd, ((kk - 1) * e - t + kk * e) / 2].forEach(y => g += dot(x0, y) + dot(x1, y)); });
   s += `<g clip-path="url(#${cid})">${g}</g>`;
   // marcadores
   const marca = (x, y, txt, cor, anc = 'start') => `<text x="${x}" y="${y}" text-anchor="${anc}" font-size="12" font-weight="600" fill="${cor}">${txt}</text>`;
@@ -1269,7 +1319,7 @@ function desenhoArmacaoP(r) {
   s += marca(X(xL) + 4, Y(-t) + 18, `N3 · Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)}`, COR.ambar);
   return {
     svg: svgWrap(VW, VH, s, 'Esquema de armação da escada plissada com estribos fechados'),
-    leg: `Em escala. <b style="color:${COR.azul}">N1</b> estribo do piso ≈ ${fmt(p + t - 2 * c, 0)} × ${fmt(t - 2 * c, 0)} e <b style="color:${COR.verde}">N2</b> estribo do espelho ≈ ${fmt(t - 2 * c, 0)} × ${fmt(e + t - 2 * c, 0)} cm, fechados, Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} → ${fmt(r.AsEf)} cm²/m por face, transpassados no nó. <b style="color:${COR.ambar}">N3</b> Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} nos cantos e pisos. Dobras: detalhe padrão BASE.`
+    leg: `Em escala. <b style="color:${COR.azul}">N1</b> estribo do piso ≈ ${fmt(p + t - 2 * c, 0)} × ${fmt(t - 2 * c, 0)} e <b style="color:${COR.verde}">N2</b> estribo do espelho ≈ ${fmt(t - 2 * c, 0)} × ${fmt(e + t - 2 * c, 0)} cm, fechados, Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} → ${fmt(r.AsEf)} cm²/m por face, transpassados no nó. <b style="color:${COR.ambar}">N3</b> Ø ${fphi(I.phiD)} nos nós dos estribos; no piso, intermediárias a cada ≤ ${fmt(r.sD, 0)} cm. Dobras: detalhe padrão BASE.`
   };
 }
 
@@ -1337,7 +1387,8 @@ function memorialHTMLP(r) {
     <div class="fml">at = a0·(1 + αf) = ${fmt(r.aT, 3)} cm ≤ L/250 = ${fmt(r.aLim, 3)} cm → taxa ${fmt(r.utilFl * 100, 0)} %: ${ok(r.utilFl <= 1)}</div>
     <div class="fml">Vibração: a(ψ2·q) = ${fmt(r.aQpsi, 3)} cm ≤ L/350 = ${fmt(r.aLimQ, 3)} cm → taxa ${fmt(r.utilQ * 100, 0)} %: ${ok(r.utilQ <= 1)} · com q integral: ${fmt(r.aQ, 3)} cm</div>
     <span class="nota">Os espelhos giram sob momento constante, por isso a plissada é mais flexível que uma laje reta de mesmo vão. Validação do solver: modelo de referência no Ftool (17 degraus 29 × 18, t = 16, E = 25000 MPa, 0,8 tf/m) → M = 2,47 tf·m, N = −2,10/+1,76 tf, flecha 11,69 mm (Ftool: 11,695 mm, com 1 tf = 9,80665 kN).</span>
-  </div>`;
+  </div>
+  ${memorialConsumo(r)}`;
 }
 
 /* ==================== QUADRO DE CARGAS (parciais por trecho) ==================== */
@@ -1478,9 +1529,11 @@ function memorialHTML(r) {
 function memorialConsumo(r) {
   const Q = r.quant, I = r.I; if (!Q) return '';
   return `<div class="card mm bloco"><h3>7. Consumo estimado — escada inteira (A + B + C)</h3>
-    Largura b = ${fmt(Q.bw, 2)} m${Q.bPadrao ? ' (larg. do lance não informada: estimativa para 1 m)' : ' (larg. do lance)'} · degraus concretados junto com a laje · aço = 7850 kg/m³ (kg/m = 0,006165·Ø²)<br>
-    <div class="fml">Volume = área do perfil em elevação (laje h = ${fmt(I.h, 1)} cm + ${Q.nDeg} degraus) × b = ${fmt(Q.area, 4)} m² × ${fmt(Q.bw, 2)} m = <strong>${fmt(Q.vol, 3)} m³</strong> (lance ${fmt(Q.volLance, 3)} + patamares ${fmt(Q.volPat, 3)})</div>
-    Comprimentos pelo detalhe do esquema de armação: ganchos nos apoios e no canto côncavo até a outra camada (h − 2·(c + Ø/2) = ${fmt(Q.gh * 100, 1)} cm), trechos de ℓb = ${fmt(r.lb, 1)} cm pela face oposta; N3 com b − 2c, reta, a cada ${fmt(r.sD, 0)} cm ao longo de ${fmt(Q.lDes, 2)} m; nº de barras = ⌈(b − 2c)/s⌉ + 1. Armadura de borda (N4) não incluída.
+    Largura b = ${fmt(Q.bw, 2)} m${Q.bPadrao ? ' (larg. do lance não informada: estimativa para 1 m)' : ' (larg. do lance)'} · ${Q.plis ? 'faixa dobrada, sem enchimento' : 'degraus concretados junto com a laje'} · aço = 7850 kg/m³ (kg/m = 0,006165·Ø²)<br>
+    <div class="fml">Volume = área do perfil em elevação (${Q.plis ? `faixa dobrada t = ${fmt(I.h, 1)} cm, ${Q.nDeg} degraus` : `laje h = ${fmt(I.h, 1)} cm + ${Q.nDeg} degraus`}) × b = ${fmt(Q.area, 4)} m² × ${fmt(Q.bw, 2)} m = <strong>${fmt(Q.vol, 3)} m³</strong> (lance ${fmt(Q.volLance, 3)} + patamares ${fmt(Q.volPat, 3)})</div>
+    ${Q.plis
+      ? `Estribos fechados pelo esquema de armação: N1 nos trechos horizontais (cada piso cobre os dois nós; o último piso segue pelo patamar C) e N2 nos espelhos (altura e + t), perímetro no eixo da barra + 2 ganchos de ponta reta 5Ø ≥ 5 cm = ${fmt(Q.gch * 100, 1)} cm (9.4.6.1); N3 com b − 2c, reta, nos nós (cantos dos estribos) e, onde o vão entre nós passa de s = ${fmt(r.sD, 0)} cm, barras intermediárias no piso; nº de estribos por posição = ⌈(b − 2c)/s⌉ + 1.`
+      : `Comprimentos pelo detalhe do esquema de armação: ganchos nos apoios e no canto côncavo até a outra camada (h − 2·(c + Ø/2) = ${fmt(Q.gh * 100, 1)} cm), trechos de ℓb = ${fmt(r.lb, 1)} cm pela face oposta; N3 com b − 2c, reta, a cada ${fmt(r.sD, 0)} cm ao longo de ${fmt(Q.lDes, 2)} m; nº de barras = ⌈(b − 2c)/s⌉ + 1. Armadura de borda (N4) não incluída.`}
     <table><tr><th>Posição</th><th>Ø</th><th>Qtde</th><th>Compr. unit. (m)</th><th>Compr. total (m)</th><th>Massa (kg)</th></tr>
       ${Q.pos.map(t => `<tr><td>${t.nome} — ${t.obs}</td><td>${fphi(t.phi)}</td><td>${t.n}</td><td>${fmt(t.l, 2)}</td><td>${fmt(t.lt, 2)}</td><td>${fmt(t.kg, 1)}</td></tr>`).join('')}
       <tr class="sel"><td>Total</td><td></td><td></td><td></td><td></td><td>${fmt(Q.aco, 1)}</td></tr></table>
@@ -1496,7 +1549,7 @@ function gerarPDF() {
   const hoje = new Date().toLocaleDateString('pt-BR');
   const P = R.plis, g = P ? desenhoGeometriaP(R) : desenhoGeometria(R), a = P ? desenhoArmacaoP(R) : desenhoArmacao(R), e = P ? desenhoEsforcosP(R) : desenhoEsforcos(R);
   $('print-area').innerHTML = `<h1>Memória de cálculo — Escada${P ? ' plissada' : ''}</h1><div class="sub">${P ? 'Escada plissada — pórtico plano' : 'Lance biapoiado com patamares'} · NBR 6118:2023 · BASE Estruturas · ${hoje}</div>
-    <div class="bloco">${g.svg}</div>${P ? memorialHTMLP(R) : memorialHTML(R)}<div class="bloco mm"><h3>${P ? 7 : 8}. ${P ? 'Pórtico: momento, normal e elástica' : 'Esforços e elástica'}</h3>${e.svg}</div><div class="bloco mm"><h3>${P ? 8 : 9}. Esquema de armação</h3>${a.svg}<p style="font-size:9.5pt">${a.leg}</p></div>`;
+    <div class="bloco">${g.svg}</div>${P ? memorialHTMLP(R) : memorialHTML(R)}<div class="bloco mm"><h3>8. ${P ? 'Pórtico: momento, normal e elástica' : 'Esforços e elástica'}</h3>${e.svg}</div><div class="bloco mm"><h3>9. Esquema de armação</h3>${a.svg}<p style="font-size:9.5pt">${a.leg}</p></div>`;
   setTimeout(() => window.print(), 100);
 }
 
