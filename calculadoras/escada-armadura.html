@@ -117,7 +117,11 @@
   table.cons td b { font-size: 13.5px; color: var(--texto); font-weight: 600; } table.cons td small { font-size: 10.5px; }
   table.cons th:first-child, table.cons td:first-child { text-align: left; padding-left: 0; }
   table.cons tr.esc td { border-top: 1px solid var(--borda); } table.cons tr.esc td b { color: var(--azul, #1A56DB); }
-  .nota-cons { font-size: 11px; line-height: 1.3; color: var(--ambar); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .nota-cons:empty { display: none; } .nota-cons:empty { display: none; }
+  .cons-op { display: flex; align-items: center; gap: 8px; margin-top: 1px; min-width: 0; }
+  .patint { display: flex; align-items: center; gap: 4px; font-size: 11px; line-height: 1.3; color: var(--texto-2); white-space: nowrap; cursor: pointer; user-select: none; flex: none; }
+  .patint input { margin: 0; width: 12px; height: 12px; cursor: pointer; } .patint .sub { color: var(--texto-3); }
+  .patint.off { opacity: .45; cursor: default; }
+  .nota-cons { font-size: 11px; line-height: 1.3; color: var(--ambar); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; } .nota-cons:empty { display: none; }
   .geo-hd { font-size: 11.5px; color: var(--texto-2); white-space: nowrap; } .geo-hd strong { color: var(--texto); font-weight: 600; }
   .cons-old { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .cons-v { display: flex; gap: 13px; font-size: 11.5px; color: var(--texto-2); }
@@ -129,7 +133,11 @@
   .desenho table.qc td small { display: none; }
   table.qc tr.tot td { font-weight: 700; background: #F8FAFF; }
   .seg-tipo label { padding: 2px 8px; font-size: 11.5px; }
-  .desenho svg { width: 100%; height: auto; display: block; max-height: calc(100vh - 470px); min-height: 190px; }
+  .col-des { align-self: stretch; }
+  .desenho { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+  #svg-box { flex: 1 1 0; min-height: 200px; overflow: hidden; }
+  #svg-box.tab { overflow: auto; }
+  .desenho svg { width: 100%; height: 100%; display: block; }
   .desenho svg text { font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; }
   .leg { margin-top: 4px; font-size: 11px; color: var(--texto-2); line-height: 1.45; }
   .leg b { color: var(--texto); font-weight: 600; }
@@ -163,7 +171,7 @@
   .mm tr.sel td { font-weight: 600; background: #EEF3FD; }
   .mm .ok { color: var(--verde); font-weight: 600; } .mm .nok { color: var(--vermelho); font-weight: 600; }
 
-  @media (max-width: 1080px) { .corpo { grid-template-columns: 1fr 1fr; } .col-des { grid-column: 1 / -1; } .desenho svg { max-height: none; } }
+  @media (max-width: 1080px) { .corpo { grid-template-columns: 1fr 1fr; } .col-des { grid-column: 1 / -1; } .desenho, #svg-box { flex: none; } .desenho svg { height: auto; } }
   @media (max-width: 680px) { .corpo { grid-template-columns: 1fr; } .hdr { height: 60px; flex-basis: 60px; } .hdr img { height: 48px; } .credito { display: none; } .kv, .kv.k4 { grid-template-columns: 1fr 1fr; } }
   @media (max-height: 760px) {
     .hdr { height: 60px; flex-basis: 60px; } .hdr img { height: 48px; }
@@ -280,7 +288,7 @@
         <div class="alertas" id="cis-al"></div>
         <div id="card-cons">
           <div class="cons-kv" id="cons-kv"></div>
-          <div class="nota-cons" id="cons-nota"></div>
+          <div class="cons-op"><label class="patint" title="Marque quando o patamar entre os lances é um patamar intermediário (de largura total, sem degraus): cada lance tem a sua faixa de patamar e nada é descontado. Desmarcado (padrão): o patamar superior de um lance e o inferior do lance seguinte são o mesmo patamar de canto e o volume é contado uma vez só."><input type="checkbox" id="patInt"> Patamar intermediário <span class="sub">(não descontar)</span></label><span class="nota-cons" id="cons-nota"></span></div>
         </div>
       </div>
 
@@ -926,10 +934,13 @@ function atualizar() {
     const lin = (rot, tt, v, a, cls) => `<tr class="${cls}"><td title="${tt}">${rot}</td><td><b>${fmt(v, 3)}</b> <small>m³</small></td><td><b>${fmt(a, 1)}</b> <small>kg</small></td><td><b>${v > 0 ? fmt(a / v, 0) : '—'}</b> <small>kg/m³</small></td></tr>`;
     $('cons-kv').innerHTML = `<table class="cons">`
       + lin(`Lance ${cur + 1} <small>b ${fmt(Q.bw)}${Q.bPadrao ? '*' : ''}</small>`, `Peça A + B + C · ${Q.pos.map(t => `${t.nome}: ${t.n} Ø ${fphi(t.phi)} × ${fmt(t.l)} m = ${fmt(t.kg, 1)} kg`).join(' · ')}`, Q.vol, Q.aco, '')
-      + lin(`Escada <small>${nl} lance${nl > 1 ? 's' : ''}${T.inval ? ', ' + T.inval + ' c/ erro' : ''}${T.semB.length ? '*' : ''}</small>`, 'Soma de todos os lances (patamares compartilhados contados em cada lance)', T.vol, T.aco, 'esc')
+      + lin(`Escada <small>${nl} lance${nl > 1 ? 's' : ''}${T.inval ? ', ' + T.inval + ' c/ erro' : ''}${T.semB.length ? '*' : ''}</small>`, T.desc > 0
+          ? `Soma dos lances ${fmt(T.volSoma, 3)} m³ − patamares de canto contados uma vez ${fmt(T.desc, 3)} m³ (${T.pares.map(q => `L${q.i}/L${q.i + 1}: ${fmt(q.l)} × ${fmt(q.t * 100, 0)} cm × ${fmt(q.b)} = ${fmt(q.v, 3)}`).join(' · ')})`
+          : (nl > 1 ? (patInt ? 'Soma dos lances (patamar intermediário: sem desconto)' : 'Soma dos lances (sem patamar compartilhado a descontar)') : 'Um lance'), T.vol, T.aco, 'esc')
       + `</table>`;
-    const nt = T.semB.length ? `* Calculado p/ 1 m de largura (${T.semB.length > 1 ? 'lances' : 'lance'} ${T.semB.join(', ')}) — preencher larg. lance.` : '';
-    $('cons-nota').textContent = nt; $('cons-nota').title = nt;
+    const nt = T.semB.length ? `* b = 1 m (${T.semB.length > 1 ? 'lances' : 'lance'} ${T.semB.join(', ')})` : '';
+    $('cons-nota').textContent = nt; $('cons-nota').title = nt ? `Calculado para 1 m de largura (${T.semB.length > 1 ? 'lances' : 'lance'} ${T.semB.join(', ')}) — preencher larg. lance.` : '';
+    $('patInt').checked = patInt; $('patInt').disabled = nl < 2; $('patInt').parentElement.classList.toggle('off', nl < 2);
   }
 
   adotadosUI(r);
@@ -985,14 +996,35 @@ function apoio(x, y, rolo) {
   else s += `<g stroke="${COR.linha}" stroke-width="1">${[-12, -6, 0, 6].map(d => `<line x1="${x + d}" y1="${y + 21}" x2="${x + d + 5}" y2="${y + 15}"/>`).join('')}</g>`;
   return s;
 }
-function svgWrap(VW, VH, s, aria) { return `<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="${aria}">${s}</svg>`; }
+// Tamanho do desenho na tela: DIMS = {W, H} em unidades do SVG (≈ px), definido só em desenhar(); null = tamanho natural (PDF)
+let DIMS = null;
+const VWd = () => DIMS ? DIMS.W : 540;
+function svgWrap(VW, VH, s, aria) {
+  if (DIMS && DIMS.H && VH < DIMS.H) { s = `<g transform="translate(0 ${((DIMS.H - VH) / 2).toFixed(1)})">${s}</g>`; VH = DIMS.H; }
+  return `<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="${aria}">${s}</svg>`;
+}
+// Escalas horizontal (kx) e vertical (ky) do perfil: horizontal pela largura; vertical pela altura disponível,
+// sem exagero vertical (ky ≤ kx) e achatamento máximo ky ≥ 0,35·kx (desenho esquemático, fora de escala)
+function escalas(kxMax, budget, Rv) {
+  let kx = kxMax, ky = Math.min(kx, budget / Math.max(Rv, 0.01));
+  if (ky < 0.35 * kx) kx = ky / 0.35;
+  return { kx, ky, esc: Math.abs(kx - ky) < 1e-6 * kx };
+}
+// Ajusta o orçamento vertical (px) para a altura total do desenho caber em DIMS.H (secante em 2 passos)
+function ajustaAltura(build, b0) {
+  const r0 = build(b0);
+  if (!DIMS || !DIMS.H) return r0;
+  const r1 = build(b0 + 40), slope = Math.max((r1.VH - r0.VH) / 40, 0.05);
+  return build(Math.max(40, b0 + (DIMS.H - r0.VH) / slope));
+}
 
-function desenhoGeometria(r) {
-  const I = r.I, VW = 540, mxE = 24, mxD = 80;
+function desenhoGeometria(r) { return ajustaAltura(b => geoConv(r, b), 115); }
+function geoConv(r, budget) {
+  const I = r.I, VW = VWd(), mxE = 24, mxD = 80;
   const P0 = perfil(I.A, I.B, I.C, r.tgA, r.cosA, I.h / 100, Math.round(I.B * 100 / I.p));
-  const D = alturaRotulos(r), k = Math.min((VW - mxE - mxD) / r.L, 115 / Math.max(P0.R, 0.01));
-  const ox = mxE + (VW - mxE - mxD - r.L * k) / 2, yTopo = 90 + D + P0.R * k;  // y da cota 0 (patamar A)
-  const X = x => ox + x * k, Y = y => yTopo - y * k;
+  const D = alturaRotulos(r), E = escalas((VW - mxE - mxD) / r.L, budget, P0.R), kx = E.kx, ky = E.ky;
+  const ox = mxE + (VW - mxE - mxD - r.L * kx) / 2, yTopo = 90 + D + P0.R * ky;  // y da cota 0 (patamar A)
+  const X = x => ox + x * kx, Y = y => yTopo - y * ky, aD = Math.atan(r.tgA * ky / kx), aDg = aD * 180 / Math.PI;
   let s = '';
   // Cargas características g + q (projeção horizontal) sobre a escada
   const ws = [r.g1 + I.q, r.g2 + I.q, r.g3 + I.q], segs = [[0, I.A], [I.A, I.A + I.B], [I.A + I.B, r.L]];
@@ -1004,7 +1036,7 @@ function desenhoGeometria(r) {
     const nArr = Math.max(2, Math.round((X(b) - X(a)) / 22));
     for (let j = 0; j <= nArr; j++) { const xx = X(a) + (X(b) - X(a)) * j / nArr; s += `<line x1="${xx}" y1="${yBase - hh}" x2="${xx}" y2="${yBase}" stroke="${COR.azul}" stroke-width="0.8"/><path d="M ${xx - 3} ${yBase - 5} L ${xx} ${yBase} L ${xx + 3} ${yBase - 5}" fill="none" stroke="${COR.azul}" stroke-width="0.8"/>`; }
   });
-  s += rotulosCarga(r, segs, X, yBase - hMax - 7);
+  s += rotulosCarga(r, segs, X, yBase - hMax - 7, VW);
   // Concreto
   s += `<polygon points="${polyPts(P0.top.concat(P0.bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.4" stroke-linejoin="round"/>`;
   // Apoios
@@ -1025,29 +1057,29 @@ function desenhoGeometria(r) {
   // ângulo α
   const ax = X(I.A + P0.off) + 4, ay = Y(-I.h / 100);
   const rA = 34;
-  s += `<path d="M ${ax + rA} ${ay} A ${rA} ${rA} 0 0 0 ${ax + rA * Math.cos(r.alfa)} ${ay - rA * Math.sin(r.alfa)}" fill="none" stroke="${COR.cota}" stroke-width="1"/>`;
+  s += `<path d="M ${ax + rA} ${ay} A ${rA} ${rA} 0 0 0 ${ax + rA * Math.cos(aD)} ${ay - rA * Math.sin(aD)}" fill="none" stroke="${COR.cota}" stroke-width="1"/>`;
   s += `<line x1="${ax}" y1="${ay}" x2="${ax + rA + 12}" y2="${ay}" stroke="#9AA0A6" stroke-width="0.7" stroke-dasharray="3 2"/>`;
-  s += `<text x="${ax + rA + 4}" y="${ay - 7}" font-size="12" font-weight="600" fill="${COR.cota}">α = ${fmt(r.alfaGr, 1)}°</text>`;
+  s += `<text x="${ax + rA + 4}" y="${E.esc ? ay - 7 : ay + 14}" font-size="12" font-weight="600" fill="${COR.cota}">α = ${fmt(r.alfaGr, 1)}°</text>`;
   // rótulos dos trechos
-  if (I.A > 0 && I.A * k > 70) s += `<text x="${X(I.A / 2)}" y="${Y(0) - 8}" text-anchor="middle" font-size="11" fill="${COR.cota}">patamar A</text>`;
-  if (I.C > 0) s += `<text x="${X(I.A + I.B + I.C / 2)}" y="${Y(P0.R) + 26 + I.h / 100 * k}" text-anchor="middle" font-size="11" fill="${COR.cota}">patamar C</text>`;
-  { const xs = I.A + I.B * 0.5, tx = X(xs) + 6, ty = Y((xs - I.A) * r.tgA - P0.tv) + 14;
-    s += `<text x="${tx}" y="${ty}" font-size="11" fill="${COR.cota}" transform="rotate(${-r.alfaGr} ${tx} ${ty})">lance · h = ${fmt(I.h, 1)} cm</text>`; }
+  if (I.A > 0 && I.A * kx > 70) s += `<text x="${X(I.A / 2)}" y="${Y(0) - 8}" text-anchor="middle" font-size="11" fill="${COR.cota}">patamar A</text>`;
+  if (I.C > 0) s += `<text x="${X(I.A + I.B + I.C / 2)}" y="${Y(P0.R) + 26 + I.h / 100 * ky}" text-anchor="middle" font-size="11" fill="${COR.cota}">patamar C</text>`;
+  { const xs = I.A + I.B * (E.esc ? 0.5 : 0.45), tx = X(xs) + 6, ty = Y((xs - I.A) * r.tgA - P0.tv) + 14;
+    s += `<text x="${tx}" y="${ty}" font-size="11" fill="${COR.cota}" transform="rotate(${-aDg} ${tx} ${ty})">${E.esc ? 'lance · ' : ''}h = ${fmt(I.h, 1)} cm</text>`; }
   const VH = yC + 44;
   return {
-    svg: svgWrap(VW, VH, s, 'Elevação da escada com patamares, cargas e cotas'),
-    leg: `A = patamar inferior · B = lance · C = patamar superior (projeção horizontal). Parciais e total q<sub>i</sub> = g + q característicos em tf/m². Em escala.`
+    VH, svg: svgWrap(VW, VH, s, 'Elevação da escada com patamares, cargas e cotas'),
+    leg: `A = patamar inferior · B = lance · C = patamar superior (projeção horizontal). Parciais e total q<sub>i</sub> = g + q característicos em tf/m². ${E.esc ? 'Em escala.' : 'Esquemático (alturas fora de escala).'}`
   };
 }
 
 function desenhoDegrau(r) {
-  const I = r.I, VW = 540, VH = 262;
+  const I = r.I, VW = VWd(), VH = DIMS && DIMS.H ? DIMS.H : 262;
   const e = I.e, p = I.p, h = I.h, tv = r.hv, tg = e / p;
   // dois degraus completos; trecho de laje de x = −p/2 a x = 2p + p/2 (cm), canto interno do 1º degrau em (0,0)
   const x0 = -p / 2, x1 = 2.5 * p;
   const yMin = x0 * tg - tv, yMax = 2 * e;
   const k = Math.min((VW - 200) / (x1 - x0), (VH - 64) / (yMax - yMin));
-  const ox = 110 - x0 * k, oy = 44 + yMax * k;
+  const ox = 110 + Math.max(0, (VW - 200 - (x1 - x0) * k) / 2) - x0 * k, oy = 44 + Math.max(0, (VH - 64 - (yMax - yMin) * k) / 2) + yMax * k;
   const X = x => ox + x * k, Y = y => oy - y * k;
   const top = [[x0, x0 * tg], [0, 0], [0, e], [p, e], [p, 2 * e], [2 * p, 2 * e], [x1, x1 * tg]];
   const bot = [[x1, x1 * tg - tv], [x0, x0 * tg - tv]];
@@ -1085,8 +1117,10 @@ function desenhoDegrau(r) {
 }
 
 function desenhoEsforcos(r) {
-  const I = r.I, VW = 540, mx = 46, L = r.L;
+  const I = r.I, VW = VWd(), mx = 46, L = r.L;
   const k = (VW - 2 * mx) / L, X = x => mx + x * k;
+  const extra = DIMS && DIMS.H ? DIMS.H - 296 : 0;            // altura disponível além do tamanho natural
+  const hM = Math.max(36, 64 + extra * 0.65), hF = Math.max(16, 30 + extra * 0.35);
   let s = '';
   // Viga em projeção horizontal + cargas
   const yV = 74, ws = [r.g1 + I.q, r.g2 + I.q, r.g3 + I.q], segs = [[0, I.A], [I.A, I.A + I.B], [I.A + I.B, L]];
@@ -1104,7 +1138,7 @@ function desenhoEsforcos(r) {
   s += `<text x="${X(L)}" y="${yV + 38}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.linha}">R<tspan baseline-shift="sub" font-size="9">B</tspan> = ${fmt(r.RB)}</text>`;
   [I.A, I.A + I.B].forEach(x => { if (x > 1e-9 && x < L - 1e-9) s += `<line x1="${X(x)}" y1="${yV - 50}" x2="${X(x)}" y2="${yV + 6}" stroke="#9AA0A6" stroke-width="0.7" stroke-dasharray="3 2"/>`; });
   // Diagrama de momento (característico)
-  const y0 = 128, hM = 64, N = 120;
+  const y0 = 128, N = 120;
   let d = `M ${X(0)} ${y0}`; for (let i = 0; i <= N; i++) { const x = L * i / N; d += ` L ${X(x)} ${y0 + hM * momento(r.segK, r.RA, x) / r.Mk}`; } d += ` L ${X(L)} ${y0} Z`;
   s += `<line x1="${X(0)}" y1="${y0}" x2="${X(L)}" y2="${y0}" stroke="${COR.linha}" stroke-width="1"/>`;
   s += `<path d="${d}" fill="rgba(26,86,219,0.10)" stroke="${COR.azul}" stroke-width="1.6"/>`;
@@ -1113,7 +1147,7 @@ function desenhoEsforcos(r) {
   s += `<text x="${X(r.xM)}" y="${y0 + hM + 32}" text-anchor="middle" font-size="11" fill="${COR.cota}">x = ${fmt(r.xM)} m · trecho ${r.trechoM}</text>`;
   s += `<text x="${mx - 6}" y="${y0 + 30}" text-anchor="end" font-size="11" fill="${COR.cota}">M<tspan baseline-shift="sub" font-size="8">k</tspan></text>`;
   // Elástica (quase permanente)
-  const y1 = y0 + hM + 50, hF = 30, NN = r.v.length - 1;
+  const y1 = y0 + hM + 50, NN = r.v.length - 1;
   let de = `M ${X(0)} ${y1}`; r.v.forEach((v, i) => { if (i % 8 === 0 || i === NN) de += ` L ${X(L * i / NN)} ${y1 + hF * v / r.a0}`; });
   s += `<line x1="${X(0)}" y1="${y1}" x2="${X(L)}" y2="${y1}" stroke="${COR.linha}" stroke-width="1"/>`;
   s += `<path d="${de}" fill="none" stroke="${COR.verm}" stroke-width="1.6" stroke-dasharray="6 3"/>`;
@@ -1127,15 +1161,16 @@ function desenhoEsforcos(r) {
   };
 }
 
-function desenhoArmacao(r) {
-  const I = r.I, VW = 540, mxE = 28, mxD = 28;
+function desenhoArmacao(r) { return ajustaAltura(b => armConv(r, b), 150); }
+function armConv(r, budget) {
+  const I = r.I, VW = VWd(), mxE = 28, mxD = 28;
   const nDeg = Math.round(I.B * 100 / I.p);
   const P1 = perfil(I.A, I.B, I.C, r.tgA, r.cosA, 1, nDeg);
-  const k = Math.min((VW - mxE - mxD) / r.L, 150 / Math.max(P1.R, 0.01));
-  const tDes = Math.max(I.h / 100, 34 / k);                  // espessura exagerada p/ leitura (≥ 40 px)
+  const E = escalas((VW - mxE - mxD) / r.L, budget, P1.R), kx = E.kx, ky = E.ky;
+  const tDes = Math.max(I.h / 100, 34 / ky);                 // espessura exagerada p/ leitura (≥ 34 px)
   const P = perfil(I.A, I.B, I.C, r.tgA, r.cosA, tDes, nDeg);
-  const ox = mxE + (VW - mxE - mxD - r.L * k) / 2, yTopo = 34 + P.R * k;
-  const X = x => ox + x * k, Y = y => yTopo - y * k;
+  const ox = mxE + (VW - mxE - mxD - r.L * kx) / 2, yTopo = 34 + P.R * ky;
+  const X = x => ox + x * kx, Y = y => yTopo - y * ky, aDg = Math.atan(r.tgA * ky / kx) * 180 / Math.PI;
   const cv = tDes * 0.2;                                      // cobrimento desenhado
   const tg = r.tgA, cs = r.cosA, A = I.A, B = I.B, C = I.C, L = r.L, R = P.R;
   let s = `<polygon points="${polyPts(P.top.concat(P.bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.3" stroke-linejoin="round"/>`;
@@ -1199,7 +1234,7 @@ function desenhoArmacao(r) {
   if (C > 0) s += marca(X(A + B + P.off), Y(R - tDes), 2, COR.verm);
   // Rótulos curtos
   const xl1 = A + B * 0.42, lx = X(xl1) + 8, ly = Y(yL(xl1)) + 24;
-  s += `<text x="${lx}" y="${ly}" font-size="12" font-weight="600" fill="${COR.azulEsc}" transform="rotate(${-r.alfaGr} ${lx} ${ly})">N1 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}</text>`;
+  s += `<text x="${lx}" y="${ly}" font-size="12" font-weight="600" fill="${COR.azulEsc}" transform="rotate(${-aDg} ${lx} ${ly})">N1 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}</text>`;
   if (C > 0) s += `<text x="${X(A + B + C * 0.6)}" y="${Y(R - tDes) + 18}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.verde}">N2 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}</text>`;
   s += A > 0 ? `<text x="${X(cv) + 2}" y="${Y(0) - 8}" font-size="11.5" font-weight="600" fill="${COR.verm}">N4</text>`
              : `<text x="${X(xN4e) + 6}" y="${Y(yN4e) + 4}" font-size="11.5" font-weight="600" fill="${COR.verm}">N4</text>`;
@@ -1208,8 +1243,8 @@ function desenhoArmacao(r) {
   s += apoio(X(0), Y(A > 0 ? -tDes : -P.tv), false) + apoio(X(L), Y(C > 0 ? R - tDes : R - P.tv), true);
   const VH = Y(-P.tv) + 34;
   return {
-    svg: svgWrap(VW, VH, s, 'Esquema de armação da escada'),
-    leg: `Sem escala na espessura. <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distrib. Ø ${fphi(I.phiD)} c/ ${fmt(r.sDa, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
+    VH, svg: svgWrap(VW, VH, s, 'Esquema de armação da escada'),
+    leg: `${E.esc ? 'Sem escala na espessura.' : 'Esquemático (fora de escala).'} <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distrib. Ø ${fphi(I.phiD)} c/ ${fmt(r.sDa, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
       ${A > 0 ? `<b style="color:${COR.verde}">①</b> convexo: pode dobrar.` : ''}${C > 0 ? ` <b style="color:${COR.verm}">②</b> côncavo: <b>não dobrar</b> (empuxo ao vazio) — cruzar N1/N2, ℓb = ${fmt(r.lb, 0)} cm pela face oposta e gancho.` : ''}`
   };
 }
@@ -1232,11 +1267,12 @@ function perfilP(r) {
   return { top, bot: bot.reverse(), R, t };
 }
 
-function desenhoGeometriaP(r) {
-  const I = r.I, VW = 540, mxE = 24, mxD = 80, P0 = perfilP(r), t = P0.t;
-  const D = alturaRotulos(r), k = Math.min((VW - mxE - mxD) / r.L, 125 / Math.max(P0.R, 0.01));
-  const ox = mxE + (VW - mxE - mxD - r.L * k) / 2, yTopo = 90 + D + P0.R * k;
-  const X = x => ox + x * k, Y = y => yTopo - y * k;
+function desenhoGeometriaP(r) { return ajustaAltura(b => geoPli(r, b), 125); }
+function geoPli(r, budget) {
+  const I = r.I, VW = VWd(), mxE = 24, mxD = 80, P0 = perfilP(r), t = P0.t;
+  const D = alturaRotulos(r), E = escalas((VW - mxE - mxD) / r.L, budget, P0.R), kx = E.kx, ky = E.ky;
+  const ox = mxE + (VW - mxE - mxD - r.L * kx) / 2, yTopo = 90 + D + P0.R * ky;
+  const X = x => ox + x * kx, Y = y => yTopo - y * ky, aDg = Math.atan(r.tgA * ky / kx) * 180 / Math.PI;
   let s = '';
   const ws = quadroCargas(r).g.map(v => v + I.q), segs = [[0, I.A], [I.A, I.A + I.B], [I.A + I.B, r.L]];
   const wMax = Math.max(...ws), yBase = Y(P0.R) - 20, hMax = 30;
@@ -1247,7 +1283,7 @@ function desenhoGeometriaP(r) {
     const nArr = Math.max(2, Math.round((X(b) - X(a)) / 22));
     for (let j = 0; j <= nArr; j++) { const xx = X(a) + (X(b) - X(a)) * j / nArr; s += `<line x1="${xx}" y1="${yBase - hh}" x2="${xx}" y2="${yBase}" stroke="${COR.azul}" stroke-width="0.8"/><path d="M ${xx - 3} ${yBase - 5} L ${xx} ${yBase} L ${xx + 3} ${yBase - 5}" fill="none" stroke="${COR.azul}" stroke-width="0.8"/>`; }
   });
-  s += rotulosCarga(r, segs, X, yBase - hMax - 7);
+  s += rotulosCarga(r, segs, X, yBase - hMax - 7, VW);
   s += `<polygon points="${polyPts(P0.top.concat(P0.bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.3" stroke-linejoin="round"/>`;
   // modelo (nós nos cantos)
   s += `<polyline points="${polyPts(r.nos.map(nd => [nd.x, nd.y]), X, Y)}" fill="none" stroke="${COR.azul}" stroke-width="0.9" stroke-dasharray="4 3"/>`;
@@ -1264,20 +1300,20 @@ function desenhoGeometriaP(r) {
   s += ext(X(I.A + I.B), Y(P0.R), X(r.L) + 26, Y(P0.R)) + ext(X(I.A), Y(0), X(r.L) + 26, Y(0));
   s += cotaV(X(r.L) + 22, Y(P0.R), Y(0), `${fmt(P0.R)} m`);
   { const xs = I.A + I.B * 0.3, tx = X(xs) + 14, ty = Y((xs - I.A) * r.tgA - t) + 30;
-    s += `<text x="${tx}" y="${ty}" font-size="11" fill="${COR.cota}" transform="rotate(${-r.alfaGr} ${tx} ${ty})">plissada · ${r.nDeg} degraus · t = ${fmt(r.t, 1)} cm</text>`; }
+    s += `<text x="${tx}" y="${ty}" font-size="11" fill="${COR.cota}" transform="rotate(${-aDg} ${tx} ${ty})">plissada · ${r.nDeg} degraus · t = ${fmt(r.t, 1)} cm</text>`; }
   return {
-    svg: svgWrap(VW, yC + 44, s, 'Elevação da escada plissada com cargas e cotas'),
-    leg: `Parciais e total g + q em tf/m² (projeção; pp espelhos equivalente — no pórtico vai na altura). <span style="color:${COR.azul}">Tracejado</span> = pórtico; rolete embaixo, pino em cima.`
+    VH: yC + 44, svg: svgWrap(VW, yC + 44, s, 'Elevação da escada plissada com cargas e cotas'),
+    leg: `${E.esc ? '' : 'Esquemático (alturas fora de escala). '}Parciais e total g + q em tf/m² (projeção; pp espelhos equivalente — no pórtico vai na altura). <span style="color:${COR.azul}">Tracejado</span> = pórtico; rolete embaixo, pino em cima.`
   };
 }
 
 function desenhoDegrauP(r) {
-  const I = r.I, VW = 540, VH = 262, e = r.ew * 100, p = r.pw * 100, t = r.t;
+  const I = r.I, VW = VWd(), VH = DIMS && DIMS.H ? DIMS.H : 262, e = r.ew * 100, p = r.pw * 100, t = r.t;
   const x0 = -0.5 * p, x1 = 1.75 * p;
   const top = [[x0, 0], [0, 0], [0, e], [p, e], [p, 2 * e], [x1, 2 * e]];
   const bot = [[x1, 2 * e - t], [p + t, 2 * e - t], [p + t, e - t], [t, e - t], [t, -t], [x0, -t]];
   const k = Math.min((VW - 190) / (x1 - x0), (VH - 70) / (2 * e + t));
-  const ox = 95 - x0 * k, oy = 46 + 2 * e * k, X = x => ox + x * k, Y = y => oy - y * k;
+  const ox = 95 + Math.max(0, (VW - 190 - (x1 - x0) * k) / 2) - x0 * k, oy = 46 + Math.max(0, (VH - 70 - (2 * e + t) * k) / 2) + 2 * e * k, X = x => ox + x * k, Y = y => oy - y * k;
   let s = `<polygon points="${polyPts(top.concat(bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.4" stroke-linejoin="round"/>`;
   [[x0, 0, -t], [x1, 2 * e, 2 * e - t]].forEach(([x, ya, yb]) => s += `<line x1="${X(x)}" y1="${Y(ya)}" x2="${X(x)}" y2="${Y(yb)}" stroke="${COR.conc}" stroke-width="2.5"/><line x1="${X(x)}" y1="${Y(ya)}" x2="${X(x)}" y2="${Y(yb)}" stroke="${COR.linha}" stroke-width="0.8" stroke-dasharray="4 3"/>`);
   // eixo do modelo
@@ -1297,10 +1333,11 @@ function desenhoDegrauP(r) {
   };
 }
 
-function desenhoEsforcosP(r) {
-  const VW = 540, mx = 40, L = r.L, R = r.R;
-  const k = Math.min((VW - 2 * mx) / L, 165 / Math.max(R, 0.01));
-  const ox = mx + (VW - 2 * mx - L * k) / 2, yTopo = 22 + R * k, X = x => ox + x * k, Y = y => yTopo - y * k;
+function desenhoEsforcosP(r) { return ajustaAltura(b => esfPli(r, b), 165); }
+function esfPli(r, budget) {
+  const VW = VWd(), mx = 40, L = r.L, R = r.R;
+  const E = escalas((VW - 2 * mx) / L, budget, R), kx = E.kx, ky = E.ky;
+  const ox = mx + (VW - 2 * mx - L * kx) / 2, yTopo = 22 + R * ky, X = x => ox + x * kx, Y = y => yTopo - y * ky;
   let s = '';
   const Mmax = Math.max(...r.pts.map(pt => Math.abs(pt.Mk))) || 1, kM = 34 / Mmax;
   // diagrama de M no lado tracionado (como no Ftool)
@@ -1336,18 +1373,18 @@ function desenhoEsforcosP(r) {
   s += `<text x="${X(r.xa0)}" y="${y1 + hF + 16}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.verm}">a<tspan baseline-shift="sub" font-size="9">0</tspan> = ${fmt(r.a0, 3)} cm · a<tspan baseline-shift="sub" font-size="9">t</tspan> = ${fmt(r.aT, 3)} cm</text>`;
   s += `<text x="${mx - 6}" y="${y1 + 18}" text-anchor="end" font-size="11" fill="${COR.cota}">a</text>`;
   return {
-    svg: svgWrap(VW, y1 + hF + 24, s, 'Pórtico plissado: momento fletor, esforço normal nos espelhos e elástica'),
-    leg: `Pórtico, faixa de 1 m, g + q <b>característicos</b>; M do lado tracionado. Espelhos em <b style="color:${COR.azulEsc}">compressão</b> / <b style="color:${COR.verm}">tração</b>; pisos com N = 0 (rolete). Elástica sem escala, quase permanente.`
+    VH: y1 + hF + 24, svg: svgWrap(VW, y1 + hF + 24, s, 'Pórtico plissado: momento fletor, esforço normal nos espelhos e elástica'),
+    leg: `Pórtico, faixa de 1 m, g + q <b>característicos</b>; M do lado tracionado. Espelhos em <b style="color:${COR.azulEsc}">compressão</b> / <b style="color:${COR.verm}">tração</b>; pisos com N = 0 (rolete). Elástica sem escala, quase permanente.${E.esc ? '' : ' Pórtico fora de escala (esquemático).'}`
   };
 }
 
 function desenhoArmacaoP(r) {
-  const I = r.I, VW = 540, VH = 280, e = r.ew * 100, p = r.pw * 100, t = r.t, c = I.c;
+  const I = r.I, VW = VWd(), VH = DIMS && DIMS.H ? DIMS.H : 280, e = r.ew * 100, p = r.pw * 100, t = r.t, c = I.c;
   const xL = -0.5 * p, xR = 1.75 * p;
   const top = [[xL, 0], [0, 0], [0, e], [p, e], [p, 2 * e], [xR, 2 * e]];
   const bot = [[xR, 2 * e - t], [p + t, 2 * e - t], [p + t, e - t], [t, e - t], [t, -t], [xL, -t]];
   const k = Math.min((VW - 120) / (xR - xL), (VH - 60) / (2 * e + t));
-  const ox = 40 - xL * k, oy = 28 + 2 * e * k, X = x => ox + x * k, Y = y => oy - y * k;
+  const ox = 40 + Math.max(0, (VW - 120 - (xR - xL) * k) / 2) - xL * k, oy = 28 + Math.max(0, (VH - 60 - (2 * e + t) * k) / 2) + 2 * e * k, X = x => ox + x * k, Y = y => oy - y * k;
   const cid = 'clipP' + Math.round(Math.random() * 1e6);
   let s = `<defs><clipPath id="${cid}"><rect x="${X(xL)}" y="0" width="${X(xR) - X(xL)}" height="${VH}"/></clipPath></defs>`;
   s += `<polygon points="${polyPts(top.concat(bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.3" stroke-linejoin="round"/>`;
@@ -1371,7 +1408,7 @@ function desenhoArmacaoP(r) {
   // marcadores
   const marca = (x, y, txt, cor, anc = 'start') => `<text x="${x}" y="${y}" text-anchor="${anc}" font-size="12" font-weight="600" fill="${cor}">${txt}</text>`;
   s += marca(X(p * 0.45), Y(e) - 8, `N1 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}`, COR.azulEsc, 'middle');
-  s += marca(X(p + t) + 8, Y(1.45 * e), `N2 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}`, COR.verde);
+  s += marca(X(p) - 8, Y(1.6 * e), `N2 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}`, COR.verde, 'end');
   s += marca(X(xL) + 4, Y(-t) + 18, `N3 · Ø ${fphi(I.phiD)} c/ ${fmt(r.sDa, 0)}`, COR.ambar);
   return {
     svg: svgWrap(VW, VH, s, 'Esquema de armação da escada plissada com estribos fechados'),
@@ -1515,7 +1552,16 @@ function desenhar() {
   if (!R || !R.ok) { box.innerHTML = ''; leg.innerHTML = ''; return; }
   const a = aba();
   const tit = { geo: 'Elevação — geometria e cargas', car: 'Quadro de cargas', deg: 'Detalhe do degrau', esf: 'Esforços e elástica', arm: 'Esquema de armação' }[a];
-  const P = R.plis, d = a === 'car' ? desenhoCargas(R) : a === 'geo' ? (P ? desenhoGeometriaP(R) : desenhoGeometria(R)) : a === 'deg' ? (P ? desenhoDegrauP(R) : desenhoDegrau(R)) : a === 'esf' ? (P ? desenhoEsforcosP(R) : desenhoEsforcos(R)) : (P ? desenhoArmacaoP(R) : desenhoArmacao(R));
+  const P = R.plis;
+  // desenho no tamanho da caixa (≈ px; zoom suave em telas grandes); em tela estreita a altura é a natural
+  const bw = box.clientWidth || 540, bh = box.clientHeight, z = Math.min(1.35, Math.max(1, bw / 620));
+  const empilhado = window.innerWidth <= 1080 || bh < 120;
+  box.classList.toggle('tab', a === 'car');
+  DIMS = a === 'car' ? null : { W: Math.round(bw / z), H: empilhado ? null : Math.round(bh / z) };
+  let d;
+  try {
+    d = a === 'car' ? desenhoCargas(R) : a === 'geo' ? (P ? desenhoGeometriaP(R) : desenhoGeometria(R)) : a === 'deg' ? (P ? desenhoDegrauP(R) : desenhoDegrau(R)) : a === 'esf' ? (P ? desenhoEsforcosP(R) : desenhoEsforcos(R)) : (P ? desenhoArmacaoP(R) : desenhoArmacao(R));
+  } finally { DIMS = null; }
   box.innerHTML = d.svg; leg.innerHTML = d.leg;
 }
 
@@ -1619,17 +1665,18 @@ function gerarPDF() {
 }
 
 function resumoConsumoHTML() {
-  let vol = 0, aco = 0;
+  const T = totalEscada(false);
   const lin = lances.map((v, i) => {
     const r = calcularLance(v), Q = r.ok && r.quant;
     if (!Q) return `<tr><td>Lance ${i + 1}</td><td colspan="5">dados inválidos</td></tr>`;
-    vol += Q.vol; aco += Q.aco;
     return `<tr><td>Lance ${i + 1}</td><td>Ø ${fphi(r.I.phiP)} c/ ${fmt(r.sPa, 0)} · Ø ${fphi(r.I.phiD)} c/ ${fmt(r.sDa, 0)}</td><td>${fmt(Q.bw, 2)}${Q.bPadrao ? '*' : ''}</td><td>${fmt(Q.vol, 3)}</td><td>${fmt(Q.aco, 1)}</td><td>${fmt(Q.taxa, 0)}</td></tr>`;
   }).join('');
-  return `<div class="card mm bloco" style="page-break-before:always"><h3>Consumo estimado da escada — soma dos lances</h3>
+  const ds = T.pares.map(q => `<tr><td colspan="3">Patamar de canto L${q.i}/L${q.i + 1} contado uma vez: − ${fmt(q.l)} × ${fmt(q.t, 2)} × ${fmt(q.b)}</td><td>− ${fmt(q.v, 3)}</td><td></td><td></td></tr>`).join('');
+  return `<div class="card mm bloco" style="page-break-before:always"><h3>Consumo estimado da escada</h3>
     <table><tr><th>Lance</th><th>Armadura (principal · distribuição)</th><th>b (m)</th><th>Volume (m³)</th><th>Aço (kg)</th><th>Taxa (kg/m³)</th></tr>${lin}
-    <tr class="sel"><td>Escada</td><td></td><td></td><td>${fmt(vol, 3)}</td><td>${fmt(aco, 1)}</td><td>${vol > 0 ? fmt(aco / vol, 0) : '—'}</td></tr></table>
-    <span class="nota">Soma simples: patamares compartilhados entre lances entram em cada lance. ${lances.some(v => { const r = calcularLance(v); return r.ok && r.quant && r.quant.bPadrao; }) ? '* larg. do lance não informada: 1 m. ' : ''}Sem perdas, emendas e armaduras construtivas.</span></div>`;
+    ${ds ? `<tr><td colspan="3">Soma dos lances</td><td>${fmt(T.volSoma, 3)}</td><td>${fmt(T.aco, 1)}</td><td>${T.volSoma > 0 ? fmt(T.aco / T.volSoma, 0) : '—'}</td></tr>${ds}` : ''}
+    <tr class="sel"><td>Escada</td><td></td><td></td><td>${fmt(T.vol, 3)}</td><td>${fmt(T.aco, 1)}</td><td>${T.vol > 0 ? fmt(T.aco / T.vol, 0) : '—'}</td></tr></table>
+    <span class="nota">${lances.length < 2 ? '' : patInt ? 'Patamar intermediário (largura total, sem degraus): cada lance com a sua faixa de patamar, sem desconto. ' : 'Patamar superior de um lance = patamar inferior do seguinte (patamar de canto): volume contado uma vez, comprimento = menor dos dois (C + p do lance; A do seguinte), espessura e largura menores. '}${lances.some(v => { const r = calcularLance(v); return r.ok && r.quant && r.quant.bPadrao; }) ? '* larg. do lance não informada: 1 m. ' : ''}Sem perdas, emendas e armaduras construtivas.</span></div>`;
 }
 
 /* ==================== EXPORTAR HTML (histórico no projeto) ==================== */
@@ -1640,7 +1687,7 @@ function exportarHTML() {
   const n = prompt('Identificação da escada (obra / escada / pavimento):', nomeEscada);
   if (n === null) return;
   nomeEscada = n.trim(); mostrarNome();
-  const est = { versao: 1, nome: nomeEscada, data: new Date().toISOString(), tipo: tipo(), cur, lances };
+  const est = { versao: 1, nome: nomeEscada, data: new Date().toISOString(), tipo: tipo(), cur, patInt, lances };
   const json = JSON.stringify(est).replace(/</g, '\\u003c');
   // só mexe no trecho antes do script principal (o próprio código contém esses textos)
   const i = FONTE_HTML.lastIndexOf('<script>\n// cópia da página');
@@ -1665,7 +1712,7 @@ function carregarEstado() {
     const t = document.getElementById(e.tipo === 'pli' ? 'tipo-pli' : 'tipo-conv'); if (t) t.checked = true;
     IDS.forEach(id => $(id).value = lances[cur][id]);
     document.querySelectorAll('input[name="tipo"]').forEach(x => { x.disabled = cur > 0; });
-    nomeEscada = e.nome || ''; mostrarNome();
+    nomeEscada = e.nome || ''; mostrarNome(); patInt = !!e.patInt;
     return true;
   } catch (err) { console.warn('Estado salvo inválido', err); return false; }
 }
@@ -1679,15 +1726,29 @@ function calcularLance(v) {
   const o = {}; IDS.forEach(id => { o[id] = parseFloat(v[id]); if (!isFinite(o[id])) o[id] = 0; });
   return tipo() === 'pli' ? calcularPlissada(o) : calcularEscada(o);
 }
-function totalEscada() {
-  // soma dos lances; o lance ativo usa o resultado em tela (R)
+// Patamar intermediário (largura total, sem degraus): cada lance tem a sua faixa de patamar → não desconta.
+// Padrão (desmarcado): patamar superior do lance i = patamar inferior do lance i+1 (patamar de canto) → conta uma vez.
+let patInt = false;
+function totalEscada(atual = true) {
+  // soma dos lances; na tela o lance ativo usa o resultado em tela (R)
   let vol = 0, aco = 0, inval = 0; const semB = [];
-  lances.forEach((v, i) => {
-    const r = i === cur ? R : calcularLance(v);
+  const rs = lances.map((v, i) => atual && i === cur ? R : calcularLance(v));
+  rs.forEach((r, i) => {
     if (!r || !r.ok || !r.quant) { inval++; return; }
     vol += r.quant.vol; aco += r.quant.aco; if (r.quant.bPadrao) semB.push(i + 1);
   });
-  return { vol, aco, inval, semB };
+  const pares = [];
+  if (!patInt) for (let i = 0; i < rs.length - 1; i++) {
+    const a = rs[i], b = rs[i + 1];
+    if (!a || !a.ok || !a.quant || !b || !b.ok || !b.quant) continue;
+    // patamar superior do lance i no perfil = C + p (o último piso fica no nível do patamar); C = 0 → sem patamar
+    const pw = a.plis ? a.pw : a.I.B / Math.max(1, Math.round(a.I.B * 100 / a.I.p)), lSup = a.I.C > 0 ? a.I.C + pw : 0, l = Math.min(lSup, b.I.A);
+    if (l <= 0) continue;
+    const t = Math.min(a.I.h, b.I.h) / 100, bb = Math.min(a.quant.bw, b.quant.bw);
+    pares.push({ i: i + 1, l, t, b: bb, v: l * t * bb });
+  }
+  const desc = pares.reduce((x, q) => x + q.v, 0);
+  return { vol: vol - desc, volSoma: vol, desc, pares, aco, inval, semB };
 }
 function statusLance(r) {
   if (!r || !r.ok) return false;
@@ -1746,6 +1807,13 @@ $('btn-pdf2').addEventListener('click', gerarPDF);
 $('phiPsel').addEventListener('change', () => { $('phiP').value = $('phiPsel').value; $('sP').value = ''; atualizar(); if (R && R.ok) { $('sP').value = R.princ.s; atualizar(); } });
 $('phiDsel').addEventListener('change', () => { $('phiD').value = $('phiDsel').value; $('sD').value = ''; atualizar(); if (R && R.ok) { $('sD').value = R.sD; atualizar(); } });
 $('btn-exp').addEventListener('click', exportarHTML);
+$('patInt').addEventListener('change', () => { patInt = $('patInt').checked; atualizar(); });
+// redesenha quando a caixa do desenho muda de tamanho (janela, zoom); em tela estreita só a largura importa
+let tamDes = '';
+new ResizeObserver(() => {
+  const bx = $('svg-box'), emp = window.innerWidth <= 1080, k = bx.clientWidth + 'x' + (emp ? 0 : bx.clientHeight);
+  if (k !== tamDes) { tamDes = k; requestAnimationFrame(desenhar); }
+}).observe($('svg-box'));
 if (!carregarEstado()) { lances = [lerCampos()]; cur = 0; }
 atualizar();
 </script>
