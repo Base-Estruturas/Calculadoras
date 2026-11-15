@@ -1004,11 +1004,10 @@ function svgWrap(VW, VH, s, aria) {
   return `<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="${aria}">${s}</svg>`;
 }
 // Escalas horizontal (kx) e vertical (ky) do perfil: horizontal pela largura; vertical pela altura disponível,
-// sem exagero vertical (ky ≤ kx) e achatamento máximo ky ≥ 0,35·kx (desenho esquemático, fora de escala)
+// mesma escala nas duas direções (desenho em escala)
 function escalas(kxMax, budget, Rv) {
-  let kx = kxMax, ky = Math.min(kx, budget / Math.max(Rv, 0.01));
-  if (ky < 0.35 * kx) kx = ky / 0.35;
-  return { kx, ky, esc: Math.abs(kx - ky) < 1e-6 * kx };
+  const k = Math.min(kxMax, budget / Math.max(Rv, 0.01));   // sempre em escala (mesma escala nas duas direções)
+  return { kx: k, ky: k, esc: true };
 }
 // Ajusta o orçamento vertical (px) para a altura total do desenho caber em DIMS.H (secante em 2 passos)
 function ajustaAltura(build, b0) {
@@ -1023,12 +1022,12 @@ function geoConv(r, budget) {
   const I = r.I, VW = VWd(), mxE = 24, mxD = 80;
   const P0 = perfil(I.A, I.B, I.C, r.tgA, r.cosA, I.h / 100, Math.round(I.B * 100 / I.p));
   const D = alturaRotulos(r), E = escalas((VW - mxE - mxD) / r.L, budget, P0.R), kx = E.kx, ky = E.ky;
-  const ox = mxE + (VW - mxE - mxD - r.L * kx) / 2, yTopo = 90 + D + P0.R * ky;  // y da cota 0 (patamar A)
+  const ox = mxE + (VW - mxE - mxD - r.L * kx) / 2, yTopo = 50 + D + P0.R * ky;  // y da cota 0 (patamar A)
   const X = x => ox + x * kx, Y = y => yTopo - y * ky, aD = Math.atan(r.tgA * ky / kx), aDg = aD * 180 / Math.PI;
   let s = '';
   // Cargas características g + q (projeção horizontal) sobre a escada
   const ws = [r.g1 + I.q, r.g2 + I.q, r.g3 + I.q], segs = [[0, I.A], [I.A, I.A + I.B], [I.A + I.B, r.L]];
-  const wMax = Math.max(...ws), yBase = Y(P0.R) - 20, hMax = 30;
+  const wMax = Math.max(...ws), yBase = Y(P0.R) - 12, hMax = 20;
   segs.forEach(([a, b], i) => {
     if (b - a <= 1e-9) return;
     const hh = hMax * ws[i] / wMax;
@@ -1036,21 +1035,21 @@ function geoConv(r, budget) {
     const nArr = Math.max(2, Math.round((X(b) - X(a)) / 22));
     for (let j = 0; j <= nArr; j++) { const xx = X(a) + (X(b) - X(a)) * j / nArr; s += `<line x1="${xx}" y1="${yBase - hh}" x2="${xx}" y2="${yBase}" stroke="${COR.azul}" stroke-width="0.8"/><path d="M ${xx - 3} ${yBase - 5} L ${xx} ${yBase} L ${xx + 3} ${yBase - 5}" fill="none" stroke="${COR.azul}" stroke-width="0.8"/>`; }
   });
-  s += rotulosCarga(r, segs, X, yBase - hMax - 7, VW);
+  s += rotulosCarga(r, segs, X, yBase - hMax - 5, VW);
   // Concreto
   s += `<polygon points="${polyPts(P0.top.concat(P0.bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.4" stroke-linejoin="round"/>`;
   // Apoios
   const yApA = Y(I.A > 0 ? -I.h / 100 : -P0.tv), yApC = Y(I.C > 0 ? P0.R - I.h / 100 : P0.R - P0.tv);
   s += apoio(X(0), yApA, false) + apoio(X(r.L), yApC, true);
   // Cotas horizontais
-  const yC = yApA + 42;
-  s += ext(X(0), yApA + 22, X(0), yC + 22) + ext(X(r.L), yApC + 22, X(r.L), yC + 22);
+  const yC = yApA + 36;
+  s += ext(X(0), yApA + 22, X(0), yC + 20) + ext(X(r.L), yApC + 22, X(r.L), yC + 20);
   if (I.A > 0) s += ext(X(I.A), Y(0), X(I.A), yC + 4);
   if (I.C > 0) s += ext(X(I.A + I.B), Y(P0.R), X(I.A + I.B), yC + 4);
   if (I.A > 0) s += cotaH(X(0), X(I.A), yC, `A = ${fmt(I.A)}`);
   s += cotaH(X(I.A), X(I.A + I.B), yC, `B = ${fmt(I.B)}`);
   if (I.C > 0) s += cotaH(X(I.A + I.B), X(r.L), yC, `C = ${fmt(I.C)}`);
-  s += cotaH(X(0), X(r.L), yC + 26, `L = ${fmt(r.L)} m (vão de cálculo)`, COR.linha);
+  s += cotaH(X(0), X(r.L), yC + 22, `L = ${fmt(r.L)} m (vão de cálculo)`, COR.linha);
   // Cota vertical do desnível
   s += ext(X(I.A + I.B), Y(P0.R), X(r.L) + 26, Y(P0.R)) + ext(X(I.A), Y(0), X(r.L) + 26, Y(0));
   s += cotaV(X(r.L) + 22, Y(P0.R), Y(0), `${fmt(P0.R)} m`);
@@ -1059,16 +1058,16 @@ function geoConv(r, budget) {
   const rA = 34;
   s += `<path d="M ${ax + rA} ${ay} A ${rA} ${rA} 0 0 0 ${ax + rA * Math.cos(aD)} ${ay - rA * Math.sin(aD)}" fill="none" stroke="${COR.cota}" stroke-width="1"/>`;
   s += `<line x1="${ax}" y1="${ay}" x2="${ax + rA + 12}" y2="${ay}" stroke="#9AA0A6" stroke-width="0.7" stroke-dasharray="3 2"/>`;
-  s += `<text x="${ax + rA + 4}" y="${E.esc ? ay - 7 : ay + 14}" font-size="12" font-weight="600" fill="${COR.cota}">α = ${fmt(r.alfaGr, 1)}°</text>`;
+  s += `<text x="${ax + rA + 4}" y="${ay - 7}" font-size="12" font-weight="600" fill="${COR.cota}">α = ${fmt(r.alfaGr, 1)}°</text>`;
   // rótulos dos trechos
   if (I.A > 0 && I.A * kx > 70) s += `<text x="${X(I.A / 2)}" y="${Y(0) - 8}" text-anchor="middle" font-size="11" fill="${COR.cota}">patamar A</text>`;
-  if (I.C > 0) s += `<text x="${X(I.A + I.B + I.C / 2)}" y="${Y(P0.R) + 26 + I.h / 100 * ky}" text-anchor="middle" font-size="11" fill="${COR.cota}">patamar C</text>`;
+  if (I.C > 0) s += `<text x="${Math.min(X(I.A + I.B + I.C / 2), X(r.L) - 46)}" y="${Y(P0.R) + 26 + I.h / 100 * ky}" text-anchor="middle" font-size="11" fill="${COR.cota}">patamar C</text>`;
   { const xs = I.A + I.B * (E.esc ? 0.5 : 0.45), tx = X(xs) + 6, ty = Y((xs - I.A) * r.tgA - P0.tv) + 14;
     s += `<text x="${tx}" y="${ty}" font-size="11" fill="${COR.cota}" transform="rotate(${-aDg} ${tx} ${ty})">${E.esc ? 'lance · ' : ''}h = ${fmt(I.h, 1)} cm</text>`; }
-  const VH = yC + 44;
+  const VH = yC + 30;
   return {
     VH, svg: svgWrap(VW, VH, s, 'Elevação da escada com patamares, cargas e cotas'),
-    leg: `A = patamar inferior · B = lance · C = patamar superior (projeção horizontal). Parciais e total q<sub>i</sub> = g + q característicos em tf/m². ${E.esc ? 'Em escala.' : 'Esquemático (alturas fora de escala).'}`
+    leg: `Em escala. q<sub>i</sub> = g + q característicos em tf/m² (projeção): pp = peso próprio da laje, deg. = degraus, rev. = revestimento.`
   };
 }
 
@@ -1244,7 +1243,7 @@ function armConv(r, budget) {
   const VH = Y(-P.tv) + 34;
   return {
     VH, svg: svgWrap(VW, VH, s, 'Esquema de armação da escada'),
-    leg: `${E.esc ? 'Sem escala na espessura.' : 'Esquemático (fora de escala).'} <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distrib. Ø ${fphi(I.phiD)} c/ ${fmt(r.sDa, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
+    leg: `Sem escala na espessura. <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distrib. Ø ${fphi(I.phiD)} c/ ${fmt(r.sDa, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
       ${A > 0 ? `<b style="color:${COR.verde}">①</b> convexo: pode dobrar.` : ''}${C > 0 ? ` <b style="color:${COR.verm}">②</b> côncavo: <b>não dobrar</b> (empuxo ao vazio) — cruzar N1/N2, ℓb = ${fmt(r.lb, 0)} cm pela face oposta e gancho.` : ''}`
   };
 }
@@ -1271,11 +1270,11 @@ function desenhoGeometriaP(r) { return ajustaAltura(b => geoPli(r, b), 125); }
 function geoPli(r, budget) {
   const I = r.I, VW = VWd(), mxE = 24, mxD = 80, P0 = perfilP(r), t = P0.t;
   const D = alturaRotulos(r), E = escalas((VW - mxE - mxD) / r.L, budget, P0.R), kx = E.kx, ky = E.ky;
-  const ox = mxE + (VW - mxE - mxD - r.L * kx) / 2, yTopo = 90 + D + P0.R * ky;
+  const ox = mxE + (VW - mxE - mxD - r.L * kx) / 2, yTopo = 50 + D + P0.R * ky;
   const X = x => ox + x * kx, Y = y => yTopo - y * ky, aDg = Math.atan(r.tgA * ky / kx) * 180 / Math.PI;
   let s = '';
   const ws = quadroCargas(r).g.map(v => v + I.q), segs = [[0, I.A], [I.A, I.A + I.B], [I.A + I.B, r.L]];
-  const wMax = Math.max(...ws), yBase = Y(P0.R) - 20, hMax = 30;
+  const wMax = Math.max(...ws), yBase = Y(P0.R) - 12, hMax = 20;
   segs.forEach(([a, b], i) => {
     if (b - a <= 1e-9) return;
     const hh = hMax * ws[i] / wMax;
@@ -1283,27 +1282,27 @@ function geoPli(r, budget) {
     const nArr = Math.max(2, Math.round((X(b) - X(a)) / 22));
     for (let j = 0; j <= nArr; j++) { const xx = X(a) + (X(b) - X(a)) * j / nArr; s += `<line x1="${xx}" y1="${yBase - hh}" x2="${xx}" y2="${yBase}" stroke="${COR.azul}" stroke-width="0.8"/><path d="M ${xx - 3} ${yBase - 5} L ${xx} ${yBase} L ${xx + 3} ${yBase - 5}" fill="none" stroke="${COR.azul}" stroke-width="0.8"/>`; }
   });
-  s += rotulosCarga(r, segs, X, yBase - hMax - 7, VW);
+  s += rotulosCarga(r, segs, X, yBase - hMax - 5, VW);
   s += `<polygon points="${polyPts(P0.top.concat(P0.bot), X, Y)}" fill="${COR.conc}" stroke="${COR.linha}" stroke-width="1.3" stroke-linejoin="round"/>`;
   // modelo (nós nos cantos)
   s += `<polyline points="${polyPts(r.nos.map(nd => [nd.x, nd.y]), X, Y)}" fill="none" stroke="${COR.azul}" stroke-width="0.9" stroke-dasharray="4 3"/>`;
   r.nos.forEach(nd => s += `<circle cx="${X(nd.x)}" cy="${Y(nd.y)}" r="1.8" fill="${COR.azul}"/>`);
   s += apoio(X(0), Y(-t), true) + apoio(X(r.L), Y(P0.R - t), false);
-  const yC = Y(-t) + 42;
-  s += ext(X(0), Y(-t) + 22, X(0), yC + 22) + ext(X(r.L), Y(P0.R - t) + 22, X(r.L), yC + 22);
+  const yC = Y(-t) + 36;
+  s += ext(X(0), Y(-t) + 22, X(0), yC + 20) + ext(X(r.L), Y(P0.R - t) + 22, X(r.L), yC + 20);
   if (I.A > 0) s += ext(X(I.A), Y(0), X(I.A), yC + 4);
   if (I.C > 0) s += ext(X(I.A + I.B), Y(P0.R), X(I.A + I.B), yC + 4);
   if (I.A > 0) s += cotaH(X(0), X(I.A), yC, `A = ${fmt(I.A)}`);
   s += cotaH(X(I.A), X(I.A + I.B), yC, `B = ${fmt(I.B)}`);
   if (I.C > 0) s += cotaH(X(I.A + I.B), X(r.L), yC, `C = ${fmt(I.C)}`);
-  s += cotaH(X(0), X(r.L), yC + 26, `L = ${fmt(r.L)} m (vão de cálculo)`, COR.linha);
+  s += cotaH(X(0), X(r.L), yC + 22, `L = ${fmt(r.L)} m (vão de cálculo)`, COR.linha);
   s += ext(X(I.A + I.B), Y(P0.R), X(r.L) + 26, Y(P0.R)) + ext(X(I.A), Y(0), X(r.L) + 26, Y(0));
   s += cotaV(X(r.L) + 22, Y(P0.R), Y(0), `${fmt(P0.R)} m`);
   { const xs = I.A + I.B * 0.3, tx = X(xs) + 14, ty = Y((xs - I.A) * r.tgA - t) + 30;
     s += `<text x="${tx}" y="${ty}" font-size="11" fill="${COR.cota}" transform="rotate(${-aDg} ${tx} ${ty})">plissada · ${r.nDeg} degraus · t = ${fmt(r.t, 1)} cm</text>`; }
   return {
-    VH: yC + 44, svg: svgWrap(VW, yC + 44, s, 'Elevação da escada plissada com cargas e cotas'),
-    leg: `${E.esc ? '' : 'Esquemático (alturas fora de escala). '}Parciais e total g + q em tf/m² (projeção; pp espelhos equivalente — no pórtico vai na altura). <span style="color:${COR.azul}">Tracejado</span> = pórtico; rolete embaixo, pino em cima.`
+    VH: yC + 30, svg: svgWrap(VW, yC + 30, s, 'Elevação da escada plissada com cargas e cotas'),
+    leg: `Em escala. g + q em tf/m² (projeção; esp. = pp dos espelhos equivalente, no pórtico vai na altura). <span style="color:${COR.azul}">Tracejado</span> = pórtico; rolete embaixo, pino em cima.`
   };
 }
 
@@ -1374,7 +1373,7 @@ function esfPli(r, budget) {
   s += `<text x="${mx - 6}" y="${y1 + 18}" text-anchor="end" font-size="11" fill="${COR.cota}">a</text>`;
   return {
     VH: y1 + hF + 24, svg: svgWrap(VW, y1 + hF + 24, s, 'Pórtico plissado: momento fletor, esforço normal nos espelhos e elástica'),
-    leg: `Pórtico, faixa de 1 m, g + q <b>característicos</b>; M do lado tracionado. Espelhos em <b style="color:${COR.azulEsc}">compressão</b> / <b style="color:${COR.verm}">tração</b>; pisos com N = 0 (rolete). Elástica sem escala, quase permanente.${E.esc ? '' : ' Pórtico fora de escala (esquemático).'}`
+    leg: `Pórtico, faixa de 1 m, g + q <b>característicos</b>; M do lado tracionado. Espelhos em <b style="color:${COR.azulEsc}">compressão</b> / <b style="color:${COR.verm}">tração</b>; pisos com N = 0 (rolete). Elástica sem escala, quase permanente.`
   };
 }
 
@@ -1489,14 +1488,14 @@ function memorialHTMLP(r) {
 function linhasCarga(r, i) {
   const q = quadroCargas(r), P = r.plis, L = [];
   const add = (n, v) => { if (v > 1e-9) L.push([n, v]); };
-  add(i === 1 ? (P ? 'pp pisos' : 'pp laje') : 'pp laje', q.ppLaje[i]);
-  add(P ? 'pp espelhos' : 'pp degraus', q.ppDeg[i]);
-  add('revest.', q.rev[i]); add('alvenaria', q.alv[i]); add('reação', q.ext[i]); add('q', r.I.q);
+  add(i === 1 && P ? 'pp pisos' : 'pp', q.ppLaje[i]);
+  add(P ? 'esp.' : 'deg.', q.ppDeg[i]);
+  add('rev.', q.rev[i]); add('alv.', q.alv[i]); add('reação', q.ext[i]); add('q', r.I.q);
   return { L, tot: q.g[i] + r.I.q };
 }
 function rotulosCarga(r, segs, X, yBottom, VW = 540) {
   const ativos = segs.map(([a, b], i) => ({ a, b, i })).filter(o => o.b - o.a > 1e-9);
-  const W = 104, fs = 10.5, lh = 12;
+  const W = 106, fs = 10, lh = 11.5;
   ativos.forEach(o => o.xc = o.cx = (X(o.a) + X(o.b)) / 2);
   for (let k = 1; k < ativos.length; k++) ativos[k].cx = Math.max(ativos[k].cx, ativos[k - 1].cx + W);   // afasta para a direita
   const n = ativos.length; if (n) ativos[n - 1].cx = Math.min(ativos[n - 1].cx, VW - W / 2);
@@ -1506,12 +1505,13 @@ function rotulosCarga(r, segs, X, yBottom, VW = 540) {
   ativos.forEach(o => {
     const { L, tot } = linhasCarga(r, o.i), y0 = yBottom - (Math.abs(o.cx - o.xc) > 4 ? 10 : 0);
     s += `<text x="${o.cx}" y="${y0}" text-anchor="middle" font-size="${fs + 1.5}" font-weight="700" fill="${COR.azulEsc}">q${o.i + 1} = ${fmt(tot)} tf/m²</text>`;
-    L.slice().reverse().forEach(([nm, v], j) => s += `<text x="${o.cx}" y="${y0 - (fs + 5) - j * lh}" text-anchor="middle" font-size="${fs}" fill="${COR.cota}">${nm} ${fmt(v)}</text>`);
+    const pares = []; for (let j = 0; j < L.length; j += 2) pares.push(L.slice(j, j + 2).map(([nm, v]) => `${nm} ${fmt(v)}`).join(' · '));
+    pares.reverse().forEach((t, j) => s += `<text x="${o.cx}" y="${y0 - (fs + 4.5) - j * lh}" text-anchor="middle" font-size="${fs}" fill="${COR.cota}">${t}</text>`);
     if (Math.abs(o.cx - o.xc) > 4) s += `<line x1="${o.cx}" y1="${y0 + 3}" x2="${o.xc}" y2="${yBottom + 6}" stroke="${COR.azulEsc}" stroke-width="0.7"/>`;
   });
   return s;
 }
-function alturaRotulos(r) { return Math.max(...[0, 1, 2].map(i => linhasCarga(r, i).L.length)) * 12 + 12; }
+function alturaRotulos(r) { return Math.ceil(Math.max(...[0, 1, 2].map(i => linhasCarga(r, i).L.length)) / 2) * 11.5 + 4; }
 function quadroCargas(r) {
   const I = r.I, P = r.plis, gc = 2.5;
   const ppLaje = P ? [r.ppPat, r.ppPiso, r.ppPat] : [r.ppP, gc * I.h / 100 / r.cosA, r.ppP];
