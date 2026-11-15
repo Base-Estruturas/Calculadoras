@@ -86,6 +86,12 @@
   .bit-tab th.sel { background: var(--azul) !important; color: #fff; }
   .bit-tab .inv { color: var(--vermelho); font-size: 10.5px; }
   .bit-tab .aviso { color: var(--ambar); }
+  .adot-ed { display: flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 12.5px; color: var(--texto-2); }
+  .adot-ed select, .adot-ed input { height: 22px; border: 1px solid var(--borda-campo); border-radius: 5px; font: inherit; font-size: 13px; font-weight: 600; color: var(--texto); background: #fff; padding: 0 4px; }
+  .adot-ed select { width: 60px; } .adot-ed input { width: 42px; -moz-appearance: textfield; } .adot-ed input::-webkit-outer-spin-button, .adot-ed input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .adot-ed input:focus, .adot-ed select:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.14); }
+  .adot-ed input.edit { border-color: #E8A33D; background: var(--ambar-bg); }
+  .adot-info { margin-left: auto; white-space: nowrap; font-size: 12px; } .adot-info strong { color: var(--texto); font-size: 13.5px; font-weight: 600; }
   .res-adot { display: flex; justify-content: space-between; align-items: baseline; margin-top: 1px; font-size: 12.5px; color: var(--texto-2); }
   .res-adot strong { font-size: 16px; color: var(--texto); font-weight: 600; }
   .alertas:empty { display: none; }
@@ -255,6 +261,7 @@
         <div class="card-hd"><span class="rot" id="flex-tit">Armadura principal (inferior)</span><span id="flex-st"></span></div>
         <div id="flex-res"></div>
         <div id="tab-p"></div>
+        <div class="adot-ed" id="adotP-ed"><span>Adotado:</span> Ø <select id="phiPsel" title="Bitola adotada (clicar na tabela também preenche)"></select> c/ <input type="number" id="sP" step="1" min="1" title="Espaçamento adotado (cm). Vazio = o calculado. Usado no consumo."> <span class="adot-info" id="adotP-info"></span></div>
         <div class="kv k4" id="flex-kv"></div>
         <div class="alertas" id="flex-al"></div>
       </div>
@@ -262,6 +269,7 @@
       <div class="card">
         <div class="card-hd"><span class="rot" id="cis-tit">Distribuição · borda · cortante</span><span id="cis-st"></span></div>
         <div id="tab-d"></div>
+        <div class="adot-ed" id="adotD-ed"><span>Adotado:</span> Ø <select id="phiDsel" title="Bitola adotada (clicar na tabela também preenche)"></select> c/ <input type="number" id="sD" step="1" min="1" title="Espaçamento adotado (cm). Vazio = o calculado. Usado no consumo."> <span class="adot-info" id="adotD-info"></span></div>
         <div class="kv k4" id="cis-kv"></div>
         <div class="alertas" id="cis-al"></div>
         <div id="card-cons">
@@ -390,9 +398,9 @@ function quantConv(r, I) {
     const yC2 = R - h + a, xF2 = Math.max(A + (yC2 + a / cs) / tg, A), x2b = Math.max(xF2 - lb * cs, A + 0.03);
     n2 = gh + (L - a - xF2) + Math.max(xF2 - x2b, 0) / cs + gh;
   }
-  const nP = Math.ceil((bw * 100 - 2 * c) / r.princ.s) + 1;
+  const nP = Math.ceil((bw * 100 - 2 * c) / r.sPa) + 1;
   const lDes = A + B / cs + C;                       // comprimento desenvolvido da face inferior
-  const nD = Math.ceil(lDes * 100 / r.sD) + 1, n3 = Math.max(bw - 2 * c / 100, 0);
+  const nD = Math.ceil(lDes * 100 / r.sDa) + 1, n3 = Math.max(bw - 2 * c / 100, 0);
   const pos = [
     { nome: 'N1', phi: phiP, n: nP, l: n1, obs: 'patamar A + lance' },
     ...(C > 0 ? [{ nome: 'N2', phi: phiP, n: nP, l: n2, obs: 'patamar C' }] : []),
@@ -403,6 +411,12 @@ function quantConv(r, I) {
   const area = areaPoligono(pf.top.concat(pf.bot));  // m² em elevação (laje + degraus)
   const vol = area * bw, volPat = (A + C) * h * bw, aco = pos.reduce((s2, t) => s2 + t.kg, 0);
   return { bw, bPadrao, a, gh, lDes, nDeg, pos, area, vol, volPat, volLance: vol - volPat, aco, taxa: aco / vol };
+}
+// Armadura adotada pelo usuário (campos abaixo das tabelas): vazio = a calculada. Usada no consumo e nos desenhos.
+function adotados(r, I) {
+  r.sPa = I.sP > 0 ? I.sP : r.princ.s; r.sDa = I.sD > 0 ? I.sD : r.sD;
+  r.AsAdot = 100 * areaBarra(I.phiP) / r.sPa; r.AsDistAdot = 100 * areaBarra(I.phiD) / r.sDa;
+  r.adotEditP = I.sP > 0 && I.sP !== r.princ.s; r.adotEditD = I.sD > 0 && I.sD !== r.sD;
 }
 function calcularEscada(I) {
   const r = { I, ok: true, erros: [] };
@@ -470,6 +484,7 @@ function calcularEscada(I) {
   });
   r.dist = r.tabelaD.find(t => t.phi === phiD) || r.tabelaD[0];
   r.sD = r.dist.s; r.AsDistEf = r.dist.AsEf;
+  adotados(r, I);
   // ---- Armadura de borda (negativa) nos apoios — Tabela 19.1 e 19.3.3.2
   r.AsBorda = 0.67 * r.rhoMin / 100 * b * h;
   r.lBorda = 0.15 * L;
@@ -606,7 +621,7 @@ function posLinha(xs, s) {
 function quantPli(r, I) {
   const { A, B, C, c, phiP, phiD } = I, L = r.L, n = r.nDeg, pw = r.pw, ew = r.ew, t = r.t / 100;
   const bw = I.bLance > 0 ? I.bLance : 1, bPadrao = !(I.bLance > 0);
-  const cc = c / 100, fP = phiP / 1000, cd = cc + fP + phiD / 2000, sD = r.sD / 100;
+  const cc = c / 100, fP = phiP / 1000, cd = cc + fP + phiD / 2000, sD = r.sDa / 100;
   const gch = Math.max(5 * phiP / 1000, 0.05);                       // ponta reta dos ganchos do estribo (9.4.6.1)
   const estribo = (lx, ly) => 2 * ((lx - 2 * cc - fP) + (ly - 2 * cc - fP)) + 2 * gch;
   // trechos horizontais: [x0, x1, nível do topo]
@@ -616,7 +631,7 @@ function quantPli(r, I) {
     const x0 = A + (k - 1) * pw, ult = k === n;
     hor.push({ nome: ult && C > 0 ? `piso ${k} + patamar C` : `piso ${k}`, x0, x1: ult ? (C > 0 ? L : A + B) : A + k * pw + t, y: k * ew });
   }
-  const nP = Math.ceil((bw * 100 - c * 2) / r.princ.s) + 1;
+  const nP = Math.ceil((bw * 100 - c * 2) / r.sPa) + 1;
   const pos = [];
   const grupos = {};
   hor.forEach(hh => { const l = estribo(hh.x1 - hh.x0, t), ch = (hh.nome.startsWith('piso') && !hh.nome.includes('patamar') ? 'pisos' : hh.nome) + '|' + l.toFixed(3); (grupos[ch] = grupos[ch] || { l, q: 0, nome: hh.nome, pisos: ch.startsWith('pisos') }).q++; });
@@ -720,6 +735,7 @@ function calcularPlissada(I) {
   r.AsDist = Math.max(0.2 * r.AsNec, 0.9, 0.5 * r.AsMin); r.sMaxD = 33;
   r.tabelaD = [5, 6.3, 8, 10].map(f => { const a = areaBarra(f), sc = 100 * a / r.AsDist, s = Math.min(Math.floor(sc), r.sMaxD); return { phi: f, a, sCalc: sc, s, AsEf: 100 * a / s }; });
   r.dist = r.tabelaD.find(tb => tb.phi === phiD) || r.tabelaD[0]; r.sD = r.dist.s; r.AsDistEf = r.dist.AsEf;
+  adotados(r, I);
   r.lBorda = 0;
   // ---- Cortante (19.4.1) em todos os pontos, com σcp = −Nd/Ac (compressão +)
   const fctm = fctmMPa(fck), fctkInf = 0.7 * fctm, fctd = fctkInf / gcon;
@@ -773,7 +789,7 @@ function calcularPlissada(I) {
 /* ==================== FIM DO MOTOR ==================== */
 
 /* ==================== INTERFACE ==================== */
-const IDS = ['A', 'B', 'C', 'h', 'e', 'p', 'gL', 'gP', 'q', 'gA', 'gC', 'gamaDeg', 'hAlv', 'bloco', 'bLance', 'fck', 'aco', 'c', 'gf', 'phiP', 'phiD', 'psi2', 'aE', 't0'];
+const IDS = ['A', 'B', 'C', 'h', 'e', 'p', 'gL', 'gP', 'q', 'gA', 'gC', 'gamaDeg', 'hAlv', 'bloco', 'bLance', 'fck', 'aco', 'c', 'gf', 'phiP', 'phiD', 'sP', 'sD', 'psi2', 'aE', 't0'];
 let R = null;
 const $ = id => document.getElementById(id);
 function fmt(v, n = 2) { return (v === undefined || v === null || !isFinite(v)) ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: n, maximumFractionDigits: n }); }
@@ -792,9 +808,11 @@ function tabelaBitolas(tab, sel, campo, nome, invalido, dica) {
     <tr class="calc"><th>s calc.</th>${tab.map(t => c(t, fmt(t.sCalc, 1))).join('')}</tr>
   </table>`;
 }
-document.addEventListener('click', ev => {
+// mousedown: dispara antes do 'change' do campo em edição, que redesenha a tabela
+document.addEventListener('mousedown', ev => {
   const el = ev.target.closest('[data-phi][data-campo]'); if (!el) return;
-  $(el.dataset.campo).value = el.dataset.phi; atualizar();
+  const campo = el.dataset.campo; $(campo).value = el.dataset.phi; atualizar();
+  if (R && R.ok) { $(campo === 'phiP' ? 'sP' : 'sD').value = campo === 'phiP' ? R.princ.s : R.sD; atualizar(); }
 });
 
 function tipo() { return document.querySelector('input[name="tipo"]:checked').value; }
@@ -856,7 +874,7 @@ function atualizar() {
   if (I.phiP > r.phiMax + 1e-9) fa.push(`<div class="alert alert-danger">Ø ${fphi(I.phiP)} &gt; h/8 = ${fmt(r.phiMax, 1)} mm (20.1): reduzir a bitola.</div>`);
   if (r.princ.s < 7) fa.push(`<div class="alert alert-warning">s = ${fmt(r.princ.s, 0)} cm: espaçamento pequeno para concretagem (recomendação prática, não normativa). Aumentar a bitola.</div>`);
   $('tab-p').innerHTML = r.flexImpossivel ? '' : tabelaBitolas(r.tabela, I.phiP, 'phiP', 'Principal', t => !t.okPhi ? 'Ø > h/8' : null, `Espaçamentos em cm. × = Ø > h/8 (20.1); âmbar = s < 7 cm. s adot. = mín(s calc.; s,máx = ${fmt(r.sMax, 0)} cm), arredondado para baixo. Clique para escolher.`)
-    + `<div class="res-adot"><span>Adotado: <strong>Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}</strong></span><span>A<sub>s,ef</sub> = <strong>${fmt(r.AsEf)}</strong> cm²/m</span></div>`;
+    ;
   if (I.h < 8) fa.push(`<div class="alert alert-warning">h = ${fmt(I.h, 1)} cm &lt; 8 cm (13.2.4.1, lajes de piso).</div>`);
   $('flex-al').innerHTML = fa.join('');
 
@@ -864,7 +882,7 @@ function atualizar() {
   const vOk = r.utilV <= 1;
   $('cis-st').innerHTML = vOk ? pill('ok', 'V OK') : pill('fail', 'V > VRd1');
   $('tab-d').innerHTML = tabelaBitolas(r.tabelaD, I.phiD, 'phiD', 'Distribuição', () => null, 'Espaçamentos em cm. s adot. = mín(s calc.; 33 cm), arredondado para baixo. Clique para escolher.')
-    + `<div class="res-adot"><span>Adotado: <strong>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)}</strong></span><span>nec. ${fmt(r.AsDist)} · ef. <strong>${fmt(r.AsDistEf)}</strong> cm²/m</span></div>`;
+    ;
   $('cis-kv').innerHTML = `
     ${r.plis ? `<div title="perna superior do estribo fechado (mesma armadura da face inferior)">Face sup.<b>${fmt(r.AsBorda)} <small>cm²/m</small></b></div>` : `<div title="armadura negativa de borda nos apoios, até 0,15·L">Borda<b>${fmt(r.AsBorda)} <small>cm²/m</small></b></div>`}
     <div>V<sub>Sd</sub><b>${fmt(r.Vsd)} <small>tf/m</small></b></div>
@@ -903,7 +921,20 @@ function atualizar() {
     $('cons-nota').innerHTML = Q.bPadrao ? '* Calculada p/ 1 m de largura — preencher larg. lance.' : '';
   }
 
+  adotadosUI(r);
   desenhar();
+}
+function adotadosUI(r) {
+  const I = r.I, optP = r.tabela.map(t => t.phi), optD = r.tabelaD.map(t => t.phi);
+  const fill = (sel, ops, v) => { const h = ops.map(f => `<option value="${f}"${f === v ? ' selected' : ''}>${fphi(f)}</option>`).join(''); if (sel.dataset.h !== h) { sel.innerHTML = h; sel.dataset.h = h; } sel.value = String(v); };
+  fill($('phiPsel'), optP, I.phiP); fill($('phiDsel'), optD, I.phiD);
+  $('sP').placeholder = fmt(r.princ.s, 0); $('sD').placeholder = fmt(r.sD, 0);
+  $('sP').classList.toggle('edit', !!r.adotEditP); $('sD').classList.toggle('edit', !!r.adotEditD);
+  const nP = r.AsAdot + 1e-9 < r.AsNec, sPx = r.sPa > r.sMax + 1e-9, nD = r.AsDistAdot + 1e-9 < r.AsDist, sDx = r.sDa > r.sMaxD + 1e-9;
+  $('adotP-info').innerHTML = `→ <strong style="${nP || sPx ? 'color:var(--vermelho)' : ''}">${fmt(r.AsAdot)}</strong> cm²/m`;
+  $('adotP-info').title = nP ? `Menor que A_s,nec = ${fmt(r.AsNec)} cm²/m` : (sPx ? `s > s,máx = ${fmt(r.sMax, 0)} cm` : `≥ A_s,nec = ${fmt(r.AsNec)} cm²/m`);
+  $('adotD-info').innerHTML = `→ <strong style="${nD || sDx ? 'color:var(--vermelho)' : ''}">${fmt(r.AsDistAdot)}</strong> cm²/m`;
+  $('adotD-info').title = nD ? `Menor que a distribuição necessária (${fmt(r.AsDist)} cm²/m)` : (sDx ? `s > ${fmt(r.sMaxD, 0)} cm` : `necessária ${fmt(r.AsDist)} cm²/m`);
 }
 
 /* ==================== DESENHOS ==================== */
@@ -1157,8 +1188,8 @@ function desenhoArmacao(r) {
   if (C > 0) s += marca(X(A + B + P.off), Y(R - tDes), 2, COR.verm);
   // Rótulos curtos
   const xl1 = A + B * 0.42, lx = X(xl1) + 8, ly = Y(yL(xl1)) + 24;
-  s += `<text x="${lx}" y="${ly}" font-size="12" font-weight="600" fill="${COR.azulEsc}" transform="rotate(${-r.alfaGr} ${lx} ${ly})">N1 · Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}</text>`;
-  if (C > 0) s += `<text x="${X(A + B + C * 0.6)}" y="${Y(R - tDes) + 18}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.verde}">N2 · Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}</text>`;
+  s += `<text x="${lx}" y="${ly}" font-size="12" font-weight="600" fill="${COR.azulEsc}" transform="rotate(${-r.alfaGr} ${lx} ${ly})">N1 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}</text>`;
+  if (C > 0) s += `<text x="${X(A + B + C * 0.6)}" y="${Y(R - tDes) + 18}" text-anchor="middle" font-size="12" font-weight="600" fill="${COR.verde}">N2 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}</text>`;
   s += A > 0 ? `<text x="${X(cv) + 2}" y="${Y(0) - 8}" font-size="11.5" font-weight="600" fill="${COR.verm}">N4</text>`
              : `<text x="${X(xN4e) + 6}" y="${Y(yN4e) + 4}" font-size="11.5" font-weight="600" fill="${COR.verm}">N4</text>`;
   s += C > 0 ? `<text x="${X(L - cv) - 2}" y="${Y(R) - 8}" text-anchor="end" font-size="11.5" font-weight="600" fill="${COR.verm}">N4</text>`
@@ -1167,7 +1198,7 @@ function desenhoArmacao(r) {
   const VH = Y(-P.tv) + 34;
   return {
     svg: svgWrap(VW, VH, s, 'Esquema de armação da escada'),
-    leg: `Sem escala na espessura. <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distrib. Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
+    leg: `Sem escala na espessura. <b style="color:${COR.azul}">N1</b>/<b style="color:${COR.verde}">N2</b> principal · <b style="color:${COR.ambar}">N3</b> distrib. Ø ${fphi(I.phiD)} c/ ${fmt(r.sDa, 0)} · <b style="color:${COR.verm}">N4</b> borda ≥ ${fmt(r.AsBorda)} cm²/m até ${fmt(r.lBorda)} m.
       ${A > 0 ? `<b style="color:${COR.verde}">①</b> convexo: pode dobrar.` : ''}${C > 0 ? ` <b style="color:${COR.verm}">②</b> côncavo: <b>não dobrar</b> (empuxo ao vazio) — cruzar N1/N2, ℓb = ${fmt(r.lb, 0)} cm pela face oposta e gancho.` : ''}`
   };
 }
@@ -1322,18 +1353,18 @@ function desenhoArmacaoP(r) {
   [0, 1, 2].forEach(kk => {
     const xa = (kk - 1) * p + cd, xb = kk * p + t - cd, ya = kk * e - t + cd, yb = kk * e - cd;
     const inf = [xa, xb, kk * p + cd], sup = [xa, xb, (kk - 1) * p + t - cd];
-    posLinha(inf, r.sD).forEach(x => g += dot(x, ya));
-    posLinha(sup, r.sD).forEach(x => g += dot(x, yb));
+    posLinha(inf, r.sDa).forEach(x => g += dot(x, ya));
+    posLinha(sup, r.sDa).forEach(x => g += dot(x, yb));
   });
   s += `<g clip-path="url(#${cid})">${g}</g>`;
   // marcadores
   const marca = (x, y, txt, cor, anc = 'start') => `<text x="${x}" y="${y}" text-anchor="${anc}" font-size="12" font-weight="600" fill="${cor}">${txt}</text>`;
-  s += marca(X(p * 0.45), Y(e) - 8, `N1 · Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}`, COR.azulEsc, 'middle');
-  s += marca(X(p + t) + 8, Y(1.45 * e), `N2 · Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)}`, COR.verde);
-  s += marca(X(xL) + 4, Y(-t) + 18, `N3 · Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)}`, COR.ambar);
+  s += marca(X(p * 0.45), Y(e) - 8, `N1 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}`, COR.azulEsc, 'middle');
+  s += marca(X(p + t) + 8, Y(1.45 * e), `N2 · Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)}`, COR.verde);
+  s += marca(X(xL) + 4, Y(-t) + 18, `N3 · Ø ${fphi(I.phiD)} c/ ${fmt(r.sDa, 0)}`, COR.ambar);
   return {
     svg: svgWrap(VW, VH, s, 'Esquema de armação da escada plissada com estribos fechados'),
-    leg: `Em escala. <b style="color:${COR.azul}">N1</b> estribo do piso ≈ ${fmt(p + t - 2 * c, 0)} × ${fmt(t - 2 * c, 0)} e <b style="color:${COR.verde}">N2</b> estribo do espelho ≈ ${fmt(t - 2 * c, 0)} × ${fmt(e + t - 2 * c, 0)} cm, fechados, Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} → ${fmt(r.AsEf)} cm²/m por face, transpassados no nó. <b style="color:${COR.ambar}">N3</b> Ø ${fphi(I.phiD)} nos nós dos estribos; no piso, intermediárias a cada ≤ ${fmt(r.sD, 0)} cm. Dobras: detalhe padrão BASE.`
+    leg: `Em escala. <b style="color:${COR.azul}">N1</b> estribo do piso ≈ ${fmt(p + t - 2 * c, 0)} × ${fmt(t - 2 * c, 0)} e <b style="color:${COR.verde}">N2</b> estribo do espelho ≈ ${fmt(t - 2 * c, 0)} × ${fmt(e + t - 2 * c, 0)} cm, fechados, Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)} → ${fmt(r.AsAdot)} cm²/m por face, transpassados no nó. <b style="color:${COR.ambar}">N3</b> Ø ${fphi(I.phiD)} nos nós dos estribos; no piso, intermediárias a cada ≤ ${fmt(r.sDa, 0)} cm. Dobras: detalhe padrão BASE.`
   };
 }
 
@@ -1384,7 +1415,7 @@ function memorialHTMLP(r) {
     <div class="fml">As,mín = ρmín·b·t = ${fmt(r.rhoMin, 3)}%·100·${fmt(I.h, 1)} = ${fmt(r.AsMin, 3)} cm²/m (Tabela 19.1 → Tabela 17.3, C${I.fck}) → As,nec = ${fmt(r.AsNec, 3)} cm²/m</div>
     Espaçamento: s ≤ mín(2t; 20 cm) = ${fmt(r.sMax, 0)} cm (20.1) · Ø ≤ t/8 = ${fmt(r.phiMax, 1)} mm (20.1)
     <table><tr><th>Bitola</th><th>Aφ (cm²)</th><th>s calc (cm)</th><th>s adot (cm)</th><th>As,ef (cm²/m)</th><th>Ø ≤ t/8</th></tr>${tab}</table>
-    Adotado: <strong>estribos fechados Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} cm</strong> em cada piso (N1) e em cada espelho (N2), transpassados nos nós → As,ef = ${fmt(r.AsEf, 2)} cm²/m <strong>em cada face</strong> · taxa ${fmt(r.utilFlex * 100, 0)} %
+    Pela tabela (calculado): <strong>estribos fechados Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} cm</strong> em cada piso (N1) e em cada espelho (N2), transpassados nos nós → As,ef = ${fmt(r.AsEf, 2)} cm²/m <strong>em cada face</strong> · taxa ${fmt(r.utilFlex * 100, 0)} %
   </div>
   <div class="card mm bloco"><h3>5. Distribuição e cortante</h3>
     <div class="fml">As,dist ≥ máx(0,2·As,nec; 0,9 cm²/m; 0,5·As,mín) = ${fmt(r.AsDist, 3)} cm²/m (Tabela 19.1 e 20.1) → Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} = ${fmt(r.AsDistEf, 2)} cm²/m, nos cantos dos estribos e ao longo dos pisos</div>
@@ -1511,13 +1542,13 @@ function memorialHTML(r) {
     As,nec = máx(As; As,mín) = <strong>${fmt(r.AsNec, 3)} cm²/m</strong> · As,máx = 4%·b·h = ${fmt(r.AsMax, 1)} cm²/m (17.3.5.2.4)<br>
     Espaçamento: s ≤ mín(2h; 20 cm) = ${fmt(r.sMax, 0)} cm (20.1) · Ø ≤ h/8 = ${fmt(r.phiMax, 1)} mm (20.1)
     <table><tr><th>Bitola</th><th>Aφ (cm²)</th><th>s calc (cm)</th><th>s adot (cm)</th><th>As,ef (cm²/m)</th><th>Ø ≤ h/8</th></tr>${tab}</table>
-    Adotado: <strong>Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} cm → As,ef = ${fmt(r.AsEf, 2)} cm²/m</strong> · taxa As,calc/As,ef = ${fmt(r.utilFlex * 100, 0)} %
+    Pela tabela (calculado): <strong>Ø ${fphi(I.phiP)} c/ ${fmt(r.princ.s, 0)} cm → As,ef = ${fmt(r.AsEf, 2)} cm²/m</strong> · taxa As,calc/As,ef = ${fmt(r.utilFlex * 100, 0)} %
   </div>
   <div class="card mm bloco"><h3>5. Distribuição, borda e cortante</h3>
     <div class="fml">As,dist ≥ máx(0,2·As,nec; 0,9 cm²/m; 0,5·As,mín) = máx(${fmt(0.2 * r.AsNec, 3)}; 0,90; ${fmt(0.5 * r.AsMin, 3)}) = ${fmt(r.AsDist, 3)} cm²/m (Tabela 19.1 e 20.1)</div>
     <table><tr><th>Bitola</th><th>Aφ (cm²)</th><th>s calc (cm)</th><th>s adot (cm)</th><th>As,ef (cm²/m)</th></tr>
       ${r.tabelaD.map(t => `<tr class="${t.phi === I.phiD ? 'sel' : ''}"><td>Ø ${fphi(t.phi)}</td><td>${fmt(t.a, 3)}</td><td>${fmt(t.sCalc, 1)}</td><td>${fmt(t.s, 0)}</td><td>${fmt(t.AsEf)}</td></tr>`).join('')}</table>
-    Adotado: <strong>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} cm</strong> (s ≤ 33 cm, 20.1) → ${fmt(r.AsDistEf, 2)} cm²/m<br>
+    Pela tabela (calculado): <strong>Ø ${fphi(I.phiD)} c/ ${fmt(r.sD, 0)} cm</strong> (s ≤ 33 cm, 20.1) → ${fmt(r.AsDistEf, 2)} cm²/m<br>
     <div class="fml">Borda sem continuidade (apoios): As ≥ 0,67·ρmín·b·h = ${fmt(r.AsBorda, 3)} cm²/m, estendida 0,15·L = ${fmt(r.lBorda, 2)} m a partir do apoio (Tabela 19.1 e 19.3.3.2)</div>
     fctm = ${fmt(r.fctm, 3)} MPa · fctd = 0,7·fctm/γc = ${fmt(r.fctd, 3)} MPa · τRd = 0,25·fctd = ${fmt(r.tauRd, 4)} MPa<br>
     k = 1,6 − d(m) = ${fmt(r.kV, 3)} ≥ 1 (toda a armadura inferior chega ao apoio) · ρ1 = As,ef/(b·d) = ${fmt(r.rho1 * 100, 3)} % ≤ 2 %<br>
@@ -1543,11 +1574,12 @@ function memorialHTML(r) {
 function memorialConsumo(r) {
   const Q = r.quant, I = r.I; if (!Q) return '';
   return `<div class="card mm bloco"><h3>7. Consumo estimado — escada inteira (A + B + C)</h3>
+    Armadura usada no consumo: principal Ø ${fphi(I.phiP)} c/ ${fmt(r.sPa, 0)} (${fmt(r.AsAdot)} cm²/m${r.adotEditP ? ', <strong>editada</strong> — calculada c/ ' + fmt(r.princ.s, 0) : ''}) · distribuição Ø ${fphi(I.phiD)} c/ ${fmt(r.sDa, 0)} (${fmt(r.AsDistAdot)} cm²/m${r.adotEditD ? ', <strong>editada</strong> — calculada c/ ' + fmt(r.sD, 0) : ''})<br>
     Largura b = ${fmt(Q.bw, 2)} m${Q.bPadrao ? ' (larg. do lance não informada: estimativa para 1 m)' : ' (larg. do lance)'} · ${Q.plis ? 'faixa dobrada, sem enchimento' : 'degraus concretados junto com a laje'} · aço = 7850 kg/m³ (kg/m = 0,006165·Ø²)<br>
     <div class="fml">Volume = área do perfil em elevação (${Q.plis ? `faixa dobrada t = ${fmt(I.h, 1)} cm, ${Q.nDeg} degraus` : `laje h = ${fmt(I.h, 1)} cm + ${Q.nDeg} degraus`}) × b = ${fmt(Q.area, 4)} m² × ${fmt(Q.bw, 2)} m = <strong>${fmt(Q.vol, 3)} m³</strong> (lance ${fmt(Q.volLance, 3)} + patamares ${fmt(Q.volPat, 3)})</div>
     ${Q.plis
-      ? `Estribos fechados pelo esquema de armação: N1 nos trechos horizontais (cada piso cobre os dois nós; o último piso segue pelo patamar C) e N2 nos espelhos (altura e + t), perímetro no eixo da barra + 2 ganchos de ponta reta 5Ø ≥ 5 cm = ${fmt(Q.gch * 100, 1)} cm (9.4.6.1); N3 com b − 2c, reta, nos nós (cantos dos estribos) e, onde o vão entre nós passa de s = ${fmt(r.sD, 0)} cm, barras intermediárias no piso; nº de estribos por posição = ⌈(b − 2c)/s⌉ + 1.`
-      : `Comprimentos pelo detalhe do esquema de armação: ganchos nos apoios e no canto côncavo até a outra camada (h − 2·(c + Ø/2) = ${fmt(Q.gh * 100, 1)} cm), trechos de ℓb = ${fmt(r.lb, 1)} cm pela face oposta; N3 com b − 2c, reta, a cada ${fmt(r.sD, 0)} cm ao longo de ${fmt(Q.lDes, 2)} m; nº de barras = ⌈(b − 2c)/s⌉ + 1. Armadura de borda (N4) não incluída.`}
+      ? `Estribos fechados pelo esquema de armação: N1 nos trechos horizontais (cada piso cobre os dois nós; o último piso segue pelo patamar C) e N2 nos espelhos (altura e + t), perímetro no eixo da barra + 2 ganchos de ponta reta 5Ø ≥ 5 cm = ${fmt(Q.gch * 100, 1)} cm (9.4.6.1); N3 com b − 2c, reta, nos nós (cantos dos estribos) e, onde o vão entre nós passa de s = ${fmt(r.sDa, 0)} cm, barras intermediárias no piso; nº de estribos por posição = ⌈(b − 2c)/s⌉ + 1.`
+      : `Comprimentos pelo detalhe do esquema de armação: ganchos nos apoios e no canto côncavo até a outra camada (h − 2·(c + Ø/2) = ${fmt(Q.gh * 100, 1)} cm), trechos de ℓb = ${fmt(r.lb, 1)} cm pela face oposta; N3 com b − 2c, reta, a cada ${fmt(r.sDa, 0)} cm ao longo de ${fmt(Q.lDes, 2)} m; nº de barras = ⌈(b − 2c)/s⌉ + 1. Armadura de borda (N4) não incluída.`}
     <table><tr><th>Posição</th><th>Ø</th><th>Qtde</th><th>Compr. unit. (m)</th><th>Compr. total (m)</th><th>Massa (kg)</th></tr>
       ${Q.pos.map(t => `<tr><td>${t.nome} — ${t.obs}</td><td>${fphi(t.phi)}</td><td>${t.n}</td><td>${fmt(t.l, 2)}</td><td>${fmt(t.lt, 2)}</td><td>${fmt(t.kg, 1)}</td></tr>`).join('')}
       <tr class="sel"><td>Total</td><td></td><td></td><td></td><td></td><td>${fmt(Q.aco, 1)}</td></tr></table>
@@ -1635,6 +1667,8 @@ $('modal-memo').addEventListener('click', ev => { if (ev.target.id === 'modal-me
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') fecharMemo(); });
 $('btn-pdf').addEventListener('click', gerarPDF);
 $('btn-pdf2').addEventListener('click', gerarPDF);
+$('phiPsel').addEventListener('change', () => { $('phiP').value = $('phiPsel').value; $('sP').value = ''; atualizar(); if (R && R.ok) { $('sP').value = R.princ.s; atualizar(); } });
+$('phiDsel').addEventListener('change', () => { $('phiD').value = $('phiDsel').value; $('sD').value = ''; atualizar(); if (R && R.ok) { $('sD').value = R.sD; atualizar(); } });
 lances = [lerCampos()]; cur = 0;
 atualizar();
 </script>
