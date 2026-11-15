@@ -20,6 +20,18 @@
 
   .hdr { background: var(--preto); height: 76px; flex: 0 0 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
   .hdr img { height: 64px; width: auto; }
+  .seg input:disabled + label { cursor: not-allowed; opacity: 0.55; }
+  .lances { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; justify-content: safe center; flex: 1; min-width: 0; padding: 0 16px; scrollbar-width: thin; }
+  .lances button { flex: 0 0 auto; }
+  .lances button { font: inherit; font-size: 12.5px; height: 28px; padding: 0 12px; border-radius: 6px; cursor: pointer; border: 1px solid #4A4F55; background: transparent; color: #D0D4D9; display: inline-flex; align-items: center; gap: 6px; }
+  .lances button:hover { border-color: #9AA0A6; color: #fff; }
+  .lances button.ativo { background: #fff; color: #000; border-color: #fff; font-weight: 600; }
+  .lances button.novo { border-style: dashed; color: #9AA0A6; }
+  .lances .dot { width: 7px; height: 7px; border-radius: 50%; background: #2E7D32; flex: 0 0 7px; }
+  .lances .dot.fail { background: #E53935; }
+  .lances .x { margin-left: 2px; color: #9AA0A6; font-weight: 400; padding: 0 2px; border-radius: 3px; }
+  .lances .x:hover { color: #fff; background: #C62828; }
+  .lances button.ativo .x:hover { color: #fff; }
   .hdr-tool { color: var(--texto-3); text-align: right; font-size: 13px; line-height: 1.35; }
   .hdr-tool strong { display: block; color: var(--texto-3); font-size: 15px; font-weight: 600; }
 
@@ -172,6 +184,7 @@
 
   <header class="hdr">
     <img src="../assets/logo-horizontal.png" alt="BASE Estruturas">
+    <nav class="lances" id="lances" aria-label="Lances da escada"></nav>
     <div class="hdr-tool"><strong>Escada — Armadura e flecha</strong><span id="hdr-sub">Lance biapoiado com patamares</span> · NBR 6118:2023</div>
   </header>
 
@@ -285,7 +298,7 @@
 
   <footer class="rodape">
     <button type="button" class="btn" id="btn-memo">Ver memorial</button>
-    <button type="button" class="btn btn-pri" id="btn-pdf">Gerar memória (PDF)</button>
+    <button type="button" class="btn btn-pri" id="btn-pdf" title="Memória de todos os lances">Gerar memória (PDF)</button>
     <span class="credito">BASE Estruturas · 1 tf = 10 kN</span>
   </footer>
 </div>
@@ -797,6 +810,7 @@ function modoUI(pli) {
 function atualizar() {
   const pli = tipo() === 'pli'; modoUI(pli);
   R = pli ? calcularPlissada(lerDados()) : calcularEscada(lerDados());
+  if (typeof salvarLance === 'function') { salvarLance(); abasLances(); }
   const r = R;
   if (!r.ok) {
     ['esf-kv', 'flex-res', 'tab-p', 'tab-d', 'flex-kv', 'cis-kv', 'fl-kv', 'cis-al', 'fl-al', 'geo-info', 'cis-st', 'fl-st'].forEach(id => $(id).innerHTML = '');
@@ -1542,16 +1556,74 @@ function memorialConsumo(r) {
   </div>`;
 }
 
-function abrirMemo() { if (!R || !R.ok) return; $('memo-body').innerHTML = R.plis ? memorialHTMLP(R) : memorialHTML(R); $('modal-memo').classList.add('aberto'); }
+function abrirMemo() { if (!R || !R.ok) return; $('memo-tit').textContent = `Memorial de cálculo — Lance ${cur + 1}`; $('memo-body').innerHTML = R.plis ? memorialHTMLP(R) : memorialHTML(R); $('modal-memo').classList.add('aberto'); }
 function fecharMemo() { $('modal-memo').classList.remove('aberto'); }
 function gerarPDF() {
   if (!R || !R.ok) return;
-  const hoje = new Date().toLocaleDateString('pt-BR');
-  const P = R.plis, g = P ? desenhoGeometriaP(R) : desenhoGeometria(R), a = P ? desenhoArmacaoP(R) : desenhoArmacao(R), e = P ? desenhoEsforcosP(R) : desenhoEsforcos(R);
-  $('print-area').innerHTML = `<h1>Memória de cálculo — Escada${P ? ' plissada' : ''}</h1><div class="sub">${P ? 'Escada plissada — pórtico plano' : 'Lance biapoiado com patamares'} · NBR 6118:2023 · BASE Estruturas · ${hoje}</div>
-    <div class="bloco">${g.svg}</div>${P ? memorialHTMLP(R) : memorialHTML(R)}<div class="bloco mm"><h3>8. ${P ? 'Pórtico: momento, normal e elástica' : 'Esforços e elástica'}</h3>${e.svg}</div><div class="bloco mm"><h3>9. Esquema de armação</h3>${a.svg}<p style="font-size:9.5pt">${a.leg}</p></div>`;
+  salvarLance();
+  const hoje = new Date().toLocaleDateString('pt-BR'), P = tipo() === 'pli', nL = lances.length;
+  let html = '';
+  lances.forEach((v, i) => {
+    const r = calcularLance(v);
+    const tit = `<h1 style="${i ? 'page-break-before:always' : ''}">Memória de cálculo — Escada${P ? ' plissada' : ''}${nL > 1 ? ` · Lance ${i + 1}` : ''}</h1><div class="sub">${P ? 'Escada plissada — pórtico plano' : 'Lance biapoiado com patamares'} · NBR 6118:2023 · BASE Estruturas · ${hoje}</div>`;
+    if (!r.ok) { html += tit + `<p>Lance ${i + 1}: ${r.erros.join(' ')}</p>`; return; }
+    const g = P ? desenhoGeometriaP(r) : desenhoGeometria(r), a = P ? desenhoArmacaoP(r) : desenhoArmacao(r), e = P ? desenhoEsforcosP(r) : desenhoEsforcos(r);
+    html += tit + `<div class="bloco">${g.svg}</div>${P ? memorialHTMLP(r) : memorialHTML(r)}<div class="bloco mm"><h3>8. ${P ? 'Pórtico: momento, normal e elástica' : 'Esforços e elástica'}</h3>${e.svg}</div><div class="bloco mm"><h3>9. Esquema de armação</h3>${a.svg}<p style="font-size:9.5pt">${a.leg}</p></div>`;
+  });
+  $('print-area').innerHTML = html;
   setTimeout(() => window.print(), 100);
 }
+
+/* ==================== LANCES ==================== */
+// Cada lance guarda os valores de todos os campos; o tipo (convencional/plissada) é da escada inteira (definido no Lance 1)
+let lances = [], cur = 0;
+function lerCampos() { const o = {}; IDS.forEach(id => o[id] = $(id).value); return o; }
+function salvarLance() { lances[cur] = lerCampos(); }
+function calcularLance(v) {
+  const o = {}; IDS.forEach(id => { o[id] = parseFloat(v[id]); if (!isFinite(o[id])) o[id] = 0; });
+  return tipo() === 'pli' ? calcularPlissada(o) : calcularEscada(o);
+}
+function statusLance(r) {
+  if (!r || !r.ok) return false;
+  const u = [r.utilV, r.utilFl, r.utilQ].filter(x => isFinite(x));
+  return r.flexOk !== false && u.every(x => x <= 1 + 1e-9);
+}
+let chaveAbas = '';
+function abasLances() {
+  // só reconstrói os botões quando muda a quantidade ou o lance ativo (um clique não se perde se o campo editado disparar 'change')
+  const nav = $('lances'), chave = lances.length + '|' + cur;
+  if (chave !== chaveAbas) {
+    chaveAbas = chave;
+    nav.innerHTML = lances.map((v, i) => `<button type="button" data-lance="${i}" class="${i === cur ? 'ativo' : ''}"><span class="dot"></span>Lance ${i + 1}${i > 0 ? `<span class="x" data-remover="${i}" title="Remover o lance ${i + 1}">×</span>` : ''}</button>`).join('')
+      + `<button type="button" class="novo" id="btn-novo-lance" title="Novo lance com os dados do Lance 1 (editáveis)">+ Lance</button>`;
+  }
+  nav.querySelectorAll('[data-lance]').forEach(bt => {
+    const i = +bt.dataset.lance, ok = statusLance(i === cur ? R : calcularLance(lances[i]));
+    bt.querySelector('.dot').classList.toggle('fail', !ok);
+    bt.title = ok ? 'Atende' : 'Verificar: alguma verificação não atende';
+  });
+}
+function irLance(i) {
+  salvarLance(); cur = i;
+  IDS.forEach(id => $(id).value = lances[i][id]);
+  document.querySelectorAll('input[name="tipo"]').forEach(el => { el.disabled = cur > 0; });
+  $('tipo-conv').parentElement.title = cur > 0 ? 'Tipo definido no Lance 1 (vale para todos os lances)' : 'Tipo de escada (vale para todos os lances)';
+  atualizar();
+}
+function novoLance() { salvarLance(); lances.push({ ...lances[0] }); irLance(lances.length - 1); }
+function removerLance(i) {
+  salvarLance(); lances.splice(i, 1);
+  const alvo = cur === i ? Math.max(0, i - 1) : (cur > i ? cur - 1 : cur);
+  cur = alvo; IDS.forEach(id => $(id).value = lances[cur][id]);
+  document.querySelectorAll('input[name="tipo"]').forEach(el => { el.disabled = cur > 0; });
+  atualizar();
+}
+$('lances').addEventListener('click', ev => {
+  const rm = ev.target.closest('[data-remover]');
+  if (rm) { ev.stopPropagation(); removerLance(+rm.dataset.remover); return; }
+  if (ev.target.closest('#btn-novo-lance')) { novoLance(); return; }
+  const b = ev.target.closest('[data-lance]'); if (b && +b.dataset.lance !== cur) irLance(+b.dataset.lance);
+});
 
 IDS.forEach(id => { const el = $(id); el.addEventListener('input', atualizar); el.addEventListener('change', atualizar); });
 document.querySelectorAll('input[name="aba"]').forEach(el => el.addEventListener('change', desenhar));
@@ -1563,6 +1635,7 @@ $('modal-memo').addEventListener('click', ev => { if (ev.target.id === 'modal-me
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') fecharMemo(); });
 $('btn-pdf').addEventListener('click', gerarPDF);
 $('btn-pdf2').addEventListener('click', gerarPDF);
+lances = [lerCampos()]; cur = 0;
 atualizar();
 </script>
 </body>
